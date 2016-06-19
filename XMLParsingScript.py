@@ -2,13 +2,15 @@ import xml.etree.ElementTree as ET
 import os
 import argparse
 import json
+import re
 
 #Class for file object
 class Parsed:
-    def __init__(self, Title, Author, PubInfo, ISBN, DocType, Chapters, Content):
+    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters='', Content=''):
         self.t = Title
         self.a = Author
         self.p = PubInfo
+        self.y = Years
         self.i = ISBN
         self.d = DocType
         self.ch = Chapters
@@ -17,6 +19,8 @@ class Parsed:
         self.c += text + " "
     def add_chapter(self, chapter):
         self.ch += chapter + " , "
+    def add_year(self, year):
+        self.y += year + " "
 
 #Self-explanatory
 def getTitleAndAuthor(root, file):
@@ -45,6 +49,39 @@ def getPublicationInfo(root, file):
         for child in root:
             getPublicationInfo(child, file)
 
+def scanSubtagsYears(root, file):
+    if root.tag == "{http://www.tei-c.org/ns/1.0}pb":
+        addYears(root, file)
+    if root.tag == "{http://www.tei-c.org/ns/1.0}hi":
+        addYears(root, file)
+    if root.tag == "{http://www.tei-c.org/ns/1.0}lb":
+        addYears(root, file)
+
+def addYears(root, file):
+    text = str(root.text) + str(root.tail)
+    text = text.strip(' \t\n\r')
+    text = text.replace("None", "")
+    reg = re.compile("[1][8-9][0-9]{2}")
+    years = reg.findall(text)
+    years[:] = [s.replace(" ", "") for s in years]
+    i = 0
+    while i < len(years):
+        file.add_year(years[i])
+        i += 1
+
+def getYears(root, file):
+    if "publisher" in root.tag or "bibl" in root.tag or "title" in root.tag or "date" in root.tag:
+        addYears(root, file)
+        for child in root:
+            scanSubtagsYears(child, file)
+            if "date" in child.tag or "title" in child.tag:
+                addYears(child, file)
+                for children in child:
+                    scanSubtagsYears(children, file)
+    else:
+        for child in root:
+            getYears(child, file)
+
 #Helper method for ISBN method
 def checkForISBN(root, file):
     test1 = str(root.text)
@@ -52,11 +89,21 @@ def checkForISBN(root, file):
     if "ISBN" in test1:
         ISBN = test1.strip(' \t\n\r')
         ISBN = ISBN.replace("None", "")
-        file.i = ISBN
+        reg = re.compile("[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?")
+        try:
+            ISBN_clean = reg.findall(ISBN)[0]
+            file.i = ISBN_clean
+        except IndexError:
+            pass
     if "ISBN" in test2:
         ISBN = test2.strip(' \t\n\r')
         ISBN = ISBN.replace("None", "")
-        file.i = ISBN
+        reg = re.compile("[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?")
+        try:
+            ISBN_clean = reg.findall(ISBN)[0]
+            file.i = ISBN_clean
+        except IndexError:
+            pass
 
 #Gets ISBN
 def getISBN(root, file):
@@ -257,13 +304,13 @@ def buildJson(file):
     file.t = file.t.replace("\n", " ")
     file.a = file.a.replace("\n", " ")
     file.p = file.p.replace("\n", " ")
-    file.i = file.i.replace("\n", " ")
     file.d = file.d.replace("\n", " ")
     file.ch = file.ch.replace("\n", " ")
     file.c = file.c.replace("\n", " ")
-    jfile = json.dumps({'1.Title': file.t, '2.Author': file.a, '3.Publisher': file.p, '4.ISBN': file.i,
-                        '5.Document Type': file.d, '6.List of chapters': file.ch, '7.Full Text': file.c},
-                       sort_keys=True, indent=4, separators=(',', ': '))
+    file.y = sorted(file.y.split())[0]
+    jfile = json.dumps({'1.Title': file.t, '2.Author': file.a, '3.Publisher': file.p, '4.Year Published': file.y, '5.ISBN': file.i,
+                        '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': file.c},
+                       sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
 
@@ -285,10 +332,11 @@ def main():
                 with open(args.o + xmldoc[:-4] + '.json', 'w') as out:
                     tree = ET.parse(args.i + "/" + xmldoc)
                     root = tree.getroot()
-                    obj = Parsed('','','','','','','')
+                    obj = Parsed()
                     getTitleAndAuthor(root, obj)
                     getPublicationInfo(root, obj)
                     getISBN(root, obj)
+                    getYears(root, obj)
                     docType(root, obj)
                     getChapters(root, obj)
                     getText(root, obj)
@@ -299,6 +347,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
