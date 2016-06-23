@@ -61,7 +61,7 @@ def addYears(root, file):
     text = str(root.text) + str(root.tail)
     text = text.strip(' \t\n\r')
     text = text.replace("None", "")
-    reg = re.compile("[1][8-9][0-9]{2}")
+    reg = re.compile("[1][6-9][0-9]{2}")
     years = reg.findall(text)
     years[:] = [s.replace(" ", "") for s in years]
     i = 0
@@ -81,6 +81,71 @@ def getYears(root, file):
     else:
         for child in root:
             getYears(child, file)
+
+def fixYears(root, file):
+    a = sorted(file.y.split())[0]
+    if int(a) > 1930:
+        if "front" in root.tag or "body" in root.tag:
+            addYears(root, file)
+            for child in root:
+                scanSubtagsYears(child, file)
+                if "div" in child.tag:
+                    addYears(child, file)
+                    for children in child:
+                        scanSubtagsYears(children, file)
+                        if "p" in children.tag:
+                            addYears(children, file)
+                            for morechildren in children:
+                                scanSubtagsYears(morechildren, file)
+        else:
+            for child in root:
+                fixYears(child, file)
+
+def fixYearsAgain(root, file):
+    a = sorted(file.y.split())[0]
+    if int(a) > 1930:
+        if "fileDesc" in root.tag:
+            addYears(root, file)
+            for child in root:
+                scanSubtagsYears(child, file)
+                if "sourceDesc" in child.tag:
+                    addYears(child, file)
+                    for children in child:
+                        scanSubtagsYears(children, file)
+                        if "title" in children.tag or "date" in children.tag:
+                            addYears(children, file)
+                            for morechildren in children:
+                                scanSubtagsYears(morechildren, file)
+        else:
+            for child in root:
+                fixYearsAgain(child, file)
+
+def fixYearsLastTime(root, file):
+    a = sorted(file.y.split())[0]
+    if int(a) > 1930:
+        if "text" in root.tag:
+            addYears(root, file)
+            for child in root:
+                scanSubtagsYears(child, file)
+                if "front" in child.tag:
+                    addYears(child, file)
+                    for children in child:
+                        scanSubtagsYears(children, file)
+                        if "div" in children.tag or "argument" in children.tag:
+                            addYears(children, file)
+                            for morechildren in children:
+                                scanSubtagsYears(morechildren, file)
+                                if "p" in morechildren.tag or "div" in morechildren.tag:
+                                    addYears(morechildren, file)
+                                    for evenmorechildren in morechildren:
+                                        scanSubtagsYears(evenmorechildren, file)
+                                        if "p" in evenmorechildren.tag:
+                                            addYears(evenmorechildren, file)
+                                            for wowmorechildren in evenmorechildren:
+                                                scanSubtagsYears(wowmorechildren, file)
+        else:
+            for child in root:
+                fixYearsLastTime(child, file)
 
 #Helper method for ISBN method
 def checkForISBN(root, file):
@@ -337,6 +402,9 @@ def main():
                     getPublicationInfo(root, obj)
                     getISBN(root, obj)
                     getYears(root, obj)
+                    fixYears(root, obj)
+                    fixYearsAgain(root, obj)
+                    fixYearsLastTime(root, obj)
                     docType(root, obj)
                     getChapters(root, obj)
                     getText(root, obj)
