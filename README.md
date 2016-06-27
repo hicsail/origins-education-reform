@@ -7,13 +7,33 @@ A collection of scripts for performing natural language processing tasks on digi
     * ``-i input_files_folder_path``
 
         Specify filepath to directory containing the input files (required).
-    * ``-o input_files_folder_path``
+    * ``-o output_files_folder_path``
 
         Specify filepath to output directory (required). The script will create a directory with the name you specify, so make sure the filepath you enter isn't already occupied by a directory of the same name.
-* ``WordFrequency.py``
-
-    A script for performing a word frequency analysis and plotting the results.
-
+    
 Example usage:
 
     python3 XMLParsingScript.py -i /Users/Ketchup/Desktop/Danish_Archive -o /Users/Ketchup/Desktop/Text_Out
+    
+* ``WordFrequency.py``
+
+    A script for performing a word frequency analysis and plotting the results.
+    * ``-i input_files_folder_path``
+        
+        Specify filepath to director containing the input files(required).
+    *``-o output_files_folder_path``
+    
+        Specify filepath to output file (required). The script will create a .txt file with the name you specify, so make sure the filepath you enter isn't already occupied by a directory of the same name.
+        
+    * ``-k "list_of_keywords" ``
+    
+        Specify which keywords you wish to perform a frequency analysis on. Separate unique words by spaces, and words with multiple spellings by "/".
+        
+    * ``-d "min max" ``
+    
+        Specify the min and max for which decades you would like the program to run the word count on. Separate each value by a space, and surround with quotes.
+        
+Example usage:
+
+    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus -o /Users/Ketchup/Desktop/Word_Frequency -k "test1 test2/test3 test4 test5/test6/test7 test8" -d "1700 1940"
+
