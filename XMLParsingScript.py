@@ -61,7 +61,7 @@ def addYears(root, file):
     text = str(root.text) + str(root.tail)
     text = text.strip(' \t\n\r')
     text = text.replace("None", "")
-    reg = re.compile("[1][6-9][0-9]{2}")
+    reg = re.compile("[1][7-9][0-9]{2}")
     years = reg.findall(text)
     years[:] = [s.replace(" ", "") for s in years]
     i = 0
@@ -393,25 +393,26 @@ def main():
 
     for subdir, dirs, files in os.walk(args.i):
         for xmldoc in files:
-            try:
-                with open(args.o + xmldoc[:-4] + '.json', 'w') as out:
-                    tree = ET.parse(args.i + "/" + xmldoc)
-                    root = tree.getroot()
-                    obj = Parsed()
-                    getTitleAndAuthor(root, obj)
-                    getPublicationInfo(root, obj)
-                    getISBN(root, obj)
-                    getYears(root, obj)
-                    fixYears(root, obj)
-                    fixYearsAgain(root, obj)
-                    fixYearsLastTime(root, obj)
-                    docType(root, obj)
-                    getChapters(root, obj)
-                    getText(root, obj)
-                    out.write(buildJson(obj))
-                    out.close()
-            except IOError:
-                pass
+            if xmldoc[0] != ".":
+                try:
+                    with open(args.o + xmldoc[:-4] + '.json', 'w') as out:
+                        tree = ET.parse(args.i + "/" + xmldoc)
+                        root = tree.getroot()
+                        obj = Parsed()
+                        getTitleAndAuthor(root, obj)
+                        getPublicationInfo(root, obj)
+                        getISBN(root, obj)
+                        getYears(root, obj)
+                        fixYears(root, obj)
+                        fixYearsAgain(root, obj)
+                        fixYearsLastTime(root, obj)
+                        docType(root, obj)
+                        getChapters(root, obj)
+                        getText(root, obj)
+                        out.write(buildJson(obj))
+                        out.close()
+                except IOError:
+                    pass
 
 if __name__ == '__main__':
     main()
