@@ -3,6 +3,7 @@ import os
 import nltk
 import argparse
 import math
+import matplotlib.pyplot as plt
 
 def buildKeyList(keywords):
     keyList = keywords.split()
@@ -104,6 +105,7 @@ def buildTF_IDF(directory, keywords, decades, idfResults, decadeTally, tf_idfRes
                                 tf_idfResults[decade][keyword] += tf_idf
                             except KeyError:
                                 pass
+    #Take average of TF_IDF results
     for decade in decades:
         for keyword in keywords:
             try:
@@ -150,9 +152,11 @@ def calculateIDFResults(keywords, decades, decadeTally, directory, idfResults):
     for decade in decades:
         for keyword in keywords:
             try:
-                #Add 1 before logarithm to ensure idf is always positive
+                #Add 1 before logarithm to ensure idf is nonzero
+                #Otherwise, a bunch of the values are zero (b/c log(1))
+                #and there's not much data to see
                 idfResults[decade][keyword] = \
-                    1 + round(math.log(((decadeTally[decade]) / (1 + idfResults[decade][keyword])), 10), 4)
+                    1 + round(math.log(((decadeTally[decade]) / max(1, idfResults[decade][keyword])), 10), 4)
             except KeyError:
                 pass
     return idfResults
@@ -192,28 +196,19 @@ def main():
             out.write(str(tf_idfResults[decade][keyword]) + "\n")
         out.write("\n")
 
+    for keyword in keywords:
+        i = 0
+        a = [0]*(len(decades))
+        while i < len(decades):
+            a[i] += tf_idfResults[decades[i]][keyword]
+            i += 1
+        plt.plot(decades, a, label=keyword)
+    plt.legend(bbox_to_anchor=(0, 1.02, 1., .102), loc=3, ncol=int(len(keywords)/2),
+           mode="expand", borderaxespad=0.)
+    plt.xlabel("Decade")
+    plt.ylabel("Word Frequency")
+    plt.axis([int(min_max[0]), int(min_max[1]), 0, 2])
+    plt.show()
+
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
