@@ -37,3 +37,6 @@ Example usage:
 
     python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus -o /Users/Ketchup/Desktop/Word_Frequency -k "test1 test2/test3 test4 test5/test6/test7 test8" -d "1700 1940"
 
+* ``YearScraping.py``
+    
+    Parses an XML Directory and writes each XML file's Title/Author/Year of publication to a .txt file. It ignores XML documents whose chapter/text fields are empty. We're just using it to simplify the process of assigning years to documents, since the bulk of it will have to be done manually. The I/O is identical to XMLParsingScript.py above.
