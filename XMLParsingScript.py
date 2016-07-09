@@ -49,6 +49,7 @@ def getPublicationInfo(root, file):
         for child in root:
             getPublicationInfo(child, file)
 
+#Looks for common subtags that contain text
 def scanSubtagsYears(root, file):
     if root.tag == "{http://www.tei-c.org/ns/1.0}pb":
         addYears(root, file)
@@ -57,6 +58,7 @@ def scanSubtagsYears(root, file):
     if root.tag == "{http://www.tei-c.org/ns/1.0}lb":
         addYears(root, file)
 
+#Appends a year to a file's year field
 def addYears(root, file):
     text = str(root.text) + str(root.tail)
     text = text.strip(' \t\n\r')
@@ -69,6 +71,11 @@ def addYears(root, file):
         file.add_year(years[i])
         i += 1
 
+#There are four separate methods for grabbing the year of publication.
+#This will likely need to be fixed in the future, but there are a lot of
+#different paths though each XML file where publication years are included,
+#and since these methods are recursive, I can't think of any way to trace each
+#path without separating them into four distinct functions.
 def getYears(root, file):
     if "publisher" in root.tag or "bibl" in root.tag or "title" in root.tag or "date" in root.tag:
         addYears(root, file)
@@ -351,6 +358,9 @@ def getTheater(child, file):
                         for evenmorechildren in morechildren:
                             scanForSubtags(evenmorechildren, file)
 
+#Gathers all the info from the parsing functions above and builds
+#a JSON file out of it. It also cleans up the file a little bit, and
+#checks if some fields are empty.
 def buildJson(file):
     if file.t is None:
         file.t = "No title listed"
@@ -365,14 +375,14 @@ def buildJson(file):
     if file.ch is None:
         file.ch = "No chapters listed"
     if file.c is None:
-        file.c = "No text listed"
+        file.c = ""
     file.t = file.t.replace("\n", " ")
     file.a = file.a.replace("\n", " ")
     file.p = file.p.replace("\n", " ")
     file.d = file.d.replace("\n", " ")
     file.ch = file.ch.replace("\n", " ")
     file.c = file.c.replace("\n", " ")
-    file.y = sorted(file.y.split())[0]
+    file.y = sorted(file.y.split())[0] #only take the earliest year collected
     jfile = json.dumps({'1.Title': file.t, '2.Author': file.a, '3.Publisher': file.p, '4.Year Published': file.y, '5.ISBN': file.i,
                         '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': file.c},
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
@@ -390,29 +400,32 @@ def main():
         pass
 
     os.mkdir(args.o)
-
+    #Navigates through the directory specified in the console input,
+    #and builds a json file from each xml document within it.
     for subdir, dirs, files in os.walk(args.i):
         for xmldoc in files:
             if xmldoc[0] != ".":
-                try:
-                    with open(args.o + xmldoc[:-4] + '.json', 'w') as out:
-                        tree = ET.parse(args.i + "/" + xmldoc)
-                        root = tree.getroot()
-                        obj = Parsed()
-                        getTitleAndAuthor(root, obj)
-                        getPublicationInfo(root, obj)
-                        getISBN(root, obj)
-                        getYears(root, obj)
-                        fixYears(root, obj)
-                        fixYearsAgain(root, obj)
-                        fixYearsLastTime(root, obj)
-                        docType(root, obj)
-                        getChapters(root, obj)
-                        getText(root, obj)
-                        out.write(buildJson(obj))
-                        out.close()
-                except IOError:
-                    pass
+                tree = ET.parse(args.i + "/" + xmldoc)
+                root = tree.getroot()
+                obj = Parsed()
+                getText(root, obj)
+                text = str(obj.c)
+                if text.strip() != "":
+                    try:
+                        with open(args.o + xmldoc[:-4] + '.json', 'w') as out:
+                            getTitleAndAuthor(root, obj)
+                            getPublicationInfo(root, obj)
+                            getISBN(root, obj)
+                            getYears(root, obj)
+                            fixYears(root, obj)
+                            fixYearsAgain(root, obj)
+                            fixYearsLastTime(root, obj)
+                            docType(root, obj)
+                            getChapters(root, obj)
+                            out.write(buildJson(obj))
+                            out.close()
+                    except IOError:
+                        pass
 
 if __name__ == '__main__':
     main()
