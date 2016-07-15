@@ -405,7 +405,8 @@ def main():
     for subdir, dirs, files in os.walk(args.i):
         for xmldoc in files:
             if xmldoc[0] != ".":
-                tree = ET.parse(args.i + "/" + xmldoc)
+                #took out "/" btwn args.i & xmldoc
+                tree = ET.parse(args.i + xmldoc)
                 root = tree.getroot()
                 obj = Parsed()
                 getText(root, obj)
