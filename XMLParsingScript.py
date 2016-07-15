@@ -413,7 +413,7 @@ def main():
                 text = str(obj.c)
                 if text.strip() != "":
                     try:
-                        with open(args.o + xmldoc[:-4] + '.json', 'w') as out:
+                        with open(args.o + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
                             getTitleAndAuthor(root, obj)
                             getPublicationInfo(root, obj)
                             getISBN(root, obj)
