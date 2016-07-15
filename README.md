@@ -40,3 +40,14 @@ Example usage:
 * ``YearScraping.py``
     
     Parses an XML Directory and writes each XML file's Title/Author/Year of publication to a .txt file. It ignores XML documents whose chapter/text fields are empty. We're just using it to simplify the process of assigning years to documents, since the bulk of it will have to be done manually. The I/O is identical to XMLParsingScript.py above.
+
+Rsync Instructions:
+
+    curl -L http://cpanmin.us | perl - —sudo App::cpanminus 
+(pkg manager)
+
+    which cpan 
+    which cpanm
+
+    sudo cpanm File::Pairtree
+(install Pairtree module)
