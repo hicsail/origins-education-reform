@@ -3,10 +3,12 @@ import os
 import argparse
 import json
 import re
+from nltk.corpus import stopwords
+import shutil
 
 #Class for file object
 class Parsed:
-    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters='', Content=''):
+    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters='', Content='', Text=[]):
         self.t = Title
         self.a = Author
         self.p = PubInfo
@@ -15,6 +17,7 @@ class Parsed:
         self.d = DocType
         self.ch = Chapters
         self.c = Content
+        self.tx = Text
     def add_content(self, text):
         self.c += text + " "
     def add_chapter(self, chapter):
@@ -358,6 +361,16 @@ def getTheater(child, file):
                         for evenmorechildren in morechildren:
                             scanForSubtags(evenmorechildren, file)
 
+def filterText(text, file):
+    textList = text.strip().split()
+    stripped_text = [word.strip(",._-:;\"'\\()[]0123456789!?") for word in textList]
+    for i in range(len(stripped_text) - 1, -1, -1):
+        if stripped_text[i] == "":
+            del stripped_text[i]
+    cleaned_text = [word.lower() for word in stripped_text]
+    filtered_words = [word for word in cleaned_text if word not in stopwords.words('danish')]
+    file.tx = filtered_words
+
 #Gathers all the info from the parsing functions above and builds
 #a JSON file out of it. It also cleans up the file a little bit, and
 #checks if some fields are empty.
@@ -384,7 +397,7 @@ def buildJson(file):
     file.c = file.c.replace("\n", " ")
     file.y = sorted(file.y.split())[0] #only take the earliest year collected
     jfile = json.dumps({'1.Title': file.t, '2.Author': file.a, '3.Publisher': file.p, '4.Year Published': file.y, '5.ISBN': file.i,
-                        '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': file.c},
+                        '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': file.c, '9.Filtered Text': file.tx},
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
@@ -393,19 +406,22 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
     parser.add_argument("-o", help="output directory argument", action="store")
+    parser.add_argument("-f", help="optional filtering argument", action="store_true")
 
     try:
         args = parser.parse_args()
     except IOError:
         pass
 
-    os.mkdir(args.o)
-    #Navigates through the directory specified in the console input,
-    #and builds a json file from each xml document within it.
+    if not os.path.exists(args.o):
+        os.mkdir(args.o)
+    else:
+        shutil.rmtree(args.o)
+        os.mkdir(args.o)
+
     for subdir, dirs, files in os.walk(args.i):
         for xmldoc in files:
             if xmldoc[0] != ".":
-                #took out "/" btwn args.i & xmldoc
                 tree = ET.parse(args.i + xmldoc)
                 root = tree.getroot()
                 obj = Parsed()
@@ -423,6 +439,8 @@ def main():
                             fixYearsLastTime(root, obj)
                             docType(root, obj)
                             getChapters(root, obj)
+                            if args.f:
+                                filterText(text, obj)
                             out.write(buildJson(obj))
                             out.close()
                     except IOError:
