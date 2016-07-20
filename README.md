@@ -44,13 +44,17 @@ Example usage:
     
     Parses an XML Directory and writes each XML file's Title/Author/Year of publication to a .txt file. It ignores XML documents whose chapter/text fields are empty. We're just using it to simplify the process of assigning years to documents, since the bulk of it will have to be done manually. The I/O is identical to XMLParsingScript.py above.
 
-Rsync Instructions:
+### Rsync Instructions:
 
-    curl -L http://cpanmin.us | perl - —sudo App::cpanminus 
-(pkg manager)
+Install Pairtree for Perl:
 
-    which cpan 
-    which cpanm
+```
+$ curl -L http://cpanmin.us | perl - —sudo App::cpanminus 
 
-    sudo cpanm File::Pairtree
-(install Pairtree module)
+which cpan 
+which cpanm
+
+sudo cpanm File::Pairtree
+```
+
+Run this [rsync script](https://gist.github.com/lit-cs-sysadmin/8ffb90911697adc1262c) on SCC1.bu.edu. Use ht_text_pd as the $TREE value.
