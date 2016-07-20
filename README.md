@@ -10,10 +10,13 @@ A collection of scripts for performing natural language processing tasks on digi
     * ``-o output_files_folder_path``
 
         Specify filepath to output directory (required). The script will create a directory with the name you specify, so make sure the filepath you enter isn't already occupied by a directory of the same name.
+    *"-f"
+        
+        Filter the raw text by removing stop-words and unnecessary characters, returning an array of individual words in each Json file. Note that if you specify the filtering argument, the script will take ~1 hour to run.
     
 Example usage:
 
-    python3 XMLParsingScript.py -i /Users/Ketchup/Desktop/Danish_Archive -o /Users/Ketchup/Desktop/Text_Out
+    python3 XMLParsingScript.py -i /Users/Ketchup/Desktop/Danish_Archive/ -o /Users/Ketchup/Desktop/Text_Out/
     
 * ``WordFrequency.py``
 
@@ -35,7 +38,7 @@ Example usage:
         
 Example usage:
 
-    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus -o /Users/Ketchup/Desktop/Word_Frequency -k "test1 test2/test3 test4 test5/test6/test7 test8" -d "1700 1940"
+    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -o /Users/Ketchup/Desktop/Word_Frequency -k "test1 test2/test3 test4 test5/test6/test7 test8" -d "1700 1940"
 
 * ``YearScraping.py``
     
