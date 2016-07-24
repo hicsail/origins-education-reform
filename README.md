@@ -44,6 +44,29 @@ Example usage:
     
     Parses an XML Directory and writes each XML file's Title/Author/Year of publication to a .txt file. It ignores XML documents whose chapter/text fields are empty. We're just using it to simplify the process of assigning years to documents, since the bulk of it will have to be done manually. The I/O is identical to XMLParsingScript.py above.
 
+* ``HT_Parsing.py``
+
+    Navigates the HT directories and extracts .txt files and their corresponding HTIDs. Then pairs each HTID with it's corresponding row in the HT CSV files and builds a Json file similar to those created by XMLParsingScript.py above.
+    *``-i input_files_folder_path``
+    
+        Specify folder containing the HT directories/files (required).
+        
+    *``-o output_files_folder_path``
+    
+        Specify filepath to output directory (required). If the directory already exists, it will be overwritten.
+        
+    *``-d Document Type``
+    
+        Specify which type of documents are contained in the HT files (Fiction/Drama/Poetry). It will be used to populate
+        the "Document Type" field in the Json files.
+        
+    *``-c csv_file_path``
+    
+        Specify path to the CSV file you will be using to populate each Json file's Author, Title, PubInfo, and Year fields. (required)
+        Make absolutely sure that the CSV file is UTF-8 encoded, or the script will fail. If you do not know which encoding your CSV
+        file uses, then open it with Notepad++ or SublimeText (or some text editor that lets you change encodings) and switch the 
+        encoding of the file to UTF-8.
+
 ### Rsync Instructions:
 
 Install Pairtree for Perl:
