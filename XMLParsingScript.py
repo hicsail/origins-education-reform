@@ -5,6 +5,9 @@ import json
 import re
 from nltk.corpus import stopwords
 import shutil
+import time
+from multiprocessing import Pool
+import cProfile
 
 # This script navigates through an arbitrary number of XML files (organized according to 
 # a particular template) and builds JSON files out of them. The outputted JSON files include 
@@ -13,7 +16,7 @@ import shutil
 
 # Class for file object
 class Parsed:
-    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters='', Content='', Text=[]):
+    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters='', Content=[], Text=[]):
         self.t = Title
         self.a = Author
         self.p = PubInfo
@@ -24,7 +27,7 @@ class Parsed:
         self.c = Content
         self.tx = Text
     def add_content(self, text):
-        self.c += text + " "
+        self.c.extend(text.split(' '))
     def add_chapter(self, chapter):
         self.ch += chapter + " , "
     def add_year(self, year):
@@ -389,25 +392,21 @@ def getTheater(child, file):
 # correspond to 'is', 'and', etc.), and also filters out non-alphabetic characters. It makes the WordFrequency
 # script run faster to just take care of it all here. It is optional, though, and controlled by the -f argument
 # on the command line (more detail in the readme file).
+
 def filterText(text, file):
-    #Split the full text into a massive array of individual words.
-    textList = text.strip().split()
-    #Strip each word of non-alphabetic characters.
-    stripped_text = [word.strip(",._-:;\"'\\()[]0123456789!?") for word in textList]
-    # Apparently you have to go from the back of the array to the front. Users on StackOverflow
-    # explained why this is only in terms of vague analogies having to do with cutting off tree branches that you're 
-    # sitting on (???), but either way they were right. The method produces strange bugs if you try to iterate through
-    # the array from front to back.
-    # Anyway, this step is necessary because after stripping the non-alphabetic characters above, alot of the array entries
-    # were just empty strings, and there were then more empty strings in the array than any one word, making the whole
-    # cleaning up stop-words process kind of pointless. This step gets rid of those empty strings, so we can more accurately 
-    # and simply grab the word with maximum frequency from the text in the WordFrequency script.
-    for i in range(len(stripped_text) - 1, -1, -1):
-        if stripped_text[i] == "":
-            del stripped_text[i]
-    cleaned_text = [word.lower() for word in stripped_text]
-    filtered_words = [word for word in cleaned_text if word not in stopwords.words('danish')]
-    file.tx = filtered_words
+    start = time.time()
+    textList = text
+    filtered_words = set(stopwords.words('danish'))
+    # Strip each word of non-alphabetic characters
+    # Loop backwards because delete changes index
+    for i in range(len(textList) - 1, -1, -1):
+        textList[i] = textList[i].strip(",._-:;\"'\\()[]0123456789!?").lower()
+        # Delete empty strings or stopwords
+        if textList[i] == "" or textList[i] in filtered_words:
+            del textList[i]
+    print('Done filtering in {0:f} s\n'.format(time.time() - start))
+    file.tx = textList
+
 
 # Gathers all the info from the parsing functions above and builds
 # a JSON file out of it. It also cleans up the file a little bit, and
@@ -432,15 +431,43 @@ def buildJson(file):
     file.p = file.p.replace("\n", " ")
     file.d = file.d.replace("\n", " ")
     file.ch = file.ch.replace("\n", " ")
-    file.c = file.c.replace("\n", " ")
+    c_temp = ' '.join(file.c)
+    c_temp = c_temp.replace("\n", " ")
     file.y = sorted(file.y.split())[0] #only take the earliest year collected
     jfile = json.dumps({'1.Title': file.t, '2.Author': file.a, '3.Publisher': file.p, '4.Year Published': file.y, '5.ISBN': file.i,
-                        '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': file.c, '9.Filtered Text': file.tx},
+                        '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': c_temp, '9.Filtered Text': file.tx},
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
 
+def parse_threaded(xmldoc, input_doc, output_doc, f):
+    tree = ET.parse(input_doc + xmldoc)
+    root = tree.getroot()
+    obj = Parsed()
+    getText(root, obj)
+    text = obj.c
+    if text:
+        try:
+            with open(output_doc + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
+                getTitleAndAuthor(root, obj)
+                getPublicationInfo(root, obj)
+                getISBN(root, obj)
+                getYears(root, obj)
+                fixYears(root, obj)
+                fixYearsAgain(root, obj)
+                fixYearsLastTime(root, obj)
+                docType(root, obj)
+                getChapters(root, obj)
+                if f:
+                    filterText(text, obj)
+                out.write(buildJson(obj))
+                out.close()
+        except IOError:
+            pass
+
+
 def main():
+    start = time.time()
     # Command line arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
@@ -460,35 +487,24 @@ def main():
         shutil.rmtree(args.o)
         os.mkdir(args.o)
 
+    thread_files = []
+
     # Grabs each XML file and does all the methods above to it, and builds up the 
     # various fields for the JSON file in the process. At the end, it builds the JSON
     # file from the Parsed() object defined at the beginning.
     for subdir, dirs, files in os.walk(args.i):
         for xmldoc in files:
             if xmldoc[0] != ".":
-                tree = ET.parse(args.i + xmldoc)
-                root = tree.getroot()
-                obj = Parsed()
-                getText(root, obj)
-                text = str(obj.c)
-                if text.strip() != "":
-                    try:
-                        with open(args.o + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
-                            getTitleAndAuthor(root, obj)
-                            getPublicationInfo(root, obj)
-                            getISBN(root, obj)
-                            getYears(root, obj)
-                            fixYears(root, obj)
-                            fixYearsAgain(root, obj)
-                            fixYearsLastTime(root, obj)
-                            docType(root, obj)
-                            getChapters(root, obj)
-                            if args.f:
-                                filterText(text, obj)
-                            out.write(buildJson(obj))
-                            out.close()
-                    except IOError:
-                        pass
+                thread_files.append((xmldoc, args.i, args.o, args.f))
+                # parse_threaded(xmldoc, args.i, args.o, args.f)
+
+    pool = Pool()
+    pool.starmap(parse_threaded, thread_files)
+    pool.close()
+    pool.join()
+
+    print('Script ran in {0:f} s\n'.format(time.time() - start))
 
 if __name__ == '__main__':
+    # cProfile.runctx('main()', globals(), locals())
     main()
