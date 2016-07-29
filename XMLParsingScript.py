@@ -5,6 +5,9 @@ import json
 import re
 from nltk.corpus import stopwords
 import shutil
+import time
+from multiprocessing import Pool
+from multiprocessing.dummy import Pool as ThreadPool
 
 # This script navigates through an arbitrary number of XML files (organized according to 
 # a particular template) and builds JSON files out of them. The outputted JSON files include 
@@ -21,10 +24,10 @@ class Parsed:
         self.i = ISBN
         self.d = DocType
         self.ch = Chapters
-        self.c = Content
+        self.c = []
         self.tx = Text
     def add_content(self, text):
-        self.c += text + " "
+        self.c.append(text)
     def add_chapter(self, chapter):
         self.ch += chapter + " , "
     def add_year(self, year):
@@ -384,7 +387,7 @@ def getTheater(child, file):
                         for evenmorechildren in morechildren:
                             scanForSubtags(evenmorechildren, file)
 
-# This method corresponds to a separate field from the 'Full Text' field in the JSON file. 
+# This method corresponds to a separate field from the 'Full Text' field in the JSON file.
 # It produces an array of all the words in the book which are not stop-words (like words in Danish that
 # correspond to 'is', 'and', etc.), and also filters out non-alphabetic characters. It makes the WordFrequency
 # script run faster to just take care of it all here. It is optional, though, and controlled by the -f argument
@@ -432,15 +435,44 @@ def buildJson(file):
     file.p = file.p.replace("\n", " ")
     file.d = file.d.replace("\n", " ")
     file.ch = file.ch.replace("\n", " ")
-    file.c = file.c.replace("\n", " ")
+    s = ' '.join(file.c)
+    s = s.replace("\n", " ")
     file.y = sorted(file.y.split())[0] #only take the earliest year collected
     jfile = json.dumps({'1.Title': file.t, '2.Author': file.a, '3.Publisher': file.p, '4.Year Published': file.y, '5.ISBN': file.i,
-                        '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': file.c, '9.Filtered Text': file.tx},
+                        '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': s, '9.Filtered Text': file.tx},
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
 
+def parse_files_threaded(xmldoc, input_dir, output_dir, f):
+    if xmldoc[0] != ".":
+        tree = ET.parse(input_dir + xmldoc)
+        root = tree.getroot()
+        obj = Parsed()
+        getText(root, obj)
+        text = str(obj.c)
+        if text.strip() != "":
+            try:
+                with open(output_dir + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
+                    getTitleAndAuthor(root, obj)
+                    getPublicationInfo(root, obj)
+                    getISBN(root, obj)
+                    getYears(root, obj)
+                    fixYears(root, obj)
+                    fixYearsAgain(root, obj)
+                    fixYearsLastTime(root, obj)
+                    docType(root, obj)
+                    getChapters(root, obj)
+                    if f:
+                        filterText(text, obj)
+                    out.write(buildJson(obj))
+                    out.close()
+            except IOError:
+                pass
+
+
 def main():
+    start = time.time()
     # Command line arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
@@ -451,7 +483,7 @@ def main():
         args = parser.parse_args()
     except IOError:
         pass
-    
+
     # Checks if the output directory already exists. If it exists, the existing directory is
     # deleted and a new directory is created in its place.
     if not os.path.exists(args.o):
@@ -460,35 +492,21 @@ def main():
         shutil.rmtree(args.o)
         os.mkdir(args.o)
 
-    # Grabs each XML file and does all the methods above to it, and builds up the 
+    docs = []
+
+    # Grabs each XML file and does all the methods above to it, and builds up the
     # various fields for the JSON file in the process. At the end, it builds the JSON
     # file from the Parsed() object defined at the beginning.
     for subdir, dirs, files in os.walk(args.i):
         for xmldoc in files:
-            if xmldoc[0] != ".":
-                tree = ET.parse(args.i + xmldoc)
-                root = tree.getroot()
-                obj = Parsed()
-                getText(root, obj)
-                text = str(obj.c)
-                if text.strip() != "":
-                    try:
-                        with open(args.o + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
-                            getTitleAndAuthor(root, obj)
-                            getPublicationInfo(root, obj)
-                            getISBN(root, obj)
-                            getYears(root, obj)
-                            fixYears(root, obj)
-                            fixYearsAgain(root, obj)
-                            fixYearsLastTime(root, obj)
-                            docType(root, obj)
-                            getChapters(root, obj)
-                            if args.f:
-                                filterText(text, obj)
-                            out.write(buildJson(obj))
-                            out.close()
-                    except IOError:
-                        pass
+            docs.append((xmldoc, args.i, args.o, args.f))
+
+    pool = Pool()
+    pool.starmap(parse_files_threaded, docs)
+    pool.close()
+    pool.join()
+
+    print('Finished parsing XML data: {0:f} s\n'.format(time.time() - start))
 
 if __name__ == '__main__':
     main()
