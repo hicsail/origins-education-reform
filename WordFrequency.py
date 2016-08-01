@@ -41,7 +41,7 @@ def buildDecadeTally(decades, decadeTally):
 def populateDecadeTally(directory, decadeTally):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
-            with open(directory + "/" + jsondoc, encoding='utf8', 'r') as input:
+            with open(directory + "/" + jsondoc, 'r', encoding='utf8') as input:
                 jsondata = json.load(input)
                 text = jsondata["9.Filtered Text"]
                 year = jsondata["4.Year Published"]
@@ -89,7 +89,7 @@ def calculateTF(fdist, w):
 def calculateTFResults(keywords, decades, directory, tfResults):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
-            with open(directory + "/" + jsondoc, encoding='utf8', 'r') as input:
+            with open(directory + "/" + jsondoc, 'r', encoding='utf8') as input:
                 jsondata = json.load(input)
                 text = jsondata["9.Filtered Text"]
                 year = jsondata["4.Year Published"]
@@ -117,7 +117,7 @@ def calculateTFResults(keywords, decades, directory, tfResults):
 def calculateIDFResults(keywords, decades, decadeTally, directory, idfResults):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
-            with open(directory + "/" + jsondoc, encoding='utf8', 'r') as input:
+            with open(directory + "/" + jsondoc, 'r', encoding='utf8') as input:
                 jsondata = json.load(input)
                 text = jsondata["9.Filtered Text"]
                 year = jsondata["4.Year Published"]
