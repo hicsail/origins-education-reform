@@ -20,8 +20,7 @@ def buildDecadesList(min, max):
         i += 1
     return sorted(decades)
 
-def buildDict(decades, keywords):
-    results = {}
+def buildDict(decades, keywords, results):
     for decade in decades:
         for keyword in keywords:
             try:
@@ -30,8 +29,7 @@ def buildDict(decades, keywords):
                 results[decade] = {keyword: 0}
     return results
 
-def buildDecadeTally(decades):
-    decadeTally = {}
+def buildDecadeTally(decades, decadeTally):
     for decade in decades:
         try:
             decadeTally[decade] = 0
@@ -39,72 +37,36 @@ def buildDecadeTally(decades):
             pass
     return decadeTally
 
+
 def populateDecadeTally(directory, decadeTally):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             with open(directory + "/" + jsondoc, 'r') as input:
                 jsondata = json.load(input)
-                text = jsondata["8.Full Text"]
+                text = jsondata["9.Filtered Text"]
                 year = jsondata["4.Year Published"]
                 decade = int(year) - int(year)%10
-                if text.strip() == "":
+                try:
+                    decadeTally[decade] += 1
+                except KeyError:
                     pass
-                else:
-                    try:
-                        decadeTally[decade] += 1
-                    except KeyError:
-                        pass
     return decadeTally
 
-def buildFreqDist(directory, keywords, results):
-    for subdir, dirs, files in os.walk(directory):
-        for jsondoc in files:
-            with open(directory + "/" + jsondoc, 'r') as input:
-                jsondata = json.load(input)
-                text = jsondata["8.Full Text"]
-                year = jsondata["4.Year Published"]
-                decade = int(year) - int(year)%10
-                textList = text.split()
-                stripped_text = [word.strip(",._-:;\"\'()0123456789!?") for word in textList]
-                cleaned_text = [word.lower() for word in stripped_text]
-                if text.strip() == "":
-                    pass
-                else:
-                    fdist = nltk.FreqDist(cleaned_text)
-                    for keyword in keywords:
-                        words = keyword.split("/")
-                        for w in words:
-                            try:
-                                num = fdist[w]
-                                results[decade][keyword] += num
-                            except KeyError:
-                                pass
-    return results
+def buildTF_IDF(keywords, decades, idfResults, tfResults, tf_idfResults):
+    for decade in decades:
+        for keyword in keywords:
+            tf_idfResults[decade][keyword] += tfResults[decade][keyword] * idfResults[decade][keyword]
+    return tf_idfResults
 
-def buildTF_IDF(directory, keywords, decades, idfResults, decadeTally, tf_idfResults):
-    for subdir, dirs, files in os.walk(directory):
-        for jsondoc in files:
-            with open(directory + "/" + jsondoc, 'r') as input:
-                jsondata = json.load(input)
-                text = jsondata["8.Full Text"]
-                year = jsondata["4.Year Published"]
-                decade = int(year) - int(year)%10
-                textList = text.split()
-                stripped_text = [word.strip(",._-:;\"\'()0123456789!?") for word in textList]
-                cleaned_text = [word.lower() for word in stripped_text]
-                if text.strip() == "":
-                    pass
-                else:
-                    fdist = nltk.FreqDist(cleaned_text)
-                    for keyword in keywords:
-                        words = keyword.split("/")
-                        for w in words:
-                            try:
-                                tf = calculateTF(fdist, w)
-                                tf_idf = tf * idfResults[decade][keyword]
-                                tf_idfResults[decade][keyword] += tf_idf
-                            except KeyError:
-                                pass
+def findMax(keywords, decades, tf_idfResults):
+    max = 0
+    for decade in decades:
+        for keyword in keywords:
+            if tf_idfResults[decade][keyword] > max:
+                max = tf_idfResults[decade][keyword]
+    return max
+
+def tf_idfAvg(decades, keywords, tf_idfResults, decadeTally):
     #Take average of TF_IDF results
     for decade in decades:
         for keyword in keywords:
@@ -120,35 +82,58 @@ def buildTF_IDF(directory, keywords, decades, idfResults, decadeTally, tf_idfRes
 def calculateTF(fdist, w):
     termFreq = fdist[w]
     maxFreq = fdist[fdist.max()]
-    TF = .5 + (.5*(termFreq/maxFreq))
+    TF = (termFreq/maxFreq)
     return TF
+
+
+def calculateTFResults(keywords, decades, directory, tfResults):
+    for subdir, dirs, files in os.walk(directory):
+        for jsondoc in files:
+            with open(directory + "/" + jsondoc, 'r') as input:
+                jsondata = json.load(input)
+                text = jsondata["9.Filtered Text"]
+                year = jsondata["4.Year Published"]
+                decade = int(year) - int(year)%10
+                fdist = nltk.FreqDist(text)
+                for keyword in keywords:
+                    words = keyword.split("/")
+                    temp = 0
+                    for w in words:
+                        temp += calculateTF(fdist, w)
+                    try:
+                        tfResults[decade][keyword] += temp
+                    except KeyError:
+                        pass
+    '''
+    for decade in decades:
+        for keyword in keywords:
+            temp = tfResults[decade][keyword]
+            new = .5 + (.5 * temp)
+            tfResults[decade][keyword] = new
+    '''
+
+    return tfResults
 
 def calculateIDFResults(keywords, decades, decadeTally, directory, idfResults):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             with open(directory + "/" + jsondoc, 'r') as input:
                 jsondata = json.load(input)
-                text = jsondata["8.Full Text"]
+                text = jsondata["9.Filtered Text"]
                 year = jsondata["4.Year Published"]
                 decade = int(year) - int(year)%10
-                textList = text.split()
-                stripped_text = [word.strip(",._-:;\"\'()0123456789!?") for word in textList]
-                cleaned_text = [word.lower() for word in stripped_text]
-                if text.strip() == "":
-                    pass
-                else:
-                    fdist = nltk.FreqDist(cleaned_text)
-                    for keyword in keywords:
-                        words = keyword.split("/")
-                        for w in words:
-                            if fdist[w] > 0:
-                                try:
-                                    idfResults[decade][keyword] += 1
-                                    break
-                                except KeyError:
-                                    pass
-                            else:
+                fdist = nltk.FreqDist(text)
+                for keyword in keywords:
+                    words = keyword.split("/")
+                    for w in words:
+                        if fdist[w] > 0:
+                            try:
+                                idfResults[decade][keyword] += 1
+                                break
+                            except KeyError:
                                 pass
+                        else:
+                            pass
     for decade in decades:
         for keyword in keywords:
             try:
@@ -160,6 +145,7 @@ def calculateIDFResults(keywords, decades, decadeTally, directory, idfResults):
             except KeyError:
                 pass
     return idfResults
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -178,13 +164,23 @@ def main():
     min_max = args.d.split()
     decades = buildDecadesList(min_max[0], min_max[1])
 
-    decadeTally = buildDecadeTally(decades)
+    decadeTally = {}
+    tf_idfResults = {}
+    tfResults = {}
+    idfResults = {}
+
+    decadeTally = buildDecadeTally(decades, decadeTally)
     decadeTally = populateDecadeTally(directory, decadeTally)
 
-    tf_idfResults = buildDict(decades, keywords)
-    idfResults = buildDict(decades, keywords)
+    tf_idfResults = buildDict(decades, keywords, tf_idfResults)
+    tfResults = buildDict(decades, keywords, tfResults)
+    idfResults = buildDict(decades, keywords, idfResults)
     idfResults = calculateIDFResults(keywords, decades, decadeTally, directory, idfResults)
-    tf_idfResults = buildTF_IDF(directory, keywords, decades, idfResults, decadeTally, tf_idfResults)
+    tfResults = calculateTFResults(keywords, decades, directory, tfResults)
+    tf_idfResults = buildTF_IDF(keywords, decades, idfResults, tfResults, tf_idfResults)
+    tf_idfResults = tf_idfAvg(decades, keywords, tf_idfResults, decadeTally)
+
+    max = findMax(keywords, decades, tf_idfResults)
 
     out = open(args.o + ".txt", 'w')
 
@@ -207,8 +203,31 @@ def main():
            mode="expand", borderaxespad=0.)
     plt.xlabel("Decade")
     plt.ylabel("Word Frequency")
-    plt.axis([int(min_max[0]), int(min_max[1]), 0, 2])
+    plt.axis([int(min_max[0]), int(min_max[1]), 0, max])
     plt.show()
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
