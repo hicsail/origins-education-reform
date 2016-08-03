@@ -7,7 +7,6 @@ from nltk.corpus import stopwords
 import shutil
 import time
 from multiprocessing import Pool
-import cProfile
 
 # This script navigates through an arbitrary number of XML files (organized according to 
 # a particular template) and builds JSON files out of them. The outputted JSON files include 
@@ -16,7 +15,7 @@ import cProfile
 
 # Class for file object
 class Parsed:
-    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters='', Content=[], Text=[]):
+    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters='', Content=None, Text=None):
         self.t = Title
         self.a = Author
         self.p = PubInfo
@@ -24,8 +23,14 @@ class Parsed:
         self.i = ISBN
         self.d = DocType
         self.ch = Chapters
-        self.c = Content
-        self.tx = Text
+        if Content is None:
+            self.c = []
+        else:
+            self.c = Content
+        if Content is None:
+            self.tx = []
+        else:
+            self.tx = Text
     def add_content(self, text):
         self.c.extend(text.split(' '))
     def add_chapter(self, chapter):
@@ -441,29 +446,30 @@ def buildJson(file):
 
 
 def parse_threaded(xmldoc, input_doc, output_doc, f):
-    tree = ET.parse(input_doc + xmldoc)
-    root = tree.getroot()
-    obj = Parsed()
-    getText(root, obj)
-    text = obj.c
-    if text:
-        try:
-            with open(output_doc + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
-                getTitleAndAuthor(root, obj)
-                getPublicationInfo(root, obj)
-                getISBN(root, obj)
-                getYears(root, obj)
-                fixYears(root, obj)
-                fixYearsAgain(root, obj)
-                fixYearsLastTime(root, obj)
-                docType(root, obj)
-                getChapters(root, obj)
-                if f:
-                    filterText(text, obj)
-                out.write(buildJson(obj))
-                out.close()
-        except IOError:
-            pass
+    if xmldoc[0] != ".":
+        tree = ET.parse(input_doc + xmldoc)
+        root = tree.getroot()
+        obj = Parsed()
+        getText(root, obj)
+        text = obj.c
+        if text:
+            try:
+                with open(output_doc + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
+                    getTitleAndAuthor(root, obj)
+                    getPublicationInfo(root, obj)
+                    getISBN(root, obj)
+                    getYears(root, obj)
+                    fixYears(root, obj)
+                    fixYearsAgain(root, obj)
+                    fixYearsLastTime(root, obj)
+                    docType(root, obj)
+                    getChapters(root, obj)
+                    if f:
+                        filterText(text, obj)
+                    out.write(buildJson(obj))
+                    out.close()
+            except IOError:
+                pass
 
 
 def main():
@@ -494,9 +500,7 @@ def main():
     # file from the Parsed() object defined at the beginning.
     for subdir, dirs, files in os.walk(args.i):
         for xmldoc in files:
-            if xmldoc[0] != ".":
                 thread_files.append((xmldoc, args.i, args.o, args.f))
-                # parse_threaded(xmldoc, args.i, args.o, args.f)
 
     pool = Pool()
     pool.starmap(parse_threaded, thread_files)
