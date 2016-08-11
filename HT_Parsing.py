@@ -20,16 +20,20 @@ class Parsed:
         self.c += text + " "
     def add_chapter(self, chapter):
         self.ch += chapter + " , "
+    
 
 def filterText(text, file):
-    textList = text.strip().split()
-    stripped_text = [word.strip(",._-:;\"'\n\t\r()[]{}^*/[]0123456789!?") for word in textList]
-    for i in range(len(stripped_text) - 1, -1, -1):
-        if stripped_text[i] == "":
-            del stripped_text[i]
-    cleaned_text = [word.lower() for word in stripped_text]
-    filtered_words = [word for word in cleaned_text if word not in stopwords.words('english')]
-    file.tx = filtered_words
+    textList = text
+    filtered_words = set(stopwords.words('danish'))
+    # Strip each word of non-alphabetic characters
+    # Loop backwards because delete changes index
+    for i in range(len(textList) - 1, -1, -1):
+        textList[i] = textList[i].strip(",._-:;\"'\\()[]0123456789!?").lower()
+        # Delete empty strings or stopwords
+        if textList[i] == "" or textList[i] in filtered_words:
+            del textList[i]
+    file.tx = textList
+
 
 def getHTID(root, file):
     if "objectIdentifierValue" in root.tag:
