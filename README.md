@@ -24,21 +24,41 @@ Example usage:
     * ``-i input_files_folder_path``
         
         Specify filepath to director containing the input files(required).
-    *``-o output_files_folder_path``
+        
+    *``-o output_file_path``
     
         Specify filepath to output file (required). The script will create a .txt file with the name you specify, so make sure the filepath you enter isn't already occupied by a directory of the same name.
         
-    * ``-k "list_of_keywords" ``
+    * ``-k "list_of_keywords"``
     
-        Specify which keywords you wish to perform a frequency analysis on. Separate unique words by spaces, and words with multiple spellings by "/".
+        Specify which keywords you wish to perform a frequency analysis on. Separate unique words by spaces. If you would like to count certain words together (e.g. "train" & "trains"), then separate them with a forward slash ("/") character. They will then be treated as the same keyword. Surround the entire list with quotes.
         
     * ``-d "min max" ``
     
         Specify the min and max for which decades you would like the program to run the word count on. Separate each value by a space, and surround with quotes.
         
+    * The following four flags determine which of the collected data is represented on a graph. While only one may be selected,
+      all of them are written to a text file when the script finishes running.
+        
+        * ``-t_avg``
+        
+            Graph the average tfidf score for each keyword/decade pair.
+            
+        * ``-t_max`` 
+        
+            Graph the max tfidf score for each keyword/decade pair.
+            
+        * ``-t_min`` 
+        
+            Graph  the min tfidf score for each keyword/decade pair.
+            
+        * ``-percent``
+        
+            Graph basic term frequency as a percentage of total words for each decade.
+    
 Example usage:
 
-    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -o /Users/Ketchup/Desktop/Word_Frequency -k "test1 test2/test3 test4 test5/test6/test7 test8" -d "1700 1940"
+    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -o /Users/Ketchup/Desktop/Word_Frequency -k "test1 test2/test3 test4 test5/test6/test7 test8" -d "1700 1940" -percent
 
 * ``YearScraping.py``
     
@@ -54,11 +74,6 @@ Example usage:
     *``-o output_files_folder_path``
     
         Specify filepath to output directory (required). If the directory already exists, it will be overwritten.
-        
-    *``-d Document Type``
-    
-        Specify which type of documents are contained in the HT files (Fiction/Drama/Poetry). It will be used to populate
-        the "Document Type" field in the Json files.
         
     *``-c csv_file_path``
     
