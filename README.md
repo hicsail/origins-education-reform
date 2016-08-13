@@ -25,7 +25,7 @@ Example usage:
         
         Specify filepath to director containing the input files(required).
         
-    *``-o output_file_path``
+    * ``-o output_file_path``
     
         Specify filepath to output file (required). The script will create a .txt file with the name you specify, so make sure the filepath you enter isn't already occupied by a directory of the same name.
         
