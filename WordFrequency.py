@@ -23,7 +23,7 @@ def buildKeyList(keywords):
 # construct list of decades
 def buildDecadesList(min, max):
     decadesMin = int(min)
-    decadesMax = int(max)
+    decadesMax = int(max) + 10
     numElements = ((decadesMax - decadesMin) / 10)
     decades = [None] * int(numElements)
     i = 0
@@ -155,8 +155,12 @@ def tf_idfMin(decades, keywords, tf_idfResults):
 # calculate term frequency for tfidf
 def calculateTF(fdist, w):
     termFreq = fdist[w]
-    maxFreq = fdist[fdist.max()]
-    TF = (termFreq/maxFreq)
+    try:
+        maxFreq = fdist[fdist.max()]
+        TF = (termFreq/maxFreq)
+    except ValueError:
+        # Text empty, maxFreq = 0
+        TF = 0
     return TF
 
 
@@ -234,7 +238,11 @@ def totalWordCount(decades, directory):
                     words = len(text)
                     year = jsondata["4.Year Published"]
                     decade = int(year) - int(year)%10
-                    word_totals[decade] += words
+                    try:
+                        word_totals[decade] += words
+                    except KeyError:
+                        # decade out of range (specified by user)
+                        pass
     return word_totals
 
 
@@ -254,7 +262,11 @@ def keywordCount(decades, keywords, directory):
                         words = keyword.split("/")
                         for w in words:
                             word_count = fdist[w]
-                            keyword_totals[decade][keyword] += word_count
+                            try:
+                                keyword_totals[decade][keyword] += word_count
+                            except KeyError:
+                                # decade out of range (specified by user)
+                                pass
     return keyword_totals
 
 
@@ -266,7 +278,7 @@ def takeKeywordPercentage(decades, keywords, total_words, keyword_totals):
         for keyword in keywords:
             num = keyword_totals[decade][keyword]
             den = total_words[decade]
-            percent = round(num/den, 4) * 100
+            percent = round((num/den) * 100, 4)
             keyword_percentages[decade][keyword] = percent
     return keyword_percentages
 
@@ -328,6 +340,20 @@ def main():
     keyword_totals = keywordCount(decades, keywords, directory)
     keyword_percentage = takeKeywordPercentage(decades, keywords, total_words, keyword_totals)
 
+    # create txt file and write all the collected data to it
+    out = open(args.o + ".txt", 'w')
+    for decade in decades:
+        out.write("Decade: " + str(decade) + "\n")
+        out.write("Number of books for this decade: " + str(decadeTally[decade]) + "\n")
+        for keyword in keywords:
+            out.write(keyword + ":" + "\n")
+            out.write("Avg TFIDF score for this decade: {0}".format(str(tf_idf_avg[decade][keyword]) + "\n"))
+            out.write("Max TFIDF score for this decade: {0}".format(str(tf_idf_max[decade][keyword]) + "\n"))
+            out.write("Min TFIDF score for this decade: {0}".format(str(tf_idf_min[decade][keyword]) + "\n"))
+            out.write("Word frequency (as percentage of total words) for this decade: {0}".format(
+                str(keyword_percentage[decade][keyword]) + "%\n"))
+        out.write("\n")
+
     # determine graph parameters, depending on which flag is set
     if args.t_avg:
         g_max = findMax(keywords, decades, tf_idf_avg)
@@ -358,24 +384,10 @@ def main():
                mode="expand", borderaxespad=0.)
     plt.xlabel("Decade")
     plt.ylabel("Word Frequency")
-    plt.axis([int(range_years[0]), int(range_years[1]) - 10, g_min - .05, g_max + .05])
-    plt.show(block=False)
-
-    # create txt file and write all the collected data to it
-    out = open(args.o + ".txt", 'w')
-    for decade in decades:
-        out.write("Decade: " + str(decade) + "\n")
-        out.write("Number of books for this decade: " + str(decadeTally[decade]) + "\n")
-        for keyword in keywords:
-            out.write(keyword + ":" + "\n")
-            out.write("Avg TFIDF score for this decade: {0}".format(str(tf_idf_avg[decade][keyword]) + "\n"))
-            out.write("Max TFIDF score for this decade: {0}".format(str(tf_idf_max[decade][keyword]) + "\n"))
-            out.write("Min TFIDF score for this decade: {0}".format(str(tf_idf_min[decade][keyword]) + "\n"))
-            out.write("Word frequency (as percentage of total words) for this decade: {0}".format(
-                str(keyword_percentage[decade][keyword]) + "%\n"))
-        out.write("\n")
-
-    # call show again so it doesn't close at the end of computation
+    if (g_min - .05) < 0:
+        plt.axis([int(range_years[0]), int(range_years[1]) - 10, 0, g_max + .05])
+    else:
+        plt.axis([int(range_years[0]), int(range_years[1]) - 10, g_min - .05, g_max + .05])
     plt.show()
 
 if __name__ == '__main__':
