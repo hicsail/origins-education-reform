@@ -5,7 +5,6 @@ import argparse
 import math
 import matplotlib.pyplot as plt
 
-
 #                           *** WordFrequencyScript.py ***
 # Takes Json documents organized in a specific way and performs various statistics on them w/r/t
 # keywords provided by the user. As of 8/13/16 this script supports avg/max/min calculations for tfidf
@@ -21,9 +20,9 @@ def buildKeyList(keywords):
 
 
 # construct list of decades
-def buildDecadesList(min, max):
-    decadesMin = int(min)
-    decadesMax = int(max) + 10
+def buildDecadesList(dmin, dmax):
+    decadesMin = int(dmin)
+    decadesMax = int(dmax) + 10
     numElements = ((decadesMax - decadesMin) / 10)
     decades = [None] * int(numElements)
     i = 0
@@ -33,11 +32,19 @@ def buildDecadesList(min, max):
     return sorted(decades)
 
 
-# simplest dict, used for calculating word percentage
-def buildSimpleDict(decades):
+# simplest dict with numbers as values, used for calculating word percentage
+def buildSimpleDictOfNums(decades):
     results = {}
     for decade in decades:
         results[decade] = 0
+    return results
+
+
+# simplest dict with lists as values, used for calculating the top n words
+def buildSimpleDictOfLists(decades):
+    results = {}
+    for decade in decades:
+        results[decade] = []
     return results
 
 
@@ -198,8 +205,8 @@ def calculateIDFResults(keywords, decades, decadeTally, directory):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as input:
-                    jsondata = json.load(input)
+                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                    jsondata = json.load(in_file)
                     text = jsondata["9.Filtered Text"]
                     year = jsondata["4.Year Published"]
                     decade = int(year) - int(year)%10
@@ -228,7 +235,7 @@ def calculateIDFResults(keywords, decades, decadeTally, directory):
 
 # returns total word count for each decade
 def totalWordCount(decades, directory):
-    word_totals = buildSimpleDict(decades)
+    word_totals = buildSimpleDictOfNums(decades)
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             if jsondoc[0] != ".":
@@ -293,6 +300,49 @@ def buildGraphList(keyword, decades, param):
     return a
 
 
+# first need a list of all the words for frequency distribution
+def obtainWordList(directory, decade):
+    word_list = []
+    for subdir, dirs, files in os.walk(directory):
+        for jsondoc in files:
+            if jsondoc[0] != ".":
+                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as input:
+                    jsondata = json.load(input)
+                    year = jsondata["4.Year Published"]
+                    d = int(year) - int(year)%10
+                    if d == decade:
+                        text = jsondata["9.Filtered Text"]
+                        word_list.extend(text)
+    return word_list
+
+
+# might need a set of word_list (minimizes redundancy / faster lookup)
+def wordListToSet(word_list):
+    word_set = set()
+    for word in word_list:
+        word_set.add(word)
+    return word_set
+
+
+# build list of words
+def obtainNWords(fdist, num, total_words):
+    keywords = []
+    n_list = fdist.most_common(num)
+    for key_tup in n_list:
+        keywords.append((key_tup[0], round((key_tup[1]/total_words)*100, 4)))
+    return keywords
+
+
+def calculateNWords(decades, directory, num):
+    nDict = buildSimpleDictOfLists(decades)
+    for decade in decades:
+        word_list = obtainWordList(directory, decade)
+        total_words = len(word_list)
+        fdist = nltk.FreqDist(word_list)
+        nDict[decade].extend(obtainNWords(fdist, num, total_words))
+    return nDict
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
@@ -302,7 +352,11 @@ def main():
     parser.add_argument("-t_avg", help="take tf_idf avg for each decade", action="store_true")
     parser.add_argument("-t_max", help="take tf_idf max for each decade", action="store_true")
     parser.add_argument("-t_min", help="take tf_idf min for each decade", action="store_true")
-    parser.add_argument("-percent", help="graph word frequency as a percentage of total words (not tfidf)", action="store_true")
+    parser.add_argument("-percent", help="graph word frequency as a percentage of total words (not tfidf)",
+                        action="store_true")
+    parser.add_argument("-n", help="boolean for top n words", action="store_true")
+    parser.add_argument("-num", help="number of words to grab from each decade, according to whichever metric "
+                                     "is chosen to be graphed", action="store")
 
     try:
         args = parser.parse_args()
@@ -322,37 +376,52 @@ def main():
 
     # check to make sure only one of the avg/max/min flags are set
     check = []
-    check.append(int(args.t_avg)), check.append(int(args.t_max)), check.append(int(args.t_min)), check.append(int(args.percent))
+    check.append(int(args.t_avg)), check.append(int(args.t_max)), \
+    check.append(int(args.t_min)), check.append(int(args.percent))
     if sum(check) > 1:
         fail("Please enter a maximum of one of the following arguments: -avg, -max, -min, -percent")
 
-    # build/populate dicts
-    idfResults = calculateIDFResults(keywords, decades, decadeTally, directory)
-    tf_idfResults = calculateTF_IDFResults(decades, keywords, directory, idfResults)
+    if args.t_avg or args.t_max or args.t_min or args.percent:
+        # build/populate dicts
+        idfResults = calculateIDFResults(keywords, decades, decadeTally, directory)
+        tf_idfResults = calculateTF_IDFResults(decades, keywords, directory, idfResults)
 
-    # take avg/max/min
-    tf_idf_avg = tf_idfAvg(decades, keywords, tf_idfResults)
-    tf_idf_max = tf_idfMax(decades, keywords, tf_idfResults)
-    tf_idf_min = tf_idfMin(decades, keywords, tf_idfResults)
+        # take avg/max/min
+        tf_idf_avg = tf_idfAvg(decades, keywords, tf_idfResults)
+        tf_idf_max = tf_idfMax(decades, keywords, tf_idfResults)
+        tf_idf_min = tf_idfMin(decades, keywords, tf_idfResults)
 
-    # take percent over total words for each keyword
-    total_words = totalWordCount(decades, directory)
-    keyword_totals = keywordCount(decades, keywords, directory)
-    keyword_percentage = takeKeywordPercentage(decades, keywords, total_words, keyword_totals)
+        # take percent over total words for each keyword
+        total_words = totalWordCount(decades, directory)
+        keyword_totals = keywordCount(decades, keywords, directory)
+        keyword_percentage = takeKeywordPercentage(decades, keywords, total_words, keyword_totals)
+
+    if args.n:
+        # calculate top N words for each decade
+        n = int(args.num)
+        nDict = calculateNWords(decades, directory, n)
 
     # create txt file and write all the collected data to it
     out = open(args.o + ".txt", 'w')
     for decade in decades:
         out.write("Decade: " + str(decade) + "\n")
         out.write("Number of books for this decade: " + str(decadeTally[decade]) + "\n")
-        for keyword in keywords:
-            out.write(keyword + ":" + "\n")
-            out.write("Avg TFIDF score for this decade: {0}".format(str(tf_idf_avg[decade][keyword]) + "\n"))
-            out.write("Max TFIDF score for this decade: {0}".format(str(tf_idf_max[decade][keyword]) + "\n"))
-            out.write("Min TFIDF score for this decade: {0}".format(str(tf_idf_min[decade][keyword]) + "\n"))
-            out.write("Word frequency (as percentage of total words) for this decade: {0}".format(
-                str(keyword_percentage[decade][keyword]) + "%\n"))
-        out.write("\n")
+        if args.t_avg or args.t_max or args.t_min or args.percent:
+            for keyword in keywords:
+                out.write(keyword + ":" + "\n")
+                out.write("Avg TFIDF score for this decade: {0}".format(str(tf_idf_avg[decade][keyword]) + "\n"))
+                out.write("Max TFIDF score for this decade: {0}".format(str(tf_idf_max[decade][keyword]) + "\n"))
+                out.write("Min TFIDF score for this decade: {0}".format(str(tf_idf_min[decade][keyword]) + "\n"))
+                out.write("Word frequency (as percentage of total words) for this decade: {0}".format(
+                    str(keyword_percentage[decade][keyword]) + "%\n"))
+            out.write("Top {0} words for this decade: ".format(str(args.n)))
+            out.write("\n")
+        i = 1
+        if args.n:
+            for key_tup in nDict[decade]:
+                out.write(str(i) + ". " + str(key_tup[0]) + ": " + str(key_tup[1]) + "%\n")
+                i += 1
+            out.write("\n")
 
     # determine graph parameters, depending on which flag is set
     if args.t_avg:
@@ -380,15 +449,16 @@ def main():
             plt.plot(decades, buildGraphList(keyword, decades, keyword_percentage), label=keyword)
 
     # specifies graph params/labels
-    plt.legend(bbox_to_anchor=(0, 1.02, 1., .102), loc=3, ncol=int(len(keywords)/2),
-               mode="expand", borderaxespad=0.)
-    plt.xlabel("Decade")
-    plt.ylabel("Word Frequency")
-    if (g_min - .05) < 0:
-        plt.axis([int(range_years[0]), int(range_years[1]) - 10, 0, g_max + .05])
-    else:
-        plt.axis([int(range_years[0]), int(range_years[1]) - 10, g_min - .05, g_max + .05])
-    plt.show()
+    if args.t_avg or args.t_max or args.t_min or args.percent:
+        plt.legend(bbox_to_anchor=(0, 1.02, 1., .102), loc=3, ncol=int(len(keywords)/2),
+                   mode="expand", borderaxespad=0.)
+        plt.xlabel("Decade")
+        plt.ylabel("Word Frequency")
+        if (g_min - .05) < 0:
+            plt.axis([int(range_years[0]), int(range_years[1]) - 10, 0, g_max + .05])
+        else:
+            plt.axis([int(range_years[0]), int(range_years[1]) - 10, g_min - .05, g_max + .05])
+        plt.show()
 
 if __name__ == '__main__':
     main()
