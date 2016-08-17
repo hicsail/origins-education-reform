@@ -37,8 +37,16 @@ Example usage:
     
         Specify the min and max for which decades you would like the program to run the word count on. Separate each value by a space, and surround with quotes.
         
+    * ``-n``
+    
+        Boolean flag that controls whether the script will search for the top word frequencies per decade. The results of the search are then printed onto a text file when the script finishes running.
+        
+    * ``-num "integer" `` 
+    
+        If the flag ``-n`` above is selected, this field is also required. It tells the script how many top words per decade to look for.
+        
     * The following four flags determine which of the collected data is represented on a graph. While only one may be selected,
-      all of them are written to a text file when the script finishes running.
+      all of them are written to a text file when the script finishes running. If none are selected, then nothing will be graphed and none of them will be written to the text file.
         
         * ``-t_avg``
         
