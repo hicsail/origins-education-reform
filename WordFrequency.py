@@ -5,6 +5,7 @@ import argparse
 import math
 import matplotlib.pyplot as plt
 
+
 #                           *** WordFrequencyScript.py ***
 # Takes Json documents organized in a specific way and performs various statistics on them w/r/t
 # keywords provided by the user. As of 8/13/16 this script supports avg/max/min calculations for tfidf
@@ -21,12 +22,12 @@ def buildKeyList(keywords):
 
 # construct list of decades
 def buildDecadesList(dmin, dmax):
-    decadesMin = int(dmin)
-    decadesMax = int(dmax) + 10
-    numElements = ((decadesMax - decadesMin) / 10)
+    decades_min = int(dmin)
+    decades_max = int(dmax) + 10
+    numElements = ((decades_max - decades_min) / 10)
     decades = [None] * int(numElements)
     i = 0
-    for num in range(decadesMin, decadesMax, 10):
+    for num in range(decades_min, decades_max, 10):
         decades[i] = num
         i += 1
     return sorted(decades)
@@ -200,8 +201,8 @@ def calculateTF_IDFResults(decades, keywords, directory, idfResults):
 
 
 # calculates idf score for each keyword/decade pair
-def calculateIDFResults(keywords, decades, decadeTally, directory):
-    idfResults = buildDictOfNums(decades, keywords)
+def calculateIDFResults(keywords, decades, decade_tally, directory):
+    idf_results = buildDictOfNums(decades, keywords)
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             if jsondoc[0] != ".":
@@ -216,7 +217,7 @@ def calculateIDFResults(keywords, decades, decadeTally, directory):
                         for w in words:
                             if fdist[w] > 0:
                                 try:
-                                    idfResults[decade][keyword] += 1
+                                    idf_results[decade][keyword] += 1
                                     break
                                 except KeyError:
                                     pass
@@ -226,11 +227,12 @@ def calculateIDFResults(keywords, decades, decadeTally, directory):
         for keyword in keywords:
             try:
                 #Add 1 before logarithm to ensure idf is nonzero
-                idfResults[decade][keyword] = \
-                    1 + round(math.log((decadeTally[decade]) / idfResults[decade][keyword], 10), 4) if idfResults[decade][keyword] > 0 else 0
+                idf_results[decade][keyword] = \
+                    1 + round(math.log((decade_tally[decade]) / idf_results[decade][keyword], 10), 4) \
+                        if idf_results[decade][keyword] > 0 else 0
             except KeyError:
                 pass
-    return idfResults
+    return idf_results
 
 
 # returns total word count for each decade
@@ -239,8 +241,8 @@ def totalWordCount(decades, directory):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as input:
-                    jsondata = json.load(input)
+                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                    jsondata = json.load(in_file)
                     text = jsondata["9.Filtered Text"]
                     words = len(text)
                     year = jsondata["4.Year Published"]
@@ -259,8 +261,8 @@ def keywordCount(decades, keywords, directory):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as input:
-                    jsondata = json.load(input)
+                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                    jsondata = json.load(in_file)
                     text = jsondata["9.Filtered Text"]
                     year = jsondata["4.Year Published"]
                     decade = int(year) - int(year)%10
@@ -306,8 +308,8 @@ def obtainWordList(directory, decade):
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as input:
-                    jsondata = json.load(input)
+                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                    jsondata = json.load(in_file)
                     year = jsondata["4.Year Published"]
                     d = int(year) - int(year)%10
                     if d == decade:
@@ -356,7 +358,7 @@ def main():
                         action="store_true")
     parser.add_argument("-n", help="boolean for top n words", action="store_true")
     parser.add_argument("-num", help="number of words to grab from each decade, according to whichever metric "
-                                     "is chosen to be graphed", action="store")
+                                   "is chosen to be graphed", action="store")
 
     try:
         args = parser.parse_args()
@@ -372,18 +374,18 @@ def main():
     keywords = buildKeyList(args.k)
     range_years = args.d.split()
     decades = buildDecadesList(range_years[0], range_years[1])
-    decadeTally = buildDecadeTally(directory, decades)
+    decade_tally = buildDecadeTally(directory, decades)
 
     # check to make sure only one of the avg/max/min flags are set
     check = []
     check.append(int(args.t_avg)), check.append(int(args.t_max)), \
-    check.append(int(args.t_min)), check.append(int(args.percent))
+        check.append(int(args.t_min)), check.append(int(args.percent))
     if sum(check) > 1:
         fail("Please enter a maximum of one of the following arguments: -avg, -max, -min, -percent")
 
     if args.t_avg or args.t_max or args.t_min or args.percent:
         # build/populate dicts
-        idfResults = calculateIDFResults(keywords, decades, decadeTally, directory)
+        idfResults = calculateIDFResults(keywords, decades, decade_tally, directory)
         tf_idfResults = calculateTF_IDFResults(decades, keywords, directory, idfResults)
 
         # take avg/max/min
@@ -399,13 +401,13 @@ def main():
     if args.n:
         # calculate top N words for each decade
         n = int(args.num)
-        nDict = calculateNWords(decades, directory, n)
+        n_dict = calculateNWords(decades, directory, n)
 
     # create txt file and write all the collected data to it
     out = open(args.o + ".txt", 'w')
     for decade in decades:
         out.write("Decade: " + str(decade) + "\n")
-        out.write("Number of books for this decade: " + str(decadeTally[decade]) + "\n")
+        out.write("Number of books for this decade: " + str(decade_tally[decade]) + "\n")
         if args.t_avg or args.t_max or args.t_min or args.percent:
             for keyword in keywords:
                 out.write(keyword + ":" + "\n")
@@ -418,7 +420,7 @@ def main():
             out.write("\n")
         i = 1
         if args.n:
-            for key_tup in nDict[decade]:
+            for key_tup in n_dict[decade]:
                 out.write(str(i) + ". " + str(key_tup[0]) + ": " + str(key_tup[1]) + "%\n")
                 i += 1
             out.write("\n")
