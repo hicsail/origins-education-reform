@@ -1,19 +1,19 @@
 import xml.etree.ElementTree as ET
-import os
-import argparse
-import json
-import re
+import os, argparse, json, re, shutil
 from nltk.corpus import stopwords
-import shutil
+from multiprocessing import Pool
+from nltk.stem.snowball import SnowballStemmer
 
-# This script navigates through an arbitrary number of XML files (organized according to 
-# a particular template) and builds JSON files out of them. The outputted JSON files include 
+#                           XMLParsingScript.py
+# This script navigates through a directory of XML files (organized according to
+# a specific template) and builds JSON files out of them. The outputted JSON files include
 # separate fields for: Title, Author, Publication Info, Publication Date, ISBN Number, Chapter
-# List, Full Text, and (optionally) Filtered Text.
+# List, Full Text, Filtered Text, and Stemmed Text.
+#
 
 # Class for file object
 class Parsed:
-    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters='', Content='', Text=[]):
+    def __init__(self, Title='', Author='', PubInfo='', Years="2000 ", ISBN='', DocType='', Chapters=''):
         self.t = Title
         self.a = Author
         self.p = PubInfo
@@ -21,25 +21,27 @@ class Parsed:
         self.i = ISBN
         self.d = DocType
         self.ch = Chapters
-        self.c = Content
-        self.tx = Text
+        self.c = []
+        self.tx = []
+        self.stem = []
     def add_content(self, text):
-        self.c += text + " "
+        self.c.extend(text.split())
     def add_chapter(self, chapter):
-        self.ch += chapter + " , "
+        self.ch += chapter + ", "
     def add_year(self, year):
         self.y += year + " "
 
-# For all the "get" methods below, the 'if' statements just lead the method through paths in the XML 
-# document where the information that it's trying to get typically resides. For example, the 
-# 'getTitleAndAuthor' method looks for all tags in the XML document with the words "title" and "author" in them, 
+
+# For all the "get" methods below, the 'if' statements just lead the method through paths in the XML
+# document where the information that it's trying to get typically resides. For example, the
+# 'getTitleAndAuthor' method looks for all tags in the XML document with the words "title" and "author" in them,
 # which are themselves children of a tag called "titleStmt". It recursively searches through the XML file, which
 # is to say that if it is called on a node in which it doesn't find on of the words that it's looking for,
 # it will simply check all the children of that node (and so on and so on) until it gets to a node with no children.
-# It will thus search the entire XML file and output only the information you want, so long as you point it to the right 
+# It will thus search the entire XML file and output only the information you want, so long as you point it to the right
 # sequence of tags.
 
-# Self-explanatory
+
 def getTitleAndAuthor(root, file):
     if "titleStmt" in root.tag:
         for child in root:
@@ -51,6 +53,7 @@ def getTitleAndAuthor(root, file):
     else:
         for child in root:
             getTitleAndAuthor(child, file)
+
 
 # Outputs Publisher
 def getPublicationInfo(root, file):
@@ -66,6 +69,7 @@ def getPublicationInfo(root, file):
         for child in root:
             getPublicationInfo(child, file)
 
+
 # Looks for common subtags that contain text
 def scanSubtagsYears(root, file):
     if root.tag == "{http://www.tei-c.org/ns/1.0}pb":
@@ -75,105 +79,32 @@ def scanSubtagsYears(root, file):
     if root.tag == "{http://www.tei-c.org/ns/1.0}lb":
         addYears(root, file)
 
+
 # Appends a year to a file's year field
 def addYears(root, file):
     text = str(root.text) + str(root.tail)
     text = text.strip(' \t\n\r')
     text = text.replace("None", "")
-    reg = re.compile("[1][7-9][0-9]{2}")
+    reg = re.compile("[1][4-9][0-9]{2}")
     years = reg.findall(text)
     years[:] = [s.replace(" ", "") for s in years]
-    i = 0
-    while i < len(years):
-        file.add_year(years[i])
-        i += 1
+    for year in years:
+        file.add_year(year)
 
-# There are four separate methods for grabbing the year of publication.
-# This will likely need to be fixed in the future, but there are a lot of
-# different paths though each XML file where publication years are included,
-# and since these methods are recursive, I can't think of any way to trace each
-# path without separating them into four distinct functions.
-# Since we're adding years manually, I suppose these methods are actually 
-# pretty useless now. I'm keeping them here just in case we end up needing 
-#them in the future.
 
+# Find publication year
 def getYears(root, file):
-    if "publisher" in root.tag or "bibl" in root.tag or "title" in root.tag or "date" in root.tag:
-        addYears(root, file)
+    if "publicationStmt" in root.tag:
         for child in root:
-            scanSubtagsYears(child, file)
-            if "date" in child.tag or "title" in child.tag:
+            if "publisher" in child.tag:
                 addYears(child, file)
                 for children in child:
                     scanSubtagsYears(children, file)
+        return
     else:
         for child in root:
             getYears(child, file)
 
-def fixYears(root, file):
-    a = sorted(file.y.split())[0]
-    if int(a) > 1930:
-        if "front" in root.tag or "body" in root.tag:
-            addYears(root, file)
-            for child in root:
-                scanSubtagsYears(child, file)
-                if "div" in child.tag:
-                    addYears(child, file)
-                    for children in child:
-                        scanSubtagsYears(children, file)
-                        if "p" in children.tag:
-                            addYears(children, file)
-                            for morechildren in children:
-                                scanSubtagsYears(morechildren, file)
-        else:
-            for child in root:
-                fixYears(child, file)
-
-def fixYearsAgain(root, file):
-    a = sorted(file.y.split())[0]
-    if int(a) > 1930:
-        if "fileDesc" in root.tag:
-            addYears(root, file)
-            for child in root:
-                scanSubtagsYears(child, file)
-                if "sourceDesc" in child.tag:
-                    addYears(child, file)
-                    for children in child:
-                        scanSubtagsYears(children, file)
-                        if "title" in children.tag or "date" in children.tag:
-                            addYears(children, file)
-                            for morechildren in children:
-                                scanSubtagsYears(morechildren, file)
-        else:
-            for child in root:
-                fixYearsAgain(child, file)
-
-def fixYearsLastTime(root, file):
-    a = sorted(file.y.split())[0]
-    if int(a) > 1930:
-        if "text" in root.tag:
-            addYears(root, file)
-            for child in root:
-                scanSubtagsYears(child, file)
-                if "front" in child.tag:
-                    addYears(child, file)
-                    for children in child:
-                        scanSubtagsYears(children, file)
-                        if "div" in children.tag or "argument" in children.tag:
-                            addYears(children, file)
-                            for morechildren in children:
-                                scanSubtagsYears(morechildren, file)
-                                if "p" in morechildren.tag or "div" in morechildren.tag:
-                                    addYears(morechildren, file)
-                                    for evenmorechildren in morechildren:
-                                        scanSubtagsYears(evenmorechildren, file)
-                                        if "p" in evenmorechildren.tag:
-                                            addYears(evenmorechildren, file)
-                                            for wowmorechildren in evenmorechildren:
-                                                scanSubtagsYears(wowmorechildren, file)
-        else:
-            for child in root:
-                fixYearsLastTime(child, file)
 
 # Helper method for ISBN method
 def checkForISBN(root, file):
@@ -183,13 +114,13 @@ def checkForISBN(root, file):
         ISBN = test1.strip(' \t\n\r')
         ISBN = ISBN.replace("None", "")
         # Looks for a sequence of numbers/dashes which fits the format of an ISBN number.
-        # the 're' module allows one to grab only those strings which match a particular 
-        # format, with the surrounding text stripped. 
+        # the 're' module allows one to grab only those strings which match a particular
+        # format, with the surrounding text stripped.
         reg = re.compile("[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?[0-9]-?")
         try:
             ISBN_clean = reg.findall(ISBN)[0]
             file.i = ISBN_clean
-        # If nothing is returned, there will be no first element (i.e. - ISBN[0]), so 
+        # If nothing is returned, there will be no first element (i.e. - ISBN[0]), so
         # this exception handles that event.
         except IndexError:
             pass
@@ -202,6 +133,7 @@ def checkForISBN(root, file):
             file.i = ISBN_clean
         except IndexError:
             pass
+
 
 # Gets ISBN
 def getISBN(root, file):
@@ -224,6 +156,7 @@ def getISBN(root, file):
     else:
         for child in root:
             getISBN(child, file)
+
 
 # Determines whether the file is a Novel/Essay, Poetry, or Drama
 def docType(root, file):
@@ -249,6 +182,7 @@ def docType(root, file):
         for child in root:
             docType(child, file)
 
+
 # Helper function to write to a file object.
 def addContent(root, file):
     text = str(root.text) + str(root.tail)
@@ -256,12 +190,25 @@ def addContent(root, file):
     text = text.replace("None", "")
     file.add_content(text)
 
-# Adds chapters to the file
+
+# Add a chapter to the chapter list
 def addChapter(root, file):
     chapter = str(root.text) + str(root.tail)
-    chapter = chapter.strip(' \t\n\r')
-    chapter = chapter.replace("None", "")
-    file.add_chapter(chapter)
+    t = re.split('\W[0-9]*', chapter)
+    ch = " ".join(t)
+    ch = ch.strip()
+    file.add_chapter(ch)
+
+
+# Cleans up the chapter list by getting rid of 'None' and empty entries
+def filterChapters(chapters):
+    ch = chapters.split(",")
+    for i in range(len(ch) - 1, -1, -1):
+        if ch[i].strip() == "" or ch[i].strip() == "None":
+            del ch[i]
+    ch_string = ", ".join(ch)
+    return ch_string
+
 
 # Scans a file for its chapter titles
 def getChapters(root, file):
@@ -295,6 +242,7 @@ def scanForSubtags(root, file):
         addContent(root, file)
     if root.tag == "{http://www.tei-c.org/ns/1.0}lb":
         addContent(root, file)
+
 
 # Method for grabbing text from the XML files.
 # It branches off some way through if the file
@@ -343,6 +291,7 @@ def getText(root, file):
         else:
             getText(kid, file)
 
+
 # Method for grabbing individual poems
 def getPoetry(root, file):
     for child in root:
@@ -352,6 +301,7 @@ def getPoetry(root, file):
                 scanForSubtags(children, file)
         else:
             getPoetry(child, file)
+
 
 # Grabs text from a Drama
 def getTheater(child, file):
@@ -384,30 +334,31 @@ def getTheater(child, file):
                         for evenmorechildren in morechildren:
                             scanForSubtags(evenmorechildren, file)
 
-# This method corresponds to a separate field from the 'Full Text' field in the JSON file. 
-# It produces an array of all the words in the book which are not stop-words (like words in Danish that
-# correspond to 'is', 'and', etc.), and also filters out non-alphabetic characters. It makes the WordFrequency
-# script run faster to just take care of it all here. It is optional, though, and controlled by the -f argument
-# on the command line (more detail in the readme file).
-def filterText(text, file):
-    #Split the full text into a massive array of individual words.
-    textList = text.strip().split()
-    #Strip each word of non-alphabetic characters.
-    stripped_text = [word.strip(",._-:;\"'\\()[]0123456789!?") for word in textList]
-    # Apparently you have to go from the back of the array to the front. Users on StackOverflow
-    # explained why this is only in terms of vague analogies having to do with cutting off tree branches that you're 
-    # sitting on (???), but either way they were right. The method produces strange bugs if you try to iterate through
-    # the array from front to back.
-    # Anyway, this step is necessary because after stripping the non-alphabetic characters above, alot of the array entries
-    # were just empty strings, and there were then more empty strings in the array than any one word, making the whole
-    # cleaning up stop-words process kind of pointless. This step gets rid of those empty strings, so we can more accurately 
-    # and simply grab the word with maximum frequency from the text in the WordFrequency script.
-    for i in range(len(stripped_text) - 1, -1, -1):
-        if stripped_text[i] == "":
-            del stripped_text[i]
-    cleaned_text = [word.lower() for word in stripped_text]
-    filtered_words = [word for word in cleaned_text if word not in stopwords.words('danish')]
-    file.tx = filtered_words
+
+# Produces an array of all the words in the book which are not stop-words,
+# and also filters out non-alphabetic characters.
+def filterText(text):
+    # Strip each word of non-alphabetic characters
+    text_list = re.split('\W[0-9]*', text)
+    filtered_words = set(stopwords.words('danish'))
+    # Loop backwards because delete changes index
+    for i in range(len(text_list) - 1, -1, -1):
+        text_list[i] = text_list[i].lower()
+        # Delete empty strings or stopwords
+        if text_list[i] == "" or text_list[i] in filtered_words:
+            del text_list[i]
+    return text_list
+
+
+# Loop through filtered text and stem all the words
+def stemText(text_list):
+    # Init stemmer & array to store stemmed words
+    stemmer = SnowballStemmer("danish")
+    stemmed = []
+    for word in text_list:
+        stemmed.append(stemmer.stem(word))
+    return stemmed
+
 
 # Gathers all the info from the parsing functions above and builds
 # a JSON file out of it. It also cleans up the file a little bit, and
@@ -423,21 +374,42 @@ def buildJson(file):
         file.i = "No ISBN listed"
     if file.d is None:
         file.d = "No document type"
-    if file.ch is None:
-        file.ch = "No chapters listed"
-    if file.c is None:
-        file.c = ""
     file.t = file.t.replace("\n", " ")
     file.a = file.a.replace("\n", " ")
     file.p = file.p.replace("\n", " ")
     file.d = file.d.replace("\n", " ")
-    file.ch = file.ch.replace("\n", " ")
-    file.c = file.c.replace("\n", " ")
-    file.y = sorted(file.y.split())[0] #only take the earliest year collected
-    jfile = json.dumps({'1.Title': file.t, '2.Author': file.a, '3.Publisher': file.p, '4.Year Published': file.y, '5.ISBN': file.i,
-                        '6.Document Type': file.d, '7.List of chapters': file.ch, '8.Full Text': file.c, '9.Filtered Text': file.tx},
-                       sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
+    c_temp = ' '.join(file.c)
+    file.ch = filterChapters(file.ch)
+    file.y = sorted(file.y.split())[0] # only take the earliest year collected
+    jfile = json.dumps({'A.Title': file.t, 'B.Author': file.a, 'C.Publisher': file.p, 'D.Year Published': file.y,
+                        'E.ISBN': file.i, 'F.Document Type': file.d, 'G.List of chapters': file.ch,
+                        'H.Full Text': c_temp, 'I.Filtered Text': file.tx, 'J.Stemmed Text': file.stem}, sort_keys=True,
+                       indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
+
+
+def parse_threaded(xmldoc, input_doc, output_doc):
+    tree = ET.parse(input_doc + xmldoc)
+    root = tree.getroot()
+    obj = Parsed()
+    getText(root, obj)
+    text = "".join(obj.c)
+    if text != "":
+        try:
+            with open(output_doc + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
+                getTitleAndAuthor(root, obj)
+                getPublicationInfo(root, obj)
+                getISBN(root, obj)
+                getYears(root, obj)
+                docType(root, obj)
+                getChapters(root, obj)
+                obj.tx = filterText(" ".join(obj.c))
+                filtered_text = obj.tx
+                obj.stem = stemText(filtered_text)
+                out.write(buildJson(obj))
+                out.close()
+        except IOError:
+            pass
 
 
 def main():
@@ -445,13 +417,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
     parser.add_argument("-o", help="output directory argument", action="store")
-    parser.add_argument("-f", help="optional filtering argument", action="store_true")
 
     try:
         args = parser.parse_args()
     except IOError:
         pass
-    
+
     # Checks if the output directory already exists. If it exists, the existing directory is
     # deleted and a new directory is created in its place.
     if not os.path.exists(args.o):
@@ -460,35 +431,22 @@ def main():
         shutil.rmtree(args.o)
         os.mkdir(args.o)
 
-    # Grabs each XML file and does all the methods above to it, and builds up the 
+    thread_files = []
+
+    # Grabs each XML file and does all the methods above to it, and builds up the
     # various fields for the JSON file in the process. At the end, it builds the JSON
     # file from the Parsed() object defined at the beginning.
     for subdir, dirs, files in os.walk(args.i):
         for xmldoc in files:
             if xmldoc[0] != ".":
-                tree = ET.parse(args.i + xmldoc)
-                root = tree.getroot()
-                obj = Parsed()
-                getText(root, obj)
-                text = str(obj.c)
-                if text.strip() != "":
-                    try:
-                        with open(args.o + xmldoc[:-4] + '.json', 'w', encoding='utf-8') as out:
-                            getTitleAndAuthor(root, obj)
-                            getPublicationInfo(root, obj)
-                            getISBN(root, obj)
-                            getYears(root, obj)
-                            fixYears(root, obj)
-                            fixYearsAgain(root, obj)
-                            fixYearsLastTime(root, obj)
-                            docType(root, obj)
-                            getChapters(root, obj)
-                            if args.f:
-                                filterText(text, obj)
-                            out.write(buildJson(obj))
-                            out.close()
-                    except IOError:
-                        pass
+                thread_files.append((xmldoc, args.i, args.o))
+                # parse_threaded(xmldoc, args.i, args.o, args.f)
+
+    pool = Pool()
+    pool.starmap(parse_threaded, thread_files)
+    pool.close()
+    pool.join()
 
 if __name__ == '__main__':
+    # cProfile.runctx('main()', globals(), locals())
     main()
