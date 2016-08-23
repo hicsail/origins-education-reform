@@ -4,13 +4,15 @@ import nltk
 import argparse
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 #                           *** WordFrequencyScript.py ***
 # Takes Json documents organized in a specific way and performs various statistics on them w/r/t
-# keywords provided by the user. As of 8/13/16 this script supports avg/max/min calculations for tfidf
+# keywords provided by the user. As of 8/23/16 this script supports avg/max/min calculations for tfidf
 # scoring as well as basic term frequency as a percentage of total words. Any one of these four metrics
 # can be represented on a graph, and all four of them are provided in a text file at the end of each run.
+# The user can plot a line graph or a bar graph, but the default is line.
 #
 
 
@@ -134,7 +136,7 @@ def tf_idfAvg(decades, keywords, tf_idfResults, increment):
             # check if there exist files for the period
             if length > 0 or total > 0:
                 try:
-                    avg = round((total/length), 4)
+                    avg = round((total / length), 4)
                     tf_idf_avg[decade][keyword] = avg
                 except ZeroDivisionError:
                     tf_idf_avg[decade][keyword] = 0
@@ -200,7 +202,7 @@ def calculateTF(fdist, w):
     termFreq = fdist[w]
     try:
         maxFreq = fdist[fdist.max()]
-        TF = (termFreq/maxFreq)
+        TF = (termFreq / maxFreq)
     except ValueError:
         # Text empty, maxFreq = 0
         TF = 0
@@ -261,7 +263,7 @@ def calculateIDFResults(keywords, decades, decade_tally, directory, increment):
     for decade in decades:
         for keyword in keywords:
             try:
-                #Add 1 before logarithm to ensure idf is nonzero
+                # Add 1 before logarithm to ensure idf is nonzero
                 idf_results[decade][keyword] = \
                     1 + round(math.log((decade_tally[decade]) / idf_results[decade][keyword], 10), 4) \
                         if idf_results[decade][keyword] > 0 else 0
@@ -323,7 +325,7 @@ def takeKeywordPercentage(decades, keywords, total_words, keyword_totals, increm
             num = keyword_totals[decade][keyword]
             den = total_words[decade]
             if den > 0:
-                percent = round((num/den) * 100, 4)
+                percent = round((num / den) * 100, 4)
                 keyword_percentages[decade][keyword] = percent
             else:
                 # no files for this decade, use previous decade's totals
@@ -341,7 +343,7 @@ def takeKeywordPercentage(decades, keywords, total_words, keyword_totals, increm
 # returns a list of values to be plotted
 def buildGraphList(keyword, decades, param):
     i = 0
-    a = [0]*len(decades)
+    a = [0] * len(decades)
     while i < len(decades):
         a[i] += param[decades[i]][keyword]
         i += 1
@@ -377,7 +379,7 @@ def obtainNWords(fdist, num, total_words):
     keywords = []
     n_list = fdist.most_common(num)
     for key_tup in n_list:
-        keywords.append((key_tup[0], round((key_tup[1]/total_words)*100, 4)))
+        keywords.append((key_tup[0], round((key_tup[1] / total_words) * 100, 4)))
     return keywords
 
 
@@ -396,7 +398,7 @@ def main():
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
     parser.add_argument("-o", help="output file argument", action="store")
     parser.add_argument("-k", help="list of keywords argument, surround list with quotes", action="store")
-    parser.add_argument("-dec", help="min/max for year range and incremement value, surround with quotes",
+    parser.add_argument("-y", help="min/max for year range and incremement value, surround with quotes",
                         action="store")
     parser.add_argument("-t_avg", help="take tf_idf avg for each decade", action="store_true")
     parser.add_argument("-t_max", help="take tf_idf max for each decade", action="store_true")
@@ -404,7 +406,8 @@ def main():
     parser.add_argument("-percent", help="graph word frequency as a percentage of total words (not tfidf)",
                         action="store_true")
     parser.add_argument("-num", help="number of words to grab from each decade, according to whichever metric "
-                        "is chosen to be graphed", action="store")
+                                     "is chosen to be graphed", action="store")
+    parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
 
     try:
         args = parser.parse_args()
@@ -418,19 +421,19 @@ def main():
     # set up necessary values
     directory = args.i
     keywords = buildKeyList(args.k)
-    range_years = args.dec.split()
+    range_years = args.y.split()
     increment = int(range_years[2])
     # need start date to be evenly divisible by increment value for
     if int(range_years[0]) % increment != 0:
         fail("Make sure the start date is evenly divisible by the increment value.")
-    #decades = buildDecadesList(range_years[0], range_years[1])
+    # decades = buildDecadesList(range_years[0], range_years[1])
     decades = buildDecadesList(range_years[0], range_years[1], range_years[2])
     decade_tally = buildDecadeTally(directory, decades, increment)
 
     # check to make sure only one of the avg/max/min flags are set
     check = []
     check.append(int(args.t_avg)), check.append(int(args.t_max)), \
-        check.append(int(args.t_min)), check.append(int(args.percent))
+    check.append(int(args.t_min)), check.append(int(args.percent))
     if sum(check) > 1:
         fail("Please enter a maximum of one of the following arguments: -avg, -max, -min, -percent")
 
@@ -479,7 +482,6 @@ def main():
             pass
         out.write("\n")
 
-
     # determine graph parameters, depending on which flag is set
     if args.t_avg:
         g_max = findMax(keywords, decades, tf_idf_avg)
@@ -494,51 +496,64 @@ def main():
         g_max = findMax(keywords, decades, keyword_percentage)
         g_min = findMin(keywords, decades, keyword_percentage, g_max)
 
-    # plot data according to which of the four flags are set
-    for keyword in keywords:
-        if args.t_avg:
-            plt.plot(decades, buildGraphList(keyword, decades, tf_idf_avg), label=keyword)
-        if args.t_max:
-            plt.plot(decades, buildGraphList(keyword, decades, tf_idf_max), label=keyword)
-        if args.t_min:
-            plt.plot(decades, buildGraphList(keyword, decades, tf_idf_min), label=keyword)
-        if args.percent:
-            plt.plot(decades, buildGraphList(keyword, decades, keyword_percentage), label=keyword)
+    if args.bar:
+        bar_width = increment / len(keywords)
+        opacity = .8
+        index = np.arange(int(range_years[0]), int(range_years[1]) + int(range_years[2]), int(range_years[2]))
 
-    # specifies graph params/labels
-    if args.t_avg or args.t_max or args.t_min or args.percent:
-        plt.legend(bbox_to_anchor=(0, 1.02, 1., .102), loc=3, ncol=int(len(keywords)/2),
-                   mode="expand", borderaxespad=0.)
-        plt.xlabel("Decade")
-        plt.ylabel("Word Frequency")
-        if (g_min - .05) < 0:
-            plt.axis([int(range_years[0]), int(range_years[1]), 0, g_max + .05])
-        else:
-            plt.axis([int(range_years[0]), int(range_years[1]), g_min - .05, g_max + .05])
-        plt.show()
+        i = 0
+        for keyword in keywords:
+            if args.percent:
+                plt.bar(index + (bar_width * i), buildGraphList(keyword, decades, keyword_percentage),
+                        bar_width, alpha=opacity, color=np.random.rand(3, 1), label=keyword)
+            if args.t_avg:
+                plt.bar(index + (bar_width * i), buildGraphList(keyword, decades, tf_idf_avg),
+                        bar_width, alpha=opacity, color=np.random.rand(3, 1), label=keyword)
+            if args.t_max:
+                plt.bar(index + (bar_width * i), buildGraphList(keyword, decades, tf_idf_max),
+                        bar_width, alpha=opacity, color=np.random.rand(3, 1), label=keyword)
+            if args.t_min:
+                plt.bar(index + (bar_width * i), buildGraphList(keyword, decades, tf_idf_min),
+                        bar_width, alpha=opacity, color=np.random.rand(3, 1), label=keyword)
+            i += 1
+
+        if args.t_avg or args.t_max or args.t_min or args.percent:
+            plt.xlabel("Decade")
+            plt.ylabel("Word Frequency")
+            if args.t_avg:
+                plt.title("TF-IDF Average Scores Per Decade")
+            if args.t_max:
+                plt.title("TF-IDF Maximum Scores Per Decade")
+            if args.t_min:
+                plt.title("TF-IDF Minimum Scores Per Decade")
+            if args.percent:
+                plt.title("Word Frequency as Percentage of Total Words Per Decade")
+            plt.xticks(index + 5, (decade for decade in decades))
+            plt.legend()
+            plt.show()
+    else:
+        # plot data according to which of the four flags are set
+        for keyword in keywords:
+            if args.t_avg:
+                plt.plot(decades, buildGraphList(keyword, decades, tf_idf_avg), label=keyword)
+            if args.t_max:
+                plt.plot(decades, buildGraphList(keyword, decades, tf_idf_max), label=keyword)
+            if args.t_min:
+                plt.plot(decades, buildGraphList(keyword, decades, tf_idf_min), label=keyword)
+            if args.percent:
+                plt.plot(decades, buildGraphList(keyword, decades, keyword_percentage), label=keyword)
+
+        # specifies graph params/labels
+        if args.t_avg or args.t_max or args.t_min or args.percent:
+            plt.legend(bbox_to_anchor=(0, 1.02, 1., .102), loc=3, ncol=int(len(keywords)/2),
+                       mode="expand", borderaxespad=0.)
+            plt.xlabel("Decade")
+            plt.ylabel("Word Frequency")
+            if (g_min - .05) < 0:
+                plt.axis([int(range_years[0]), int(range_years[1]), 0, g_max + .05])
+            else:
+                plt.axis([int(range_years[0]), int(range_years[1]), g_min - .05, g_max + .05])
+            plt.show()
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
