@@ -41,8 +41,11 @@ Example usage:
     
         Tells the script how many top words per decade to display.
         
-    * The following four flags determine which of the collected data is represented on a graph. While only one may be selected,
-      all of them are written to a text file when the script finishes running. If none are selected, then nothing will be graphed and none of them will be written to the text file.
+    * The following five flags determine which of the collected data is represented on a graph & how that data is represented. While only one of the bottom four may be selected, all of them are written to a text file when the script finishes running. If none are selected, then nothing will be graphed and none of them will be written to the text file.
+      
+        * ``-bar``
+        
+            The script will generate a line graph by default, but setting this flag will cause it to output a bar graph instead.
         
         * ``-t_avg``
         
