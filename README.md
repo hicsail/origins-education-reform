@@ -33,9 +33,17 @@ Example usage:
     
         Specify which keywords you wish to perform a frequency analysis on. Separate unique words by spaces. If you would like to count certain words together (e.g. "train" & "trains"), then separate them with a forward slash ("/") character. They will then be treated as the same keyword. Surround the entire list with quotes.
         
-    * ``-d "min max" ``
+    * ``-y "min max inc" ``
     
-        Specify the min and max for which decades you would like the program to run the word count on. Separate each value by a space, and surround with quotes.
+        Specify the min and max for which years you would like the program to run the word count on, as well as the increment value. Separate each value by a space, and surround with quotes.
+        
+    * ``-p`` 
+    
+        Boolean flag to control whether the script will be analyzing groups of text according to a fixed increment value (default), or by periods of arbitrary length. This flag controls periods of arbitrary length.
+        
+    * ``-periods "int1 int2 int3 int4"``
+    
+        Specifies the begin and end date for each period the user would like to analyze. The periods are exclusive, so the string above instructs the script to look for text from years int1 to (int2 - 1), int2 to (int3 - 1), and so on.
         
     * ``-num "integer" `` 
     
