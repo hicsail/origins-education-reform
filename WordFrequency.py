@@ -42,42 +42,42 @@ def buildYearList(increment, range_years):
 
 
 # simplest dict with numbers as values, used for calculating word percentage
-def buildSimpleDictOfNums(decades):
+def buildSimpleDictOfNums(year_list):
     results = {}
-    for decade in decades:
-        results[decade] = 0
+    for year in year_list:
+        results[year] = 0
     return results
 
 
 # simplest dict with lists as values, used for calculating the top n words
-def buildSimpleDictOfLists(decades):
+def buildSimpleDictOfLists(year_list):
     results = {}
-    for decade in decades:
-        results[decade] = []
+    for year in year_list:
+        results[year] = []
     return results
 
 
 # build a dict with lists as values
-def buildDictOfLists(decades, keywords):
+def buildDictOfLists(year_list, keywords):
     results = {}
-    for decade in decades:
+    for year in year_list:
         for keyword in keywords:
             try:
-                results[decade][keyword] = []
+                results[year][keyword] = []
             except KeyError:
-                results[decade] = {keyword: []}
+                results[year] = {keyword: []}
     return results
 
 
 # build a dict with individual numbers as values
-def buildDictOfNums(decades, keywords):
+def buildDictOfNums(year_list, keywords):
     results = {}
-    for decade in decades:
+    for year in year_list:
         for keyword in keywords:
             try:
-                results[decade][keyword] = 0
+                results[year][keyword] = 0
             except KeyError:
-                results[decade] = {keyword: 0}
+                results[year] = {keyword: 0}
     return results
 
 
@@ -126,74 +126,74 @@ def calculateTF_IDF(idfScore, tfScore):
 
 
 # returns avg tfidf score for each decade
-def tf_idfAvg(decades, keywords, tf_idfResults):
-    tf_idf_avg = buildDictOfNums(decades, keywords)
+def tf_idfAvg(year_list, keywords, tf_idfResults):
+    tf_idf_avg = buildDictOfNums(year_list, keywords)
     # Take avg of TFIDF results
-    for i in range(len(decades)):
+    for i in range(len(year_list)):
         for keyword in keywords:
-            length = len(tf_idfResults[decades[i]][keyword])
-            total = sum(tf_idfResults[decades[i]][keyword])
+            length = len(tf_idfResults[year_list[i]][keyword])
+            total = sum(tf_idfResults[year_list[i]][keyword])
             # check if there exist files for the period
             if length > 0 or total > 0:
                 try:
                     avg = round((total / length), 4)
-                    tf_idf_avg[decades[i]][keyword] = avg
+                    tf_idf_avg[year_list[i]][keyword] = avg
                 except ZeroDivisionError:
-                    tf_idf_avg[decades[i]][keyword] = 0
+                    tf_idf_avg[year_list[i]][keyword] = 0
             else:
                 # no files, use previous period's score
-                prev_decade = decades[i - 1]
+                prev_year = year_list[i - 1]
                 try:
-                    prev_avg = tf_idf_avg[prev_decade][keyword]
+                    prev_avg = tf_idf_avg[prev_year][keyword]
                 except KeyError:
                     # case when the first period in the list of dates
                     # has no files associated with it.
                     prev_avg = 0
-                tf_idf_avg[decades[i]][keyword] = prev_avg
+                tf_idf_avg[year_list[i]][keyword] = prev_avg
     return tf_idf_avg
 
 
 # returns maximum tfidf score for each decade
-def tf_idfMax(decades, keywords, tf_idfResults):
-    tf_idf_max = buildDictOfNums(decades, keywords)
+def tf_idfMax(year_list, keywords, tf_idfResults):
+    tf_idf_max = buildDictOfNums(year_list, keywords)
     # Take max of TFIDF results
-    for i in range(len(decades)):
+    for i in range(len(year_list)):
         for keyword in keywords:
             try:
-                maximum = max(tf_idfResults[decades[i]][keyword])
-                tf_idf_max[decades[i]][keyword] = maximum
+                maximum = max(tf_idfResults[year_list[i]][keyword])
+                tf_idf_max[year_list[i]][keyword] = maximum
             except ValueError:
                 # no files for this period
-                prev_decade = decades[i - 1]
+                prev_year = year_list[i - 1]
                 try:
-                    prev_max = tf_idf_max[prev_decade][keyword]
+                    prev_max = tf_idf_max[prev_year][keyword]
                 except KeyError:
                     # case when the first period in the list of dates
                     # has no files associated with it.
                     prev_max = 0
-                tf_idf_max[decades[i]][keyword] = prev_max
+                tf_idf_max[year_list[i]][keyword] = prev_max
     return tf_idf_max
 
 
 # returns minimum tfidf score for each decade
-def tf_idfMin(decades, keywords, tf_idfResults):
-    tf_idf_min = buildDictOfNums(decades, keywords)
+def tf_idfMin(year_list, keywords, tf_idfResults):
+    tf_idf_min = buildDictOfNums(year_list, keywords)
     # Take max of TFIDF results
-    for i in range(len(decades)):
+    for i in range(len(year_list)):
         for keyword in keywords:
             try:
-                minimum = min(tf_idfResults[decades[i]][keyword])
-                tf_idf_min[decades[i]][keyword] = minimum
+                minimum = min(tf_idfResults[year_list[i]][keyword])
+                tf_idf_min[year_list[i]][keyword] = minimum
             except ValueError:
                 # no files for this period
-                prev_decade = decades[i - 1]
+                prev_year = year_list[i - 1]
                 try:
-                    prev_min = tf_idf_min[prev_decade][keyword]
+                    prev_min = tf_idf_min[prev_year][keyword]
                 except KeyError:
                     # case when the first period in the list of dates
                     # has no files associated with it.
                     prev_min = 0
-                tf_idf_min[decades[i]][keyword] = prev_min
+                tf_idf_min[year_list[i]][keyword] = prev_min
     return tf_idf_min
 
 
@@ -212,8 +212,8 @@ def calculateTF(fdist, w):
 # calculates term frequency for each keyword/decade pair, then multiplies it
 # with the idf score for that decade, yielding a tfidf score for each keyword/document pair.
 # The results are stored in a dict, and ordered by decade.
-def calculateTF_IDFResults(decades, keywords, directory, idf_results):
-    tf_idf_results = buildDictOfLists(decades, keywords)
+def calculateTF_IDFResults(year_list, keywords, directory, idf_results):
+    tf_idf_results = buildDictOfLists(year_list, keywords)
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             if jsondoc[0] != ".":
@@ -223,9 +223,9 @@ def calculateTF_IDFResults(decades, keywords, directory, idf_results):
                     year = int(jsondata["4.Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
-                        for i in range(len(decades)):
-                            if decades[i] <= year < decades[i + 1] or year == decades[i + 1]:
-                                decade = decades[i]
+                        for i in range(len(year_list)):
+                            if year_list[i] <= year < year_list[i + 1] or year == year_list[i + 1]:
+                                target = year_list[i]
                                 break
                             else:
                                 i += 1
@@ -237,9 +237,9 @@ def calculateTF_IDFResults(decades, keywords, directory, idf_results):
                             for w in words:
                                 temp += calculateTF(fdist, w)
                             try:
-                                idf = idf_results[decade][keyword]
+                                idf = idf_results[target][keyword]
                                 tf_idf = calculateTF_IDF(idf, temp)
-                                tf_idf_results[decade][keyword].append(tf_idf)
+                                tf_idf_results[target][keyword].append(tf_idf)
                             except KeyError:
                                 pass
     return tf_idf_results
@@ -326,7 +326,7 @@ def totalWordCount(year_list, directory):
                         try:
                             word_totals[target] += words
                         except KeyError:
-                            # decade out of range (specified by user)
+                            # year out of range (specified by user)
                             pass
     return word_totals
 
@@ -373,37 +373,34 @@ def keywordCount(year_list, keywords, directory):
 
 # calculates term frequency for each keyword/decade pair as a percentage
 # of the total words in all books for each decade
-# NEED TO FIX, so as not to rely on "increment", fucks with the previous decade shit for
-# the end of period based analysis. probably need to fix it in the other tf-idf methods
-# too
-def takeKeywordPercentage(decades, keywords, total_words, keyword_totals):
-    keyword_percentages = buildDictOfNums(decades, keywords)
-    for i in range(len(decades)):
+def takeKeywordPercentage(year_list, keywords, total_words, keyword_totals):
+    keyword_percentages = buildDictOfNums(year_list, keywords)
+    for i in range(len(year_list)):
         for keyword in keywords:
-            num = keyword_totals[decades[i]][keyword]
-            den = total_words[decades[i]]
+            num = keyword_totals[year_list[i]][keyword]
+            den = total_words[year_list[i]]
             if den > 0:
                 percent = round((num / den) * 100, 4)
-                keyword_percentages[decades[i]][keyword] = percent
+                keyword_percentages[year_list[i]][keyword] = percent
             else:
                 # no files for this decade, use previous decade's totals
-                prev_decade = decades[i - 1]
+                prev_year = year_list[i - 1]
                 try:
-                    percent = keyword_percentages[prev_decade][keyword]
+                    percent = keyword_percentages[prev_year][keyword]
                 except KeyError:
                     # case when the first period in the list of dates
                     # has no files associated with it.
                     percent = 0
-                keyword_percentages[decades[i]][keyword] = percent
+                keyword_percentages[year_list[i]][keyword] = percent
     return keyword_percentages
 
 
 # returns a list of values to be plotted
-def buildGraphList(keyword, decades, param):
+def buildGraphList(keyword, year_list, param):
     i = 0
-    a = [0] * len(decades)
-    while i < len(decades):
-        a[i] += param[decades[i]][keyword]
+    a = [0] * len(year_list)
+    while i < len(year_list):
+        a[i] += param[year_list[i]][keyword]
         i += 1
     return a
 
@@ -463,33 +460,33 @@ def obtainNWords(fdist, num, total_words):
     return keywords
 
 
-def calculateNWords(decades, directory, num):
-    n_dict = buildSimpleDictOfLists(decades)
-    for decade in decades:
-        word_list = obtainWordList(directory, decades, decade)
+def calculateNWords(year_list, directory, num):
+    n_dict = buildSimpleDictOfLists(year_list)
+    for year in year_list:
+        word_list = obtainWordList(directory, year_list, year)
         total_words = len(word_list)
         fdist = nltk.FreqDist(word_list)
-        n_dict[decade].extend(obtainNWords(fdist, num, total_words))
+        n_dict[year].extend(obtainNWords(fdist, num, total_words))
     return n_dict
 
 
 # find max value used in graphed results
-def findMax(keywords, decades, results):
+def findMax(keywords, year_list, results):
     g_max = 0
-    for decade in decades:
+    for year in year_list:
         for keyword in keywords:
-            if results[decade][keyword] > g_max:
-                g_max = results[decade][keyword]
+            if results[year][keyword] > g_max:
+                g_max = results[year][keyword]
     return g_max
 
 
 # find min value used in graphed results
-def findMin(keywords, decades, results, g_max):
+def findMin(keywords, year_list, results, g_max):
     g_min = g_max
-    for decade in decades:
+    for year in year_list:
         for keyword in keywords:
-            if results[decade][keyword] < g_max:
-                g_min = results[decade][keyword]
+            if results[year][keyword] < g_max:
+                g_min = results[year][keyword]
     return g_min
 
 
