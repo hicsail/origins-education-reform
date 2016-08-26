@@ -101,17 +101,20 @@ def buildYearsTally(directory, year_list):
                         for i in range(len(year_list)):
                             # check if doing fixed increments or periods
                             if not periods:
-                                if year_list[i] <= year < year_list[i + 1] or year == year_list[i + 1]:
+                                if year_list[i] <= year < year_list[i + 1]:
                                     target = year_list[i]
                                     break
+                                if year >= year_list[len(year_list) - 1]:
+                                    target = year_list[len(year_list) - 1]
+                                    break
                                 else:
-                                    i += 1
+                                    continue
                             else:
                                 if year_list[i] <= year < year_list[i + 1]:
                                     target = year_list[i]
                                     break
                                 else:
-                                    i += 1
+                                    continue
                         try:
                             years_tally[target] += 1
                         except KeyError:
@@ -224,11 +227,14 @@ def calculateTF_IDFResults(year_list, keywords, directory, idf_results):
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
-                            if year_list[i] <= year < year_list[i + 1] or year == year_list[i + 1]:
+                            if year_list[i] <= year < year_list[i + 1]:
                                 target = year_list[i]
                                 break
+                            if year >= year_list[len(year_list) - 1]:
+                                target = year_list[len(year_list) - 1]
+                                break
                             else:
-                                i += 1
+                                continue
                          # create word frequency distribution
                         fdist = nltk.FreqDist(text)
                         for keyword in keywords:
@@ -258,19 +264,14 @@ def calculateIDFResults(keywords, year_list, years_tally, directory):
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
-                            # check if doing fixed increments or periods
-                            if not periods:
-                                if year_list[i] <= year < year_list[i + 1] or year == year_list[i + 1]:
-                                    target = year_list[i]
-                                    break
-                                else:
-                                    i += 1
+                            if year_list[i] <= year < year_list[i + 1]:
+                                target = year_list[i]
+                                break
+                            if year >= year_list[len(year_list) - 1]:
+                                target = year_list[len(year_list) - 1]
+                                break
                             else:
-                                if year_list[i] <= year < year_list[i + 1]:
-                                    target = year_list[i]
-                                    break
-                                else:
-                                    i += 1
+                                continue
                         # create word frequency distribution
                         fdist = nltk.FreqDist(text)
                         for keyword in keywords:
@@ -311,18 +312,14 @@ def totalWordCount(year_list, directory):
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
                             # check if doing fixed increments or periods
-                            if not periods:
-                                if year_list[i] <= year < year_list[i + 1] or year == year_list[i + 1]:
-                                    target = year_list[i]
-                                    break
-                                else:
-                                    i += 1
+                            if year_list[i] <= year < year_list[i + 1]:
+                                target = year_list[i]
+                                break
+                            if year >= year_list[len(year_list) - 1]:
+                                target = year_list[len(year_list) - 1]
+                                break
                             else:
-                                if year_list[i] <= year < year_list[i + 1]:
-                                    target = year_list[i]
-                                    break
-                                else:
-                                    i += 1
+                                continue
                         try:
                             word_totals[target] += words
                         except KeyError:
@@ -344,19 +341,14 @@ def keywordCount(year_list, keywords, directory):
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
-                            # check if doing fixed increments or periods
-                            if not periods:
-                                if year_list[i] <= year < year_list[i + 1] or year == year_list[i + 1]:
-                                    target = year_list[i]
-                                    break
-                                else:
-                                    i += 1
+                            if year_list[i] <= year < year_list[i + 1]:
+                                target = year_list[i]
+                                break
+                            if year >= year_list[len(year_list) - 1]:
+                                target = year_list[len(year_list) -1]
+                                break
                             else:
-                                if year_list[i] <= year < year_list[i + 1]:
-                                    target = year_list[i]
-                                    break
-                                else:
-                                    i += 1
+                                continue
                         # create word frequency distribution
                         fdist = nltk.FreqDist(text)
                         for keyword in keywords:
@@ -417,24 +409,14 @@ def obtainWordList(directory, year_list, target):
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
-                            # check if doing fixed increments or periods
-
-                            # fixed increments
-                            if not periods:
-                                if year_list[i] <= year < year_list[i + 1] or year == year_list[i + 1]:
-                                    t = year_list[i]
-                                    break
-                                else:
-                                    i += 1
-
-                            # periods
+                            if year_list[i] <= year < year_list[i + 1]:
+                                t = year_list[i]
+                                break
+                            if year >= year_list[len(year_list) - 1]:
+                                target = year_list[len(year_list) - 1]
+                                break
                             else:
-                                if year_list[i] <= year < year_list[i + 1]:
-                                    t = year_list[i]
-                                    break
-                                else:
-                                    i += 1
-
+                                continue
                         # test if this document belongs to the range of years whose
                         # word list is being built
                         if t == target:
