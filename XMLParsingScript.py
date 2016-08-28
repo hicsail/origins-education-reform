@@ -4,12 +4,10 @@ from nltk.corpus import stopwords
 from multiprocessing import Pool
 from nltk.stem.snowball import SnowballStemmer
 
-#                           XMLParsingScript.py
 # This script navigates through a directory of XML files (organized according to
 # a specific template) and builds JSON files out of them. The outputted JSON files include
 # separate fields for: Title, Author, Publication Info, Publication Date, ISBN Number, Chapter
 # List, Full Text, Filtered Text, and Stemmed Text.
-#
 
 # Class for file object
 class Parsed:
@@ -22,10 +20,17 @@ class Parsed:
         self.d = DocType
         self.ch = Chapters
         self.c = []
+        self.cstem = []
         self.tx = []
-        self.stem = []
+        self.txstem = []
     def add_content(self, text):
-        self.c.extend(text.split())
+        self.c.extend(text)
+    def add_filtered(self, text):
+        self.tx.extend(text)
+    def add_stemmed(self, text):
+        self.cstem.extend(text)
+    def add_filtered_stemmed(self, text):
+        self.txstem.extend(text)
     def add_chapter(self, chapter):
         self.ch += chapter + ", "
     def add_year(self, year):
@@ -78,6 +83,17 @@ def scanSubtagsYears(root, file):
         addYears(root, file)
     if root.tag == "{http://www.tei-c.org/ns/1.0}lb":
         addYears(root, file)
+
+
+# Helper function to search for most common subtags
+# and write their contents to a file object.
+def scanForSubtags(root, file):
+    if root.tag == "{http://www.tei-c.org/ns/1.0}pb":
+        addContent(root, file)
+    if root.tag == "{http://www.tei-c.org/ns/1.0}hi":
+        addContent(root, file)
+    if root.tag == "{http://www.tei-c.org/ns/1.0}lb":
+        addContent(root, file)
 
 
 # Appends a year to a file's year field
@@ -183,33 +199,6 @@ def docType(root, file):
             docType(child, file)
 
 
-# Helper function to write to a file object.
-def addContent(root, file):
-    text = str(root.text) + str(root.tail)
-    text = text.strip(' \t\n\r')
-    text = text.replace("None", "")
-    file.add_content(text)
-
-
-# Add a chapter to the chapter list
-def addChapter(root, file):
-    chapter = str(root.text) + str(root.tail)
-    t = re.split('\W[0-9]*', chapter)
-    ch = " ".join(t)
-    ch = ch.strip()
-    file.add_chapter(ch)
-
-
-# Cleans up the chapter list by getting rid of 'None' and empty entries
-def filterChapters(chapters):
-    ch = chapters.split(",")
-    for i in range(len(ch) - 1, -1, -1):
-        if ch[i].strip() == "" or ch[i].strip() == "None":
-            del ch[i]
-    ch_string = ", ".join(ch)
-    return ch_string
-
-
 # Scans a file for its chapter titles
 def getChapters(root, file):
     if "body" in root.tag:
@@ -231,17 +220,6 @@ def getChapters(root, file):
     else:
         for child in root:
             getChapters(child, file)
-
-
-# Helper function to search for most common subtags
-# and write their contents to a file object.
-def scanForSubtags(root, file):
-    if root.tag == "{http://www.tei-c.org/ns/1.0}pb":
-        addContent(root, file)
-    if root.tag == "{http://www.tei-c.org/ns/1.0}hi":
-        addContent(root, file)
-    if root.tag == "{http://www.tei-c.org/ns/1.0}lb":
-        addContent(root, file)
 
 
 # Method for grabbing text from the XML files.
@@ -335,17 +313,68 @@ def getTheater(child, file):
                             scanForSubtags(evenmorechildren, file)
 
 
-# Produces an array of all the words in the book which are not stop-words,
-# and also filters out non-alphabetic characters.
-def filterText(text):
-    # Strip each word of non-alphabetic characters
+# Add a chapter to the chapter list
+def addChapter(root, file):
+    chapter = str(root.text) + str(root.tail)
+    t = re.split('\W[0-9]*', chapter)
+    ch = " ".join(t)
+    ch = ch.strip()
+    file.add_chapter(ch)
+
+
+# Cleans up the chapter list by getting rid of 'None' and empty entries
+def filterChapters(chapters):
+    ch = chapters.split(",")
+    for i in range(len(ch) - 1, -1, -1):
+        if ch[i].strip() == "" or ch[i].strip() == "None":
+            del ch[i]
+    ch_string = ", ".join(ch)
+    return ch_string
+
+
+# Helper function to write to a file object. If you want to add more fields
+# (lemmatization, etc.) to a Parsed object, you just need to define it in the
+# class definition above, write the method(s) for building it, and add it to
+# this method along with the buildJson method below.
+def addContent(root, file):
+    text = str(root.text) + str(root.tail)
+    text_list = cleanText(text)
+    # full text
+    file.add_content(text_list)
+    # stem the full text
+    stemmed = stemText(text_list)
+    file.add_stemmed(stemmed)
+    # filter the unstemmed full text
+    # note: the filterText method permanently deletes elements of text_list, so if you need
+    # to use the unfiltered text_list, use it above the filtered declaration below
+    filtered = filterText(text_list)
+    file.add_filtered(filtered)
+    # stem the filtered text
+    filtered_stemmed = stemText(filtered)
+    file.add_filtered_stemmed(filtered_stemmed)
+
+
+# converts all letters to lowercase, removes non-alphabetic characters, removes empty strings
+def cleanText(text):
+    # strip each word of non-alphabetic characters
     text_list = re.split('\W[0-9]*', text)
+    # Loop backwards because delete changes index
+    for i in range(len(text_list) - 1, -1, -1):
+        # Delete empty strings
+        if text_list[i] == "" or text_list[i] == "None":
+            del text_list[i]
+        else:
+            text_list[i] = text_list[i].lower()
+    return text_list
+
+
+# removes stop words from a text
+def filterText(text_list):
     filtered_words = set(stopwords.words('danish'))
     # Loop backwards because delete changes index
     for i in range(len(text_list) - 1, -1, -1):
-        text_list[i] = text_list[i].lower()
         # Delete empty strings or stopwords
-        if text_list[i] == "" or text_list[i] in filtered_words:
+        if text_list[i] in filtered_words:
             del text_list[i]
     return text_list
 
@@ -378,13 +407,13 @@ def buildJson(file):
     file.a = file.a.replace("\n", " ")
     file.p = file.p.replace("\n", " ")
     file.d = file.d.replace("\n", " ")
-    c_temp = ' '.join(file.c)
     file.ch = filterChapters(file.ch)
     file.y = sorted(file.y.split())[0] # only take the earliest year collected
-    jfile = json.dumps({'A.Title': file.t, 'B.Author': file.a, 'C.Publisher': file.p, 'D.Year Published': file.y,
-                        'E.ISBN': file.i, 'F.Document Type': file.d, 'G.List of chapters': file.ch,
-                        'H.Full Text': c_temp, 'I.Filtered Text': file.tx, 'J.Stemmed Text': file.stem}, sort_keys=True,
-                       indent=4, separators=(',', ': '), ensure_ascii=False)
+    jfile = json.dumps({'Title': file.t, 'Author': file.a, 'Publisher': file.p, 'Year Published': file.y,
+                        'ISBN': file.i, 'Document Type': file.d, 'List of chapters': file.ch,
+                        'Full Text': file.c, 'Full Text Stemmed': file.cstem, 'Filtered Text': file.tx,
+                        'Filtered Text Stemmed': file.txstem}, sort_keys=True, indent=4, separators=(',', ': '),
+                       ensure_ascii=False)
     return jfile
 
 
@@ -403,9 +432,6 @@ def parse_threaded(xmldoc, input_doc, output_doc):
                 getYears(root, obj)
                 docType(root, obj)
                 getChapters(root, obj)
-                obj.tx = filterText(" ".join(obj.c))
-                filtered_text = obj.tx
-                obj.stem = stemText(filtered_text)
                 out.write(buildJson(obj))
                 out.close()
         except IOError:
