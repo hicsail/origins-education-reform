@@ -1,8 +1,4 @@
-import json
-import os
-import nltk
-import argparse
-import math
+import json, math, os, nltk, argparse
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -95,7 +91,7 @@ def buildYearsTally(directory, year_list):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    year = int(jsondata["4.Year Published"])
+                    year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
@@ -222,8 +218,8 @@ def calculateTF_IDFResults(year_list, keywords, directory, idf_results):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                     jsondata = json.load(inpt)
-                    text = jsondata["9.Filtered Text"]
-                    year = int(jsondata["4.Year Published"])
+                    text = jsondata[text_type]
+                    year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
@@ -259,8 +255,8 @@ def calculateIDFResults(keywords, year_list, years_tally, directory):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    text = jsondata["9.Filtered Text"]
-                    year = int(jsondata["4.Year Published"])
+                    text = jsondata[text_type]
+                    year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
@@ -305,9 +301,9 @@ def totalWordCount(year_list, directory):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    text = jsondata["9.Filtered Text"]
+                    text = jsondata[text_type]
                     words = len(text)
-                    year = int(jsondata["4.Year Published"])
+                    year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
@@ -336,8 +332,8 @@ def keywordCount(year_list, keywords, directory):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    text = jsondata["9.Filtered Text"]
-                    year = int(jsondata["4.Year Published"])
+                    text = jsondata[text_type]
+                    year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
@@ -405,7 +401,7 @@ def obtainWordList(directory, year_list, target):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    year = int(jsondata["4.Year Published"])
+                    year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         for i in range(len(year_list)):
@@ -420,7 +416,7 @@ def obtainWordList(directory, year_list, target):
                         # test if this document belongs to the range of years whose
                         # word list is being built
                         if t == target:
-                            text = jsondata["9.Filtered Text"]
+                            text = jsondata[text_type]
                             word_list.extend(text)
     return word_list
 
@@ -491,6 +487,8 @@ def main():
                         action="store_true")
     parser.add_argument("-periods", help="list of periods, include cutoff date for last period as last entry",
                         action="store")
+    parser.add_argument("-type", help="which text field from the json document you intend to analyze",
+                        action="store")
 
     try:
         args = parser.parse_args()
@@ -505,8 +503,9 @@ def main():
     directory = args.i
     keywords = buildKeyList(args.k)
 
-    global yrange_min, yrange_max, periods
+    global yrange_min, yrange_max, periods, text_type
 
+    text_type = args.type
     periods = args.p
 
     # if periods flag is not set, set up variables for fixed increments
