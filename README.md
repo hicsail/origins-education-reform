@@ -48,6 +48,10 @@ Example usage:
     * ``-num "integer" `` 
     
         Tells the script how many top words per decade to display.
+    
+    * ``-type "text_type"``
+    
+        Tells the script which field of the Json documents to analyze. For example, if you wanted to analyze a field called "Happy Text" within the Json docs of your corpus, your input would look like -type "Happy Text".
         
     * The following five flags determine which of the collected data is represented on a graph & how that data is represented. While only one of the bottom four may be selected, all of them are written to a text file when the script finishes running. If none are selected, then nothing will be graphed and none of them will be written to the text file.
       
