@@ -13,7 +13,7 @@ import numpy as np
 
 # construct list of keywords
 def buildKeyList(keywords):
-    keyList = keywords.split()
+    keyList = keywords.lower().split()
     return keyList
 
 
