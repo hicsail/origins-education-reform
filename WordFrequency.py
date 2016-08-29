@@ -131,7 +131,10 @@ def tf_idfAvg(year_list, keywords, tf_idfResults):
     for i in range(len(year_list)):
         for keyword in keywords:
             length = len(tf_idfResults[year_list[i]][keyword])
-            total = sum(tf_idfResults[year_list[i]][keyword])
+            totals = []
+            for j in range(length):
+                totals.append(tf_idfResults[year_list[i]][keyword][j][1])
+            total = sum(totals)
             # check if there exist files for the period
             if length > 0 or total > 0:
                 try:
@@ -159,7 +162,10 @@ def tf_idfMax(year_list, keywords, tf_idfResults):
     for i in range(len(year_list)):
         for keyword in keywords:
             try:
-                maximum = max(tf_idfResults[year_list[i]][keyword])
+                length = len(tf_idfResults[year_list[i]][keyword])
+                # the lists in tf_idf results are sorted by the
+                # second tuple value, so max is the last tuple
+                maximum = tf_idfResults[year_list[i]][keyword][length - 1][1]
                 tf_idf_max[year_list[i]][keyword] = maximum
             except ValueError:
                 # no files for this period
@@ -181,7 +187,9 @@ def tf_idfMin(year_list, keywords, tf_idfResults):
     for i in range(len(year_list)):
         for keyword in keywords:
             try:
-                minimum = min(tf_idfResults[year_list[i]][keyword])
+                # the lists in tf_idfResults are sorted by the
+                # second tuple value, so min is the first tuple
+                minimum = tf_idfResults[year_list[i]][keyword][0][1]
                 tf_idf_min[year_list[i]][keyword] = minimum
             except ValueError:
                 # no files for this period
@@ -231,7 +239,7 @@ def calculateTF_IDFResults(year_list, keywords, directory, idf_results):
                                 break
                             else:
                                 continue
-                         # create word frequency distribution
+                        # create word frequency distribution
                         fdist = nltk.FreqDist(text)
                         for keyword in keywords:
                             words = keyword.split("/")
@@ -241,9 +249,14 @@ def calculateTF_IDFResults(year_list, keywords, directory, idf_results):
                             try:
                                 idf = idf_results[target][keyword]
                                 tf_idf = calculateTF_IDF(idf, temp)
-                                tf_idf_results[target][keyword].append(tf_idf)
+                                # append tuple of document/tf-idf score pair (8/28)
+                                tf_idf_results[target][keyword].append((jsondoc, tf_idf))
                             except KeyError:
                                 pass
+    for year in year_list:
+        for keyword in keywords:
+            tf_idf_results[year][keyword] = sorted(tf_idf_results[year][keyword], key=lambda x: x[1])
+
     return tf_idf_results
 
 
@@ -409,7 +422,7 @@ def obtainWordList(directory, year_list, target):
                                 t = year_list[i]
                                 break
                             if year >= year_list[len(year_list) - 1]:
-                                target = year_list[len(year_list) - 1]
+                                t = year_list[len(year_list) - 1]
                                 break
                             else:
                                 continue
@@ -429,7 +442,7 @@ def wordListToSet(word_list):
     return word_set
 
 
-# build list of words
+# build list of top words
 def obtainNWords(fdist, num, total_words):
     keywords = []
     n_list = fdist.most_common(num)
@@ -444,7 +457,12 @@ def calculateNWords(year_list, directory, num):
         word_list = obtainWordList(directory, year_list, year)
         total_words = len(word_list)
         fdist = nltk.FreqDist(word_list)
-        n_dict[year].extend(obtainNWords(fdist, num, total_words))
+        if num < len(fdist):
+            n_dict[year].extend(obtainNWords(fdist, num, total_words))
+        else:
+            # user requested more top words than there are
+            # in the frequency distribution for that period
+            n_dict[year].extend(obtainNWords(fdist, len(fdist), total_words))
     return n_dict
 
 
@@ -466,6 +484,51 @@ def findMin(keywords, year_list, results, g_max):
             if results[year][keyword] < g_max:
                 g_min = results[year][keyword]
     return g_min
+
+
+def listMaxDocs(out, year, keyword, results, num):
+    list_length = len(results[year][keyword])
+    if int(num) < list_length:
+        out.write("{0} highest TFIDF scores for this period: ".format(str(num)) + "\n")
+        i = 1
+        for key_tup in results[year][keyword][list_length - int(num): list_length]:
+            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
+            i += 1
+        out.write("\n")
+    else:
+        out.write("{0} highest TFIDF scores for this period: ".format(str(list_length)) + "\n")
+        i = 1
+        for key_tup in results[year][keyword]:
+            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
+            i += 1
+        out.write("\n")
+
+
+def listMinDocs(out, year, keyword, results, num):
+    list_length = len(results[year][keyword])
+    if int(num) < list_length:
+        out.write("{0} lowest TFIDF scores for this period: ".format(str(num)) + "\n")
+        i = 1
+        for key_tup in results[year][keyword][:int(num)]:
+            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
+            i += 1
+        out.write("\n")
+    else:
+        out.write("{0} lowest TFIDF scores for this period: ".format(str(list_length)) + "\n")
+        i = 1
+        for key_tup in results[year][keyword]:
+            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
+            i += 1
+        out.write("\n")
+
+
+def listTopWords(out, year, results, num):
+    out.write("Top {0} words for this period: ".format(str(num)) + "\n")
+    i = 1
+    for key_tup in results[year]:
+        out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
+        i += 1
+    out.write("\n")
 
 
 def main():
@@ -559,33 +622,33 @@ def main():
         keyword_totals = keywordCount(year_list, keywords, directory)
         keyword_percentage = takeKeywordPercentage(year_list, keywords, total_words, keyword_totals)
 
-    # calculate top N words for each decade, but check if user set -num first
+    # calculate top N words for each period, check if user set -num first
     try:
-        n = int(args.num)
-        n_dict = calculateNWords(year_list, directory, n)
+        n_dict = calculateNWords(year_list, directory, int(args.num))
     except TypeError:
         pass
 
     # create txt file and write all the collected data to it
     out = open(args.o + ".txt", 'w')
-    for decade in year_list:
-        out.write("Decade: " + str(decade) + "\n")
-        out.write("Number of books for this decade: " + str(years_tally[decade]) + "\n")
+    for year in year_list:
+        out.write("Decade: " + str(year) + "\n")
+        out.write("Number of books for this decade: " + str(years_tally[year]) + "\n")
         if args.t_avg or args.t_max or args.t_min or args.percent:
             for keyword in keywords:
                 out.write(keyword + ":" + "\n")
-                out.write("Avg TFIDF score for this decade: {0}".format(str(tf_idf_avg[decade][keyword]) + "\n"))
-                out.write("Max TFIDF score for this decade: {0}".format(str(tf_idf_max[decade][keyword]) + "\n"))
-                out.write("Min TFIDF score for this decade: {0}".format(str(tf_idf_min[decade][keyword]) + "\n"))
-                out.write("Word frequency (as percentage of total words) for this decade: {0}".format(
-                    str(keyword_percentage[decade][keyword]) + "%\n"))
+                out.write("Avg TFIDF score for this period: {0}".format(str(tf_idf_avg[year][keyword]) + "\n"))
+                out.write("Max TFIDF score for this period: {0}".format(str(tf_idf_max[year][keyword]) + "\n"))
+                out.write("Min TFIDF score for this period: {0}".format(str(tf_idf_min[year][keyword]) + "\n"))
+                out.write("Word frequency for \"{0}\" (as percentage of total words) for this period: {1}".format(
+                    keyword, str(keyword_percentage[year][keyword]) + "\n"))
+                try:
+                    listMaxDocs(out, year, keyword, tf_idf_results, args.num)
+                    listMinDocs(out, year, keyword, tf_idf_results, args.num)
+                except (AttributeError, UnboundLocalError, TypeError) as e:
+                    # user didn't want max/min n words
+                    pass
         try:
-            out.write("Top {0} words for this decade: ".format(str(args.num)) + "\n")
-            i = 1
-            for key_tup in n_dict[decade]:
-                out.write(str(i) + ". " + str(key_tup[0]) + ": " + str(key_tup[1]) + "%\n")
-                i += 1
-            out.write("\n")
+            listTopWords(out, year, n_dict, args.num)
         except (AttributeError, UnboundLocalError) as e:
             # user didn't want top n words, so n_dict wasn't built
             pass
@@ -597,7 +660,7 @@ def main():
             index = np.arange(int(range_years[0]), int(range_years[1]) + int(range_years[2]), int(range_years[2]))
         else:
             range = yrange_max - yrange_min
-            bar_width = (range / (len(range_years) - 1)) / len(keywords)
+            bar_width = (range / len(range_years)) / len(keywords)
             range_years_int = []
             for num in range_years:
                 range_years_int.append(int(num))
