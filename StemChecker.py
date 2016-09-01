@@ -16,6 +16,7 @@ def stemText(word_list, language):
     stemmer = SnowballStemmer(language)
     stemmed = []
     for word in word_list:
+        word.encode('utf-8')
         stemmed.append((word, stemmer.stem(word)))
     return stemmed
 
