@@ -20,14 +20,19 @@ Example usage:
     
 * ``WordFrequency.py``
 
-    A script for performing a word frequency analysis and plotting the results.
+    A script for performing a word frequency analysis.
+    
     * ``-i input_files_folder_path``
         
         Specify filepath to director containing the input files(required).
         
-    * ``-o output_file_path``
+    * ``-txt output_file_path``
     
         Specify filepath to output file (required). The script will create a .txt file with the name you specify, so make sure the filepath you enter isn't already occupied by a directory of the same name.
+    
+    * ``-csv output_file_path``
+    
+        Specify filepath to output csv file (required). The filepath will be printed in the txt file for each run as well, to so the user can keep track. The csv file created is used as input to GraphCSV.py.
         
     * ``-k "list_of_keywords"``
     
@@ -52,8 +57,16 @@ Example usage:
     * ``-type "text_type"``
     
         Tells the script which field of the Json documents to analyze. For example, if you wanted to analyze a field called "Happy Text" within the Json docs of your corpus, your input would look like -type "Happy Text".
-        
-    * The following five flags determine which of the collected data is represented on a graph & how that data is represented. While only one of the bottom four may be selected, all of them are written to a text file when the script finishes running. If none are selected, then nothing will be graphed and none of them will be written to the text file.
+    
+Example usage:
+
+    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -txt /Users/Ketchup/Desktop/Word_Frequency -csv /Users/Ketchup/Desktop/Wordcsv -k "test1 test2/test3 test4 test5/test6/test7 test8" -y "1700 1940 5" 
+
+* ``GraphCSV.py``
+
+    Reads from CSV files and produces graphs representing the statistics stored in them. Can produce either line graphs or bar graphs.
+
+        * The following five flags determine which of the collected data is represented on a graph & how that data is represented. If -bar is not entered, the graph will be a line graph by default. At least one of the bottom four flags must be selected. 
       
         * ``-bar``
         
@@ -74,11 +87,7 @@ Example usage:
         * ``-percent``
         
             Graph basic term frequency as a percentage of total words for each decade.
-    
-Example usage:
-
-    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -o /Users/Ketchup/Desktop/Word_Frequency -k "test1 test2/test3 test4 test5/test6/test7 test8" -d "1700 1940" -percent
-
+            
 * ``YearScraping.py``
     
     Parses an XML Directory and writes each XML file's Title/Author/Year of publication to a .txt file. It ignores XML documents whose chapter/text fields are empty. We're just using it to simplify the process of assigning years to documents, since the bulk of it will have to be done manually. The I/O is identical to XMLParsingScript.py above.
