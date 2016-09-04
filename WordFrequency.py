@@ -622,7 +622,7 @@ def main():
     # create txt file and write all the collected data to it
     with open(args.txt + '.txt', 'w') as txt_out:
         txt_out.write("Corresponding CSV file for this text document is located on your machine at the "
-                      "following filepath: {0}".format(args.csv))
+                      "following filepath: {0}".format(args.csv) + "\n")
         for i in range(len(year_list) - 1):
             txt_out.write("Period: {0} - {1}".format(str(year_list[i]), str(year_list[i+1])) + "\n")
             txt_out.write("Number of books for this period: {0}".format(str(years_tally[year_list[i]])) + "\n")
