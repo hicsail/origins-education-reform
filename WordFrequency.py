@@ -1,23 +1,23 @@
-import json, math, os, nltk, argparse
-import matplotlib.pyplot as plt
-import numpy as np
+import json, math, os, nltk, argparse, csv
 
 
 #                           *** WordFrequencyScript.py ***
+#
 # Takes Json documents as input and performs various statistics on them w/r/t keywords provided
-# by the user. As of 8/29/16 this script supports avg/max/min calculations for tf-idf scoring as
-# well as basic term frequency as a percentage of total words. Any one of these four metrics can
-# be represented on a graph, and all four of them are provided in a text file at the end of each
-# run. The text file can also include an arbitrary number (specified by the user) of max/min tf-idf
-# scores along with their respective documents, as well as a list of words with top frequencies per
-# period.
+# by the user. As of 9/1/16 this script supports avg/max/min calculations for tf-idf scoring as
+# well as basic term frequency as a percentage of total words. All four of these metrics are provided
+# in a text file at the end of each run. The text file can also include an arbitrary number (specified
+# by the user) of max/min tf-idf scores along with their respective documents, as well as a list of
+# words with top frequencies per period. This script also outputs a csv file with tf-idf average, maximum,
+# minimum and term frequency for each keyword specified. The statistics in this csv file can be read and
+# graphed by another script called GraphCSV.py.
 #
 
 
 # construct list of keywords
 def buildKeyList(keywords):
-    keyList = keywords.lower().split()
-    return keyList
+    key_list = keywords.lower().split()
+    return key_list
 
 
 # construct list of year periods
@@ -473,26 +473,6 @@ def buildGraphList(keyword, year_list, param):
     return a
 
 
-# find max value used in graphed results
-def findMax(keywords, year_list, results):
-    g_max = 0
-    for year in year_list:
-        for keyword in keywords:
-            if results[year][keyword] > g_max:
-                g_max = results[year][keyword]
-    return g_max
-
-
-# find min value used in graphed results
-def findMin(keywords, year_list, results, g_max):
-    g_min = g_max
-    for year in year_list:
-        for keyword in keywords:
-            if results[year][keyword] < g_max:
-                g_min = results[year][keyword]
-    return g_min
-
-
 # writes N documents with highest tf-idf scores for each period to a text file
 def listMaxDocs(out, year, keyword, results, num):
     list_length = len(results[year][keyword])
@@ -551,22 +531,25 @@ def listTopWords(out, year, results, num):
     out.write("\n")
 
 
+# can't store lists in csv file, so need to store data in string
+def listToString(list_inpt):
+    return_string = ""
+    for wd in list_inpt:
+        return_string += (str(wd) + " ")
+    return return_string
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
-    parser.add_argument("-o", help="output file argument", action="store")
+    parser.add_argument("-txt", help="output text file argument", action="store")
+    parser.add_argument("-csv", help="output csv file argument", action="store")
     parser.add_argument("-k", help="list of keywords argument, surround list with quotes", action="store")
     parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
                         action="store")
-    parser.add_argument("-t_avg", help="take tf_idf avg for each decade", action="store_true")
-    parser.add_argument("-t_max", help="take tf_idf max for each decade", action="store_true")
-    parser.add_argument("-t_min", help="take tf_idf min for each decade", action="store_true")
-    parser.add_argument("-percent", help="graph word frequency as a percentage of total words (not tfidf)",
-                        action="store_true")
     parser.add_argument("-num", help="number of words to grab from each decade, according to whichever metric "
                                      "is chosen to be graphed", action="store")
-    parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
-    parser.add_argument("-p", help="boolean to graph by different periods rather than a fixed increment value",
+    parser.add_argument("-p", help="boolean to analyze by different periods rather than a fixed increment value",
                         action="store_true")
     parser.add_argument("-periods", help="list of periods, include cutoff date for last period as last entry",
                         action="store")
@@ -577,10 +560,6 @@ def main():
         args = parser.parse_args()
     except IOError:
         pass
-
-    def fail(msg):
-        print(msg)
-        os._exit(1)
 
     # set up necessary values
     directory = args.i
@@ -622,25 +601,17 @@ def main():
         year_list = buildYearList(increment, range_years)
         years_tally = buildYearsTally(directory, year_list)
 
-    # check to make sure only one of the avg/max/min flags are set
-    check = []
-    check.append(int(args.t_avg)), check.append(int(args.t_max)), \
-    check.append(int(args.t_min)), check.append(int(args.percent))
-    if sum(check) > 1:
-        fail("Please enter a maximum of one of the following arguments: -avg, -max, -min, -percent")
-
-    if args.t_avg or args.t_max or args.t_min or args.percent:
-        # build/populate dicts
-        idf_results = calculateIDFResults(keywords, year_list, years_tally, directory)
-        tf_idf_results = calculateTF_IDFResults(year_list, keywords, directory, idf_results)
-        # take avg/max/min
-        tf_idf_avg = tf_idfAvg(year_list, keywords, tf_idf_results)
-        tf_idf_max = tf_idfMax(year_list, keywords, tf_idf_results)
-        tf_idf_min = tf_idfMin(year_list, keywords, tf_idf_results)
-        # take percent over total words for each keyword
-        total_words = totalWordCount(year_list, directory)
-        keyword_totals = keywordCount(year_list, keywords, directory)
-        keyword_percentage = takeKeywordPercentage(year_list, keywords, total_words, keyword_totals)
+    # build/populate dicts
+    idf_results = calculateIDFResults(keywords, year_list, years_tally, directory)
+    tf_idf_results = calculateTF_IDFResults(year_list, keywords, directory, idf_results)
+    # take avg/max/min
+    tf_idf_avg = tf_idfAvg(year_list, keywords, tf_idf_results)
+    tf_idf_max = tf_idfMax(year_list, keywords, tf_idf_results)
+    tf_idf_min = tf_idfMin(year_list, keywords, tf_idf_results)
+    # take percent over total words for each keyword
+    total_words = totalWordCount(year_list, directory)
+    keyword_totals = keywordCount(year_list, keywords, directory)
+    keyword_percentage = takeKeywordPercentage(year_list, keywords, total_words, keyword_totals)
 
     # calculate top N words for each period, check if user set -num first
     try:
@@ -649,120 +620,44 @@ def main():
         pass
 
     # create txt file and write all the collected data to it
-    out = open(args.o + ".txt", 'w')
-    for year in year_list:
-        out.write("Period begin date: " + str(year) + "\n")
-        out.write("Number of books for this period: " + str(years_tally[year]) + "\n")
-        if args.t_avg or args.t_max or args.t_min or args.percent:
+    with open(args.txt + '.txt', 'w') as txt_out:
+        txt_out.write("Corresponding CSV file for this text document is located on your machine at the "
+                      "following filepath: {0}".format(args.csv))
+        for i in range(len(year_list) - 1):
+            txt_out.write("Period: {0} - {1}".format(str(year_list[i]), str(year_list[i+1])) + "\n")
+            txt_out.write("Number of books for this period: {0}".format(str(years_tally[year_list[i]])) + "\n")
             for keyword in keywords:
-                out.write(keyword + ":" + "\n")
-                out.write("Avg TFIDF score for this period: {0}".format(str(tf_idf_avg[year][keyword]) + "\n"))
-                out.write("Max TFIDF score for this period: {0}".format(str(tf_idf_max[year][keyword]) + "\n"))
-                out.write("Min TFIDF score for this period: {0}".format(str(tf_idf_min[year][keyword]) + "\n"))
-                out.write("Word frequency for \"{0}\" (as percentage of total words) for this period: {1}".format(
-                    keyword, str(keyword_percentage[year][keyword]) + "\n"))
+                txt_out.write("{0}:".format(str(keyword)) + "\n")
+                txt_out.write("Avg TFIDF score for this period: {0}".format(str(tf_idf_avg[year_list[i]][keyword]) + "\n"))
+                txt_out.write("Max TFIDF score for this period: {0}".format(str(tf_idf_max[year_list[i]][keyword]) + "\n"))
+                txt_out.write("Min TFIDF score for this period: {0}".format(str(tf_idf_min[year_list[i]][keyword]) + "\n"))
+                txt_out.write("Word frequency for \"{0}\" (as percentage of total words) for this period: {1}".format(
+                    keyword, str(keyword_percentage[year_list[i]][keyword]) + "\n"))
                 try:
-                    listMaxDocs(out, year, keyword, tf_idf_results, args.num)
-                    listMinDocs(out, year, keyword, tf_idf_results, args.num)
+                    listMaxDocs(txt_out, year_list[i], keyword, tf_idf_results, args.num)
+                    listMinDocs(txt_out, year_list[i], keyword, tf_idf_results, args.num)
                 except (AttributeError, UnboundLocalError, TypeError) as e:
                     # user didn't want max/min n words
                     pass
-        try:
-            listTopWords(out, year, n_dict, args.num)
-        except (AttributeError, UnboundLocalError) as e:
-            # user didn't want top n words, so n_dict wasn't built
-            pass
-        out.write("\n")
+            try:
+                listTopWords(txt_out, year_list[i], n_dict, args.num)
+            except (AttributeError, UnboundLocalError) as e:
+                # user didn't want top n words, so n_dict wasn't built
+                pass
+            txt_out.write("\n")
 
-    if args.bar:
-        if not periods:
-            bar_width = increment / len(keywords)
-            index = np.arange(int(range_years[0]), int(range_years[1]) + int(range_years[2]), int(range_years[2]))
-        else:
-            range = yrange_max - yrange_min
-            bar_width = (range / len(range_years)) / len(keywords)
-            range_years_int = []
-            for num in range_years:
-                range_years_int.append(int(num))
-            index = np.array(sorted(range_years_int))
-        opacity = .8
-
-        i = 0
+    with open(args.csv + '.csv', 'w', newline='') as csv_out:
+        csvwriter = csv.writer(csv_out, delimiter=',')
+        year_list_str = []
+        for year in year_list:
+            year_list_str.append(str(year))
+        year_string = " ".join(year_list_str)
+        csvwriter.writerow(['word', 'tf-idf avg', 'tf-idf max', 'tf-idf min', 'word frequency', year_string])
         for keyword in keywords:
-            if args.percent:
-                plt.bar(index + (bar_width * i), buildGraphList(keyword, year_list, keyword_percentage),
-                        bar_width, alpha=opacity, color=np.random.rand(3, 1), label=keyword)
-            if args.t_avg:
-                plt.bar(index + (bar_width * i), buildGraphList(keyword, year_list, tf_idf_avg),
-                        bar_width, alpha=opacity, color=np.random.rand(3, 1), label=keyword)
-            if args.t_max:
-                plt.bar(index + (bar_width * i), buildGraphList(keyword, year_list, tf_idf_max),
-                        bar_width, alpha=opacity, color=np.random.rand(3, 1), label=keyword)
-            if args.t_min:
-                plt.bar(index + (bar_width * i), buildGraphList(keyword, year_list, tf_idf_min),
-                        bar_width, alpha=opacity, color=np.random.rand(3, 1), label=keyword)
-            i += 1
-
-        if args.t_avg or args.t_max or args.t_min or args.percent:
-            plt.xlabel("Period")
-            plt.ylabel("Word Frequency")
-            if args.t_avg:
-                plt.title("TF-IDF Average Scores Per Period")
-            if args.t_max:
-                plt.title("TF-IDF Maximum Scores Per Period")
-            if args.t_min:
-                plt.title("TF-IDF Minimum Scores Per Period")
-            if args.percent:
-                plt.title("Word Frequency as Percentage of Total Words Per Period")
-            plt.xticks(index + 5, (year for year in year_list))
-            plt.legend()
-            plt.show()
-    else:
-
-        # determine graph parameters, depending on which flag is set
-        if args.t_avg:
-            g_max = findMax(keywords, year_list, tf_idf_avg)
-            g_min = findMin(keywords, year_list, tf_idf_avg, g_max)
-        if args.t_max:
-            g_max = findMax(keywords, year_list, tf_idf_max)
-            g_min = findMin(keywords, year_list, tf_idf_max, g_max)
-        if args.t_min:
-            g_max = findMax(keywords, year_list, tf_idf_min)
-            g_min = findMin(keywords, year_list, tf_idf_min, g_max)
-        if args.percent:
-            g_max = findMax(keywords, year_list, keyword_percentage)
-            g_min = findMin(keywords, year_list, keyword_percentage, g_max)
-
-        # plot data according to which of the four flags are set
-        for keyword in keywords:
-            if args.t_avg:
-                plt.plot(year_list, buildGraphList(keyword, year_list, tf_idf_avg), label=keyword)
-            if args.t_max:
-                plt.plot(year_list, buildGraphList(keyword, year_list, tf_idf_max), label=keyword)
-            if args.t_min:
-                plt.plot(year_list, buildGraphList(keyword, year_list, tf_idf_min), label=keyword)
-            if args.percent:
-                plt.plot(year_list, buildGraphList(keyword, year_list, keyword_percentage), label=keyword)
-
-        # specifies graph params/labels
-        if args.t_avg or args.t_max or args.t_min or args.percent:
-            if args.t_avg:
-                plt.title("TF-IDF Average Scores Per Period")
-            if args.t_max:
-                plt.title("TF-IDF Maximum Scores Per Period")
-            if args.t_min:
-                plt.title("TF-IDF Minimum Scores Per Period")
-            if args.percent:
-                plt.title("Word Frequency as Percentage of Total Words Per Period")
-            plt.legend(bbox_to_anchor=(1, .1, 0, .1), ncol=int(len(keywords)/2),
-                       mode="expand", borderaxespad=0.)
-            plt.xlabel("Period")
-            plt.ylabel("Word Frequency")
-            if (g_min - .05) < 0:
-                plt.axis([yrange_min, yrange_max - increment, 0, g_max + .05])
-            else:
-                plt.axis([yrange_min, yrange_max - increment, g_min - .05, g_max + .05])
-            plt.show()
+            csvwriter.writerow([keyword, listToString(buildGraphList(keyword, year_list, tf_idf_avg)),
+                                 listToString(buildGraphList(keyword, year_list, tf_idf_max)),
+                                 listToString(buildGraphList(keyword, year_list, tf_idf_min)),
+                                 listToString(buildGraphList(keyword, year_list, keyword_percentage))])
 
 if __name__ == '__main__':
     main()
