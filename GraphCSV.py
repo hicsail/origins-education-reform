@@ -1,4 +1,4 @@
-import csv, argparse
+import csv, argparse, os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -51,25 +51,28 @@ def main():
     # list of tuples - (keyword, stats_list)
     graphed = []
 
-    # construct list of tuples to be graphed (word, list)
-    with open(args.i + ".csv", encoding='UTF-8') as csvfile:
-        read_csv = csv.reader(csvfile, delimiter=',')
-        year_list = []
-        for row in read_csv:
-            if row[0] == "word" and row[1] == "tf-idf avg":
-                years = row[5].split()
-                for year in years:
-                    year_list.append(int(year))
-            # all these np arrays here are lists, need to be ints. do later because its fucking up
-            else:
-                if args.t_avg:
-                    graphed.append((row[0], string_to_floats(row[1])))
-                if args.t_max:
-                    graphed.append((row[0], string_to_floats(row[2])))
-                if args.t_min:
-                    graphed.append((row[0], string_to_floats(row[3])))
-                if args.percent:
-                    graphed.append((row[0], string_to_floats(row[4])))
+    for subdir, dirs, files in os.walk(args.i):
+        for csv_file in files:
+            if csv_file[0] != ".":
+                # construct list of tuples to be graphed (word, list)
+                with open(args.i + "/" + csv_file, 'r', encoding='UTF-8') as csvfile:
+                    read_csv = csv.reader(csvfile, delimiter=',')
+                    year_list = []
+                    for row in read_csv:
+                        if row[0] == "word" and row[1] == "tf-idf avg":
+                            years = row[5].split()
+                            for year in years:
+                                year_list.append(int(year))
+                        # all these np arrays here are lists, need to be ints. do later because its fucking up
+                        else:
+                            if args.t_avg:
+                                graphed.append((row[0], string_to_floats(row[1])))
+                            if args.t_max:
+                                graphed.append((row[0], string_to_floats(row[2])))
+                            if args.t_min:
+                                graphed.append((row[0], string_to_floats(row[3])))
+                            if args.percent:
+                                graphed.append((row[0], string_to_floats(row[4])))
 
     # determine maximum y-coordinate
     g_max = findMax(graphed)
