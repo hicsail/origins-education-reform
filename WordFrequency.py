@@ -646,7 +646,7 @@ def main():
                 pass
             txt_out.write("\n")
 
-    with open(args.csv + '.csv', 'w', newline='') as csv_out:
+    with open(args.csv + '.csv', 'w', newline='', encoding='utf-8') as csv_out:
         csvwriter = csv.writer(csv_out, delimiter=',')
         year_list_str = []
         for year in year_list:
