@@ -12,11 +12,29 @@ import json, math, os, nltk, argparse, csv
 # minimum and term frequency for each keyword specified. The statistics in this csv file can be read and
 # graphed by another script called GraphCSV.py.
 #
+# Update 9/28: Input argument -b will allow the user to analyze bigrams rather than individual keywords.
+# All other script functionality is the same.
+#
 
 
+# This method is modified, tested, and not broken
 # construct list of keywords
 def buildKeyList(keywords):
-    key_list = keywords.lower().split()
+    key_list = keywords.lower().split(",")
+    key_list = [keyword.strip() for keyword in key_list]
+    if bigrams:
+        bigram_list = []
+        key_list = [tuple(keyword.split("/")) for keyword in key_list]
+        # if a bigram is by itself, i.e. - not associated with other bigrams via "/",
+        # then this loop will create a tuple with the second index empty. Keep an eye
+        # on it with the word frequency methods, I don't know if it will cause a
+        # problem yet.
+        for i in range(len(key_list)):
+            temp_list = list(key_list[i])
+            temp_list = [tuple(elem.split()) for elem in temp_list]
+            temp_list = tuple(temp_list)
+            bigram_list.append(temp_list)
+        return bigram_list
     return key_list
 
 
@@ -122,6 +140,8 @@ def calculateIDFResults(keywords, year_list, years_tally, directory):
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
                     text = jsondata[text_type]
+                    if bigrams:
+                        text = nltk.bigrams(text)
                     year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
@@ -138,17 +158,28 @@ def calculateIDFResults(keywords, year_list, years_tally, directory):
                         # create word frequency distribution
                         fdist = nltk.FreqDist(text)
                         for keyword in keywords:
-                            words = keyword.split("/")
-                            for w in words:
-                                # check if word occurs in document
-                                if fdist[w] > 0:
-                                    try:
-                                        idf_results[target][keyword] += 1
-                                        break
-                                    except KeyError:
+                            if not bigrams:
+                                words = keyword.split("/")
+                                for w in words:
+                                    # check if word occurs in document
+                                    if fdist[w] > 0:
+                                        try:
+                                            idf_results[target][keyword] += 1
+                                            break
+                                        except KeyError:
+                                            pass
+                                    else:
                                         pass
-                                else:
-                                    pass
+                            else:
+                                for i in range(len(keyword)):
+                                    if fdist[keyword[i]] > 0:
+                                        try:
+                                            idf_results[target][keyword] += 1
+                                            break
+                                        except KeyError:
+                                            pass
+                                    else:
+                                        pass
     for y in year_list:
         for keyword in keywords:
             try:
@@ -173,6 +204,8 @@ def calculateTF_IDFResults(year_list, keywords, directory, idf_results):
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                     jsondata = json.load(inpt)
                     text = jsondata[text_type]
+                    if bigrams:
+                        text = nltk.bigrams(text)
                     year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
@@ -190,10 +223,16 @@ def calculateTF_IDFResults(year_list, keywords, directory, idf_results):
                         fdist = nltk.FreqDist(text)
                         # calculate tf and tf-idf for each keyword
                         for keyword in keywords:
-                            words = keyword.split("/")
+                            # if single-word keywords are being searched for, then
+                            # they can be grouped together, separated by a "/" character.
                             temp = 0
-                            for w in words:
-                                temp += calculateTF(fdist, w)
+                            if not bigrams:
+                                words = keyword.split("/")
+                                for w in words:
+                                    temp += calculateTF(fdist, w)
+                            else:
+                                for i in range(len(keyword)):
+                                    temp += calculateTF(fdist, keyword[i])
                             try:
                                 idf = idf_results[target][keyword]
                                 tf_idf = calculateTF_IDF(idf, temp)
@@ -314,7 +353,9 @@ def totalWordCount(year_list, directory):
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
                     text = jsondata[text_type]
-                    words = len(text)
+                    if bigrams:
+                        text = nltk.bigrams(text)
+                    words = len(list(text))
                     year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
@@ -345,6 +386,8 @@ def keywordCount(year_list, keywords, directory):
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
                     text = jsondata[text_type]
+                    if bigrams:
+                        text = nltk.bigrams(text)
                     year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
@@ -362,14 +405,19 @@ def keywordCount(year_list, keywords, directory):
                         fdist = nltk.FreqDist(text)
                         for keyword in keywords:
                             # update keyword count for period/keyword pair
-                            words = keyword.split("/")
-                            for w in words:
-                                word_count = fdist[w]
-                                try:
-                                    keyword_totals[target][keyword] += word_count
-                                except KeyError:
-                                    # decade out of range (specified by user)
-                                    pass
+                            word_count = 0
+                            if not bigrams:
+                                words = keyword.split("/")
+                                for w in words:
+                                    word_count += fdist[w]
+                            else:
+                                for i in range(len(keyword)):
+                                    word_count += fdist[keyword[i]]
+                            try:
+                                keyword_totals[target][keyword] += word_count
+                            except KeyError:
+                                # decade out of range (specified by user)
+                                pass
     return keyword_totals
 
 
@@ -422,6 +470,8 @@ def obtainWordList(directory, year_list, target):
                         # word list is being built
                         if t == target:
                             text = jsondata[text_type]
+                            if bigrams:
+                                text = nltk.bigrams(text)
                             word_list.extend(text)
     return word_list
 
@@ -544,6 +594,8 @@ def main():
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
     parser.add_argument("-txt", help="output text file argument", action="store")
     parser.add_argument("-csv", help="output csv file argument", action="store")
+    parser.add_argument("-b", help="boolean to control searching for bigrams rather than individual words",
+                        action="store_true")
     parser.add_argument("-k", help="list of keywords argument, surround list with quotes", action="store")
     parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
                         action="store")
@@ -561,14 +613,16 @@ def main():
     except IOError:
         pass
 
-    # set up necessary values
-    directory = args.i
-    keywords = buildKeyList(args.k)
-
-    global yrange_min, yrange_max, periods, text_type
+    # set up global values
+    global yrange_min, yrange_max, periods, text_type, bigrams
 
     text_type = args.type
     periods = args.p
+    bigrams = args.b
+
+    # set up necessary values
+    directory = args.i
+    keywords = buildKeyList(args.k)
 
     # if periods flag is not set, set up variables for fixed increments
     if not periods:
@@ -655,9 +709,9 @@ def main():
         csvwriter.writerow(['word', 'tf-idf avg', 'tf-idf max', 'tf-idf min', 'word frequency', year_string])
         for keyword in keywords:
             csvwriter.writerow([keyword, listToString(buildGraphList(keyword, year_list, tf_idf_avg)),
-                                 listToString(buildGraphList(keyword, year_list, tf_idf_max)),
-                                 listToString(buildGraphList(keyword, year_list, tf_idf_min)),
-                                 listToString(buildGraphList(keyword, year_list, keyword_percentage))])
+                                listToString(buildGraphList(keyword, year_list, tf_idf_max)),
+                                listToString(buildGraphList(keyword, year_list, tf_idf_min)),
+                                listToString(buildGraphList(keyword, year_list, keyword_percentage))])
 
 if __name__ == '__main__':
     main()
