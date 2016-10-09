@@ -36,12 +36,14 @@ def findMax(list_inpt):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", help="input csv filepath", action="store")
-    parser.add_argument("-t_avg", help="take tf_idf avg for each decade", action="store_true")
-    parser.add_argument("-t_max", help="take tf_idf max for each decade", action="store_true")
-    parser.add_argument("-t_min", help="take tf_idf min for each decade", action="store_true")
+    parser.add_argument("-avg", help="take tf_idf /sentiment avg for each decade", action="store_true")
+    parser.add_argument("-max", help="take tf_idf /sentiment max for each decade", action="store_true")
+    parser.add_argument("-min", help="take tf_idf / sentiment min for each decade", action="store_true")
     parser.add_argument("-percent", help="graph word frequency as a percentage of total words (not tfidf)",
                         action="store_true")
     parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
+    parser.add_argument("-wf", help="if plotting from word frequency script results", action="store_true")
+    parser.add_argument("-sa", help="if plotting from sentiment analysis script results", action="store_true")
 
     try:
         args = parser.parse_args()
@@ -58,21 +60,34 @@ def main():
                 with open(args.i + "/" + csv_file, 'r', encoding='UTF-8') as csvfile:
                     read_csv = csv.reader(csvfile, delimiter=',')
                     year_list = []
-                    for row in read_csv:
-                        if row[0] == "word" and row[1] == "tf-idf avg":
-                            years = row[5].split()
-                            for year in years:
-                                year_list.append(int(year))
-                        # all these np arrays here are lists, need to be ints. do later because its fucking up
-                        else:
-                            if args.t_avg:
-                                graphed.append((row[0], string_to_floats(row[1])))
-                            if args.t_max:
-                                graphed.append((row[0], string_to_floats(row[2])))
-                            if args.t_min:
-                                graphed.append((row[0], string_to_floats(row[3])))
-                            if args.percent:
-                                graphed.append((row[0], string_to_floats(row[4])))
+                    if args.wf:
+                        for row in read_csv:
+                            if row[0] == "word" and row[1] == "tf-idf avg":
+                                years = row[5].split()
+                                for year in years:
+                                    year_list.append(int(year))
+                            else:
+                                if args.avg:
+                                    graphed.append((row[0], string_to_floats(row[1])))
+                                if args.max:
+                                    graphed.append((row[0], string_to_floats(row[2])))
+                                if args.min:
+                                    graphed.append((row[0], string_to_floats(row[3])))
+                                if args.percent:
+                                    graphed.append((row[0], string_to_floats(row[4])))
+                    if args.sa:
+                        for row in read_csv:
+                            if row[0] == "word" and row[1] == "sent avg":
+                                years = row[5].split()
+                                for year in years:
+                                    year_list.append(int(year))
+                            else:
+                                if args.avg:
+                                    graphed.append((row[0], string_to_floats(row[1])))
+                                if args.max:
+                                    graphed.append((row[0], string_to_floats(row[2])))
+                                if args.min:
+                                    graphed.append((row[0], string_to_floats(row[3])))
 
     # determine maximum y-coordinate
     g_max = findMax(graphed)
@@ -95,14 +110,23 @@ def main():
     # labels etc.
     plt.xlabel("Period")
     plt.ylabel("Word Frequency")
-    if args.t_avg:
-        plt.title("TF-IDF Average Scores Per Period")
-    if args.t_max:
-        plt.title("TF-IDF Maximum Scores Per Period")
-    if args.t_min:
-        plt.title("TF-IDF Minimum Scores Per Period")
-    if args.percent:
-        plt.title("Word Frequency as Percentage of Total Words Per Period")
+
+    if args.wf:
+        if args.avg:
+            plt.title("TF-IDF Average Scores Per Period")
+        if args.max:
+            plt.title("TF-IDF Maximum Scores Per Period")
+        if args.min:
+            plt.title("TF-IDF Minimum Scores Per Period")
+        if args.percent:
+            plt.title("Word Frequency as Percentage of Total Words Per Period")
+    if args.sa:
+        if args.avg:
+            plt.title("Average Sentiment Scores Per Period")
+        if args.max:
+            plt.title("Maximum Sentiment Scores Per Period")
+        if args.min:
+            plt.title("Minimum Sentiment Scores Per Period")
 
     # generate x-tick labels for x-axis
     labels = []
@@ -114,7 +138,7 @@ def main():
 
     # only different because with the bar graph, you want to include the space for the last year in year_list (i.e. -
     # the end of the last period being counted) because you need space for the bars. With the line graph, though, you
-    # don't want it because it just flatlines there - all you need is the point.
+    # don't want it because it just flatlines there; all you need is the point.
     if args.bar:
         plt.axis([year_list[0], year_list[len(year_list) - 1], 0, g_max + (g_max/8)])
     else:
