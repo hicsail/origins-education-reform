@@ -1,6 +1,18 @@
 import os, argparse, json, csv
 
 
+#                                       *** SentAnalysis.py ***
+#
+#   This script takes the directory created by SentBuilder.py (which outputs a directory and subdirectories
+# corresponding to a list of keywords) and calculates sentiment scores on them corresponding to the AFINN
+# word list (http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=6010). It creates a text file which
+# lists those scores, along with which documents per period had the highest and lowest sentiment scores. It also
+# creates a csv file with lists corresponding to avg/max/min sentiment scores per period, which can then be
+# passed to GraphCSV.py as input.
+#
+
+
+# build list of keywords
 def build_key_list(directory):
     key_list = []
     for dirs, subdirs, files in os.walk(directory):
@@ -12,6 +24,7 @@ def build_key_list(directory):
 # construct list of year periods
 def build_year_list(increment, range_years):
     if not periods:
+        # fixed increments
         num_elements = int(((yrange_max - yrange_min) / increment))
         year_list = [None] * num_elements
         i = 0
@@ -19,6 +32,7 @@ def build_year_list(increment, range_years):
             year_list[i] = num
             i += 1
     else:
+        # periods of arbitrary length
         num_elements = len(range_years)
         year_list = [None] * num_elements
         i = 0
@@ -28,7 +42,7 @@ def build_year_list(increment, range_years):
     return sorted(year_list)
 
 
-# build a nested dict with lists as values
+# build a 2D dict with lists as values
 def build_dict_of_lists(year_list, keywords):
     results = {}
     for year in year_list:
@@ -40,7 +54,7 @@ def build_dict_of_lists(year_list, keywords):
     return results
 
 
-# build a nested dict with individual numbers as values
+# build a 2D dict with individual numbers as values
 def build_dict_of_nums(year_list, keywords):
     results = {}
     for year in year_list:
@@ -52,7 +66,7 @@ def build_dict_of_nums(year_list, keywords):
     return results
 
 
-# build dict of afinn words and their pos/neg values
+# build dict of words corresponding to the AFINN word list and their pos/neg values
 def build_afinn_dict(filepath):
     afinn = {}
     with open(filepath, 'r', encoding='utf-8') as in_file:
@@ -85,7 +99,7 @@ def determine_year(year, year_list):
             continue
 
 
-# sort dict entries in a list of tuples by second value (sentiment)
+# sort dict entries in a list of tuples by second value (i.e. - sentiment score)
 def sort_sent_dict(year_list, key_list, sent_results):
     for year in year_list:
         for keyword in key_list:
@@ -93,7 +107,7 @@ def sort_sent_dict(year_list, key_list, sent_results):
     return sent_results
 
 
-# fill sent dict with sent results for each json doc w/r/t afinn dict
+# fill sent dict with sent results for each json doc w/r/t AFINN dict
 def populate_sent_dict(directory, key_list, year_list, afinn):
     sent_dict = build_dict_of_lists(year_list, key_list)
     for dirs, subdirs, files in os.walk(directory):
@@ -117,6 +131,9 @@ def populate_sent_dict(directory, key_list, year_list, afinn):
     return sent_dict_sorted
 
 
+# sometimes a period has no json documents associated with it. it makes the graph look
+# bad and throws a ValueError, so this method makes that period's score equal to the
+# period directly before it.
 def handle_empty_entry(year_list, i, keyword, sent_result):
     # no files for this period
     prev_year = year_list[i - 1]
@@ -129,6 +146,8 @@ def handle_empty_entry(year_list, i, keyword, sent_result):
     return previous
 
 
+# builds dicts for avg, max, and min sentiment scores. type of
+# score that gets calculated is inputted as the 'type' argument.
 def sent_calcs(year_list, key_list, sent_results, type):
     sent_result = build_dict_of_nums(year_list, key_list)
     for i in range(len(year_list)):
@@ -153,6 +172,7 @@ def sent_calcs(year_list, key_list, sent_results, type):
                 for j in range(length):
                     totals.append(sent_results[year_list[i]][keyword][j][1])
                 total = sum(totals)
+                # make sure there are files associated with this period
                 if length > 0 or total > 0:
                     try:
                         average = round((total / length), 4)
@@ -162,6 +182,7 @@ def sent_calcs(year_list, key_list, sent_results, type):
                 else:
                     # no files for this period / keyword pair, use previous period's score
                     sent_result[year_list[i]][keyword] = handle_empty_entry(year_list, i, keyword, sent_result)
+            # kept total in here just in case we figure out some way of normalizing the results
             if type == "total":
                 totals = []
                 for j in range(length):
@@ -175,26 +196,28 @@ def sent_calcs(year_list, key_list, sent_results, type):
 def list_max_docs(out, year, keyword, results, num):
     list_length = len(results[year][keyword])
     if int(num) <= list_length:
-        # make sure user requested less scores than actually exist for that period
+        # make sure user requested less tf-idf scores than actually exist for that period
         out.write("{0} highest sentiment scores for \"{1}\" in this period: ".format(str(num), str(keyword)) + "\n")
         i = 1
         for key_tup in results[year][keyword][list_length - int(num): list_length]:
             out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
             i += 1
+        out.write("\n")
     else:
-        # user requested more scores than there are for that period
+        # user requested more tf-idf scores than there are for that period
         out.write("{0} highest sentiment scores for \"{1}\" in this period: ".format(str(list_length), str(keyword)) + "\n")
         i = 1
         for key_tup in results[year][keyword]:
             out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
             i += 1
+        out.write("\n")
 
 
 # writes N=num documents with lowest sentiment scores for each period to a text file
 def list_min_docs(out, year, keyword, results, num):
     list_length = len(results[year][keyword])
     if int(num) <= list_length:
-        # make sure user requested less scores than actually exist for that period
+        # make sure user requested less tf-idf scores than actually exist for that period
         out.write("{0} lowest sentiment scores for \"{1}\" in this period: ".format(str(num), str(keyword)) + "\n")
         i = 1
         for key_tup in results[year][keyword][:int(num)]:
@@ -202,7 +225,7 @@ def list_min_docs(out, year, keyword, results, num):
             i += 1
         out.write("\n")
     else:
-        # user requested more scores than there are for that period
+        # user requested more tf-idf scores than there are for that period
         out.write("{0} lowest sentiment scores for \"{1}\" in this period: ".format(str(list_length), str(keyword)) + "\n")
         i = 1
         for key_tup in results[year][keyword]:
@@ -282,8 +305,10 @@ def main():
     afinn = build_afinn_dict(args.afinn)
     key_list = build_key_list(directory)
 
+    # master dict with raw sent scores and their corresponding json doc file names
     sent_results = populate_sent_dict(directory, key_list, year_list, afinn)
 
+    # individual sentiment score calculations
     sent_avg = sent_calcs(year_list, key_list, sent_results, "avg")
     sent_min = sent_calcs(year_list, key_list, sent_results, "min")
     sent_max = sent_calcs(year_list, key_list, sent_results, "max")
@@ -313,6 +338,7 @@ def main():
                     pass
             txt_out.write("\n")
 
+    # create a csv file and write sentiment scores to it
     with open(args.csv + '.csv', 'w', newline='', encoding='utf-8') as csv_out:
         csvwriter = csv.writer(csv_out, delimiter=',')
         year_list_str = []
