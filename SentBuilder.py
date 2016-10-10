@@ -1,6 +1,14 @@
 import json, os, shutil, argparse
 
 
+#                                       *** SentBuilder.py ***
+#
+#   This script takes a corpus of Json document-formatted texts and a list of keywords / bigrams,
+# and extracts a user-specified length of text around each occurrence of each keyword / bigram.
+# It stores the results in subdirectories corresponding to each keyword / bigram.
+#
+
+
 # construct list of keywords
 def build_key_list(keywords):
     key_list = keywords.lower().split(",")
