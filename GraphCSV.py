@@ -6,10 +6,10 @@ import numpy as np
 #                       *** GraphCSV.py ***
 #
 # This script takes csv files as input (which are themselves output
-# of WordFrequencyScript.py) and graphs whichever information the user
-# would like to from them. As of 9/1/16 this script supports graphing for
-# the following metrics: tf-idf average, maximum, minimum, and term frequency
-# as a percentage of total words.
+# of WordFrequency.py or SentAnalysis.py) and graphs whichever information the user
+# would like to from them. As of 10/9/16 this script supports graphing for
+# the following metrics: tf-idf average, maximum, minimum, term frequency
+# as a percentage of total words, and avg/max/min sentiment score.
 #
 
 
@@ -23,7 +23,7 @@ def string_to_floats(str_inpt):
     return return_list
 
 
-# find max value used in graphed results
+# find max value in graphed results, used to set graph parameters
 def findMax(list_inpt):
     g_max = 0
     for i in range(len(list_inpt)):
@@ -53,13 +53,15 @@ def main():
     # list of tuples - (keyword, stats_list)
     graphed = []
 
+    # iterate over directory of csv files
     for subdir, dirs, files in os.walk(args.i):
         for csv_file in files:
-            if csv_file[0] != ".":
+            if csv_file[0] != "." and csv_file[-4:] == ".csv":
                 # construct list of tuples to be graphed (word, list)
                 with open(args.i + "/" + csv_file, 'r', encoding='UTF-8') as csvfile:
                     read_csv = csv.reader(csvfile, delimiter=',')
                     year_list = []
+                    # graph results from WordFrequency.py
                     if args.wf:
                         for row in read_csv:
                             if row[0] == "word" and row[1] == "tf-idf avg":
@@ -75,6 +77,7 @@ def main():
                                     graphed.append((row[0], string_to_floats(row[3])))
                                 if args.percent:
                                     graphed.append((row[0], string_to_floats(row[4])))
+                    # graph results from SentAnalysis.py
                     if args.sa:
                         for row in read_csv:
                             if row[0] == "word" and row[1] == "sent avg":
@@ -112,6 +115,7 @@ def main():
     plt.ylabel("Word Frequency")
 
     if args.wf:
+        # titles corresponding to WordFrequency.py metrics
         if args.avg:
             plt.title("TF-IDF Average Scores Per Period")
         if args.max:
@@ -121,6 +125,7 @@ def main():
         if args.percent:
             plt.title("Word Frequency as Percentage of Total Words Per Period")
     if args.sa:
+        # titles corresponding to SentAnalysis.py metrics
         if args.avg:
             plt.title("Average Sentiment Scores Per Period")
         if args.max:
