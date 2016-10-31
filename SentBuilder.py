@@ -1,14 +1,6 @@
 import json, os, shutil, argparse
 
 
-#                                       *** SentBuilder.py ***
-#
-#   This script takes a corpus of Json document-formatted texts and a list of keywords / bigrams,
-# and extracts a user-specified length of text around each occurrence of each keyword / bigram.
-# It stores the results in subdirectories corresponding to each keyword / bigram.
-#
-
-
 # construct list of keywords
 def build_key_list(keywords):
     key_list = keywords.lower().split(",")
@@ -57,41 +49,44 @@ def parse_json(in_dir, out_dir, keywords):
                 with open(in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     index += 1
                     jsondata = json.load(in_file)
-                    title = jsondata["Title"]
-                    author = jsondata["Author"]
                     year = int(jsondata["Year Published"])
-                    text = jsondata[text_type]
-                    for keyword in keywords:
-                        if not bigrams:
-                            # keep a set for more efficient word lookup,
-                            # and a list to preserve ordering for file naming
-                            word_set = set(keyword.split("/"))
-                            words = keyword.split("/")
-                            for i in range(len(text)):
-                                if text[i] in word_set:
-                                    word = text[i]
-                                    sub_index += 1
-                                    # build jsondoc out of text chunk around text[i]
-                                    sub_text = text[(i - int(length/2)):(i + int(length/2))]
-                                    with open(out_dir + "/" + "_".join(words) + "/" + str(index) + str(sub_index)
-                                                      + '.json', 'w', encoding='utf-8') as out:
-                                        out.write(build_json(title, author, word, year, sub_text))
-                        else:
-                            words = []
-                            # build a list of tuples
-                            for i in range(len(keyword)):
-                                words.append("-".join(wd for wd in keyword[i]))
-                            # for each tuple, search the text for occurrences of it
-                            for i in range(len(keyword)):
-                                for j in range(len(text) - 1):
-                                    if text[j] == keyword[i][0] and text[j+1] == keyword[i][1]:
+                    if y_min <= year <= y_max:
+                        title = jsondata["Title"]
+                        author = jsondata["Author"]
+                        text = jsondata[text_type]
+                        for keyword in keywords:
+                            if not bigrams:
+                                # keep a set for more efficient word lookup,
+                                # and a list to preserve ordering for file naming
+                                word_set = set(keyword.split("/"))
+                                words = keyword.split("/")
+                                for i in range(len(text)):
+                                    if text[i] in word_set:
+                                        word = text[i]
                                         sub_index += 1
-                                        sub_text = text[(j - int(length/2)):(j + int(length/2))]
-                                        # write extracted text to file
-                                        with open(out_dir + "/" + "_".join(words) + "/" + str(index) + str(sub_index)
+                                        # build jsondoc out of text chunk around text[i]
+                                        sub_text = text[(i - int(length/2)):(i + int(length/2))]
+                                        with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
+                                                          + str(index) + "-" + str(sub_index)
                                                           + '.json', 'w', encoding='utf-8') as out:
-                                            word = " ".join(wd for wd in keyword[i])
                                             out.write(build_json(title, author, word, year, sub_text))
+                            else:
+                                words = []
+                                # build a list of tuples
+                                for i in range(len(keyword)):
+                                    words.append("-".join(wd for wd in keyword[i]))
+                                # for each tuple, search the text for occurrences of it
+                                for i in range(len(keyword)):
+                                    for j in range(len(text) - 1):
+                                        if text[j] == keyword[i][0] and text[j+1] == keyword[i][1]:
+                                            sub_index += 1
+                                            sub_text = text[(j - int(length/2)):(j + int(length/2))]
+                                            # write extracted text to file
+                                            with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
+                                                              + str(index) + "-" + str(sub_index)
+                                                              + '.json', 'w', encoding='utf-8') as out:
+                                                word = " ".join(wd for wd in keyword[i])
+                                                out.write(build_json(title, author, word, year, sub_text))
 
 
 # json file to hold extracted text. in addition to extracted text, it also contains publication
@@ -113,6 +108,7 @@ def main():
                         action="store_true")
     parser.add_argument("-type", help="which text field from the json document you intend to analyze",
                         action="store")
+    parser.add_argument("-y", help="year range", action="store")
 
     try:
         args = parser.parse_args()
@@ -127,11 +123,14 @@ def main():
         os.mkdir(args.o)
 
     # make some variables global to simplify the function parameters
-    global text_type, bigrams, length
+    global text_type, bigrams, length, y_min, y_max
 
     text_type = args.type
     bigrams = args.b
     length = int(args.len)
+    y_range = args.y.split()
+    y_min = int(y_range[0])
+    y_max = int(y_range[1])
 
     # set up input directory and key list values
     in_dir = args.i
