@@ -33,6 +33,15 @@ def findMax(list_inpt):
     return g_max
 
 
+def findMin(list_inpt, g_max):
+    g_min = g_max
+    for i in range(len(list_inpt)):
+        for j in range(len(list_inpt[i][1])):
+            if list_inpt[i][1][j] < g_min:
+                g_min = list_inpt[i][1][j]
+    return g_min
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", help="input csv filepath", action="store")
@@ -84,6 +93,8 @@ def main():
                                 years = row[5].split()
                                 for year in years:
                                     year_list.append(int(year))
+                            elif row[0] == "Average Sentiment Across Corpus":
+                                graphed.append((row[0], string_to_floats(row[1])))
                             else:
                                 if args.avg:
                                     graphed.append((row[0], string_to_floats(row[1])))
@@ -94,6 +105,8 @@ def main():
 
     # determine maximum y-coordinate
     g_max = findMax(graphed)
+    g_min = findMin(graphed, g_max)
+
     # set x-axis
     index = np.array(sorted(year_list))
     if args.bar:
@@ -112,7 +125,10 @@ def main():
 
     # labels etc.
     plt.xlabel("Period")
-    plt.ylabel("Word Frequency")
+    if args.wf:
+        plt.ylabel("Word Frequency")
+    if args.sa:
+        plt.ylabel("Sentiment Score")
 
     if args.wf:
         # titles corresponding to WordFrequency.py metrics
@@ -145,9 +161,9 @@ def main():
     # the end of the last period being counted) because you need space for the bars. With the line graph, though, you
     # don't want it because it just flatlines there; all you need is the point.
     if args.bar:
-        plt.axis([year_list[0], year_list[len(year_list) - 1], 0, g_max + (g_max/8)])
+        plt.axis([year_list[0], year_list[len(year_list) - 1], g_min - int(g_min/8), g_max + int(g_max/8)])
     else:
-        plt.axis([year_list[0], year_list[len(year_list) - 2], 0, g_max + (g_max/8)])
+        plt.axis([year_list[0], year_list[len(year_list) - 2], g_min - int(g_min/8), g_max + int(g_max/8)])
     plt.legend()
     plt.show()
 
