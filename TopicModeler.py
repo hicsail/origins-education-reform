@@ -171,8 +171,8 @@ def main():
     for year in year_list:
         for key in key_list:
             corpus_dict[year][key] = [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
-            gensim.corpora.MmCorpus.serialize('/tmp/{0}{1}.mm'.format(year, key), corpus_dict[year][key])
-            corpus_dict[year][key] = gensim.corpora.MmCorpus('/tmp/{0}{1}.mm'.format(year, key))
+            # gensim.corpora.MmCorpus.serialize('/tmp/{0}{1}.mm'.format(year, key), corpus_dict[year][key])
+            # corpus_dict[year][key] = gensim.corpora.MmCorpus('/tmp/{0}{1}.mm'.format(year, key))
             try:
                 lda_dict[year][key] = gensim.models.LdaModel(
                     corpus_dict[year][key], id2word=dictionary_dict[year][key], num_topics=int(args.num_topics))
