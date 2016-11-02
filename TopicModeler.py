@@ -186,7 +186,7 @@ def main():
             for key in key_list:
                 txt_out.write("For extracted documents around {0}:".format(str(key)) + "\n")
                 try:
-                    topics = lda_dict[year][key].show_topics(
+                    topics = lda_dict[year_list[i]][key].show_topics(
                         num_topics=int(args.num_topics), num_words=int(args.num_words))
                     j = 1
                     for topic in topics:
@@ -202,7 +202,7 @@ def main():
                         txt_out.write("\n")
                     txt_out.write("\n")
                 except AttributeError:
-                    txt_out.write(lda_dict[year][key])
+                    txt_out.write(lda_dict[year_list[i]][key])
             txt_out.write("\n")
 
 
