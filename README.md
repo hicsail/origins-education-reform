@@ -36,7 +36,11 @@ Example usage:
         
     * ``-k "list_of_keywords"``
     
-        Specify which keywords you wish to perform a frequency analysis on. Separate unique words by spaces. If you would like to count certain words together (e.g. "train" & "trains"), then separate them with a forward slash ("/") character. They will then be treated as the same keyword. Surround the entire list with quotes.
+        Specify which keywords you wish to perform a frequency analysis on. Separate unique words by commas. If you would like to count certain words together (e.g. "train" & "trains"), then separate them with a forward slash ("/") character. They will then be treated as the same keyword. Surround the entire list with quotes.
+        
+    * ``-b ``
+        
+        Flag that tells the script to search for bigrams rather than individual words. Rules for building a bigram key list are the same as with single keywords, just separate words within a bigram with a whitespace.
         
     * ``-y "min max inc" ``
     
@@ -61,10 +65,72 @@ Example usage:
 Example usage:
 
     python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -txt /Users/Ketchup/Desktop/Word_Frequency -csv /Users/Ketchup/Desktop/Wordcsv -k "test1 test2/test3 test4 test5/test6/test7 test8" -y "1700 1940 5" 
+    
+* ``SentBuilder.py``
+
+    A script for parsing a corpus of text and outputting snippets of text surrounding the occurrence of keywords.
+    
+    * `` -i <filepath to full corpus> ``
+    
+        Filepath to input directory. The directory itself must be filled with Json files, no subdirectories.
+        
+    * `` -o <filepath to output directory> ``
+    
+        Filepath to output directory. 
+    * `` -k "list of keywords" ``
+    
+        List of keywords. The syntax for the argument itself is identical to the scripts above. 
+        
+    * `` -b ``
+    
+        Controls whether your list of keywords is interpreted as a list of bigrams or individual keywords.
+        
+    * `` -len "integer" ``
+    
+        Number of words around each occurence of a keyword to extract.
+        
+    * `` -type "text_type" ``
+    
+        Indicates which subfield of each Json document you'd like to parse. For example, our current corpus has four sub-fields: "Full Text", "Filtered Text", "Full Text Stemmed", and "Filtered Text Stemmed". 
+        
+    * `` -y "min_year max_year" ``
+    
+        Range of years you'd like to include.
+        
+* ``SentAnalysis.py``
+
+    A script for parsing the output of SentBuilder.py and returning sentiment scores for text around keywords over time. The input directory is required to be of the same structure as the output of SentBuilder.py, i.e. - the filepath to the top level directory is the input directory ( `` -i ``), and within it there are subdirectories corresponding to each keyword that you'd like to to analyze. The other input arguments are used as follows:
+    
+    * `` -c <full corpus file path> ``
+    
+        This is the filepath to the full corpus which corresponds to the text being analyzed (i.e. - the corpus used to build the text you're analyzing). Unlike the directory structure for the input directory described above, this directory structure must be a single top level directory filled with Json documents. 
+        
+    * `` -y "min_year max_year increment" OR -y "period_1 period_2 period_3 ... period_n" ``
+    
+        If you're looking at a range of years with a fixed increment value (e.g. - by decades), use the first structure. If you'd like periods of arbitrary length, use the second. Note that if using the second, you must use the periods flag (`` -p ``) on the command line, or the script won't know what to do with it.
+        
+    * `` -num "integer" ``
+    
+        This tells the script how many maximum/minimum documents to output from each period in the text file at the end of the run. Knowing the documents with the highest and lowest sentiment scores can be useful for understanding whether certain results are being caused by several outliers or truly representative of the corpus itself.
+        
+    * `` -language "en/da" ``
+    
+        Indicates which language your corpus is in. Note that 'en' is for English, while 'da' is for Danish.
+        
+    * `` -csv <filepath to output CSV file> ``
+    
+        Filepath to outputted CSV file. This file can be passed to GraphCSV.py to plot data from the run.
+        
+    * `` -txt <filepath to output txt file> ``
+    
+        Filepath to outputted text file. This file contains more specific information about the run.
+
 
 * ``GraphCSV.py``
 
     Reads from CSV files and produces graphs representing the statistics stored in them. Can produce either line graphs or bar graphs.
+    
+        * If you are graphing output from the script SentAnalysis.py, use the flag `` -sa `` anywhere on the command line. If you are using output from the script WordFrequency.py, type `` -wf `` on the command line.
 
         * The following five flags determine which of the collected data is represented on a graph & how that data is represented. If -bar is not entered, the graph will be a line graph by default. At least one of the bottom four flags must be selected. 
       
