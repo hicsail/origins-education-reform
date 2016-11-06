@@ -1,4 +1,5 @@
 import os, argparse, json, csv
+from afinn import Afinn
 
 
 #                                       *** SentAnalysis.py ***
@@ -67,6 +68,8 @@ def build_dict_of_nums(year_list, keywords):
 
 
 # build dict of words corresponding to the AFINN word list and their pos/neg values
+# update - currently unused, handled by importing afinn package instead. just keeping
+# this method around in case it ends up being faster than using the package
 def build_afinn_dict(filepath):
     afinn = {}
     with open(filepath, 'r', encoding='utf-8') as in_file:
@@ -123,11 +126,11 @@ def populate_overall_sentiment(directory, overall_list, year_list, afinn, extrac
                     if yrange_min <= year < yrange_max:
                         # determine which period it falls within
                         target = determine_year(year, year_list)
-                        for word in text:
-                            if word in afinn:
-                                sentiment += afinn[word]
-                        # even though overall_list only has one keyword, this looks
-                        # better than just hard-coding "all" within the method
+                        for i in range(0, len(text), extract_length):
+                            snippet = " ".join(text[i:i+extract_length])
+                            sentiment += afinn.score(snippet)
+                            # even though overall_list only has one keyword, this looks
+                            # better than just hard-coding "all" within the method
                         truncated_sentiment = float(sentiment/truncated)
                         for keyword in overall_list:
                             # append entry as tuple rather than just sentiment score
@@ -168,9 +171,7 @@ def populate_sent_dict(directory, key_list, year_list, afinn):
                             # check to make sure it's within range specified by user
                             if yrange_min <= year < yrange_max:
                                 target = determine_year(year, year_list)
-                                for word in text:
-                                    if word in afinn:
-                                        sentiment += afinn[word]
+                                sentiment += afinn.score(" ".join(text))
                                 sent_dict[target][subdir].append((jsondoc, sentiment))
     sent_dict_sorted = sort_sent_dict(year_list, key_list, sent_dict)
     return sent_dict_sorted
@@ -299,7 +300,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-dir', action="store", help="input directory argument")
     parser.add_argument("-c", help="file path to full corpus", action="store")
-    parser.add_argument("-afinn", help="file path to AFINN word list", action="store")
     parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
                         action="store")
     parser.add_argument("-num", help="number of max/min documents to grab from each period", action="store")
@@ -307,6 +307,9 @@ def main():
                         action="store_true")
     parser.add_argument("-csv", help="file path to csv output", action="store")
     parser.add_argument("-txt", help="file path to txt output", action="store")
+    parser.add_argument("-language", help="language for AFINN word list. \'en\' for english, "
+                                          "\'da\' for danish", action="store")
+    parser.add_argument("-afinn", help='file path to afinn wordlist', action="store")
 
     try:
         args = parser.parse_args()
@@ -348,7 +351,8 @@ def main():
         year_list = build_year_list(increment, range_years)
 
     # set up dicts for sentiment word list, keyword list, & results of sentiment analysis
-    afinn = build_afinn_dict(args.afinn)
+    # afinn = build_afinn_dict(args.afinn)
+    afinn = Afinn(language=args.language)
     key_list = build_key_list(directory)
     extract_len = determine_text_length(directory)
     overall_list = ["Average Sentiment Across Corpus"]
