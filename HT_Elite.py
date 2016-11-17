@@ -1,11 +1,11 @@
-import csv, argparse, os, shutil, json, zipfile, re
+import csv, argparse, os, shutil, json, zipfile, re, nltk
 import xml.etree.ElementTree as ET
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 
 
 class Parsed:
-    def __init__(self, HTID= '', Title='', Author='', PubInfo='', Years=" ", ISBN='', DocType='', Chapters=''):
+    def __init__(self, HTID= '', Title='', Author='', PubInfo='', Years=" ", ISBN='', DocType='', Chapters='',):
         self.h = HTID
         self.t = Title
         self.a = Author
@@ -18,6 +18,10 @@ class Parsed:
         self.tx = []
         self.cstem = []
         self.txstem = []
+        self.c_sent = []
+        self.tx_sent = []
+        self.cstem_sent = []
+        self.txstem_sent = []
     def add_chapter(self, chapter):
         self.ch += chapter + ", "
     def add_content(self, text):
@@ -28,6 +32,16 @@ class Parsed:
         self.cstem.extend(text)
     def add_filtered_stemmed(self, text):
         self.txstem.extend(text)
+    # use of 'append' rather than 'extend' below assumes that
+    # we'll be adding one sentence at a time to the field
+    def add_content_sent(self, text):
+        self.c_sent.append(text)
+    def add_filtered_sent(self, text):
+        self.tx_sent.append(text)
+    def add_stemmed_sent(self, text):
+        self.cstem_sent.append(text)
+    def add_filtered_stemmed_sent(self, text):
+        self.txstem_sent.append(text)
 
 
 # Gathers all the info from the parsing functions above and builds
@@ -35,7 +49,9 @@ class Parsed:
 def buildJson(file):
     jfile = json.dumps({'Title': file.t, 'Author': file.a, 'Publisher': file.p, 'Year Published': file.y,
                         'ISBN': file.i, 'Document Type': file.d, 'List of chapters': file.ch, 'Full Text': file.c,
-                        'Filtered Text': file.tx,'Filtered Text Stemmed': file.txstem, 'Full Text Stemmed': file.cstem},
+                        'Filtered Text': file.tx,'Filtered Text Stemmed': file.txstem, 'Full Text Stemmed': file.cstem,
+                        'Full Sentences': file.c_sent, 'Filtered Sentences': file.tx_sent,
+                        'Stemmed Sentences': file.cstem_sent, 'Filtered Stemmed Sentences': file.txstem_sent},
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
@@ -70,6 +86,7 @@ def buildHTIDs(in_dir):
                             id = row[0]
                             id = id.replace("+", ":")
                             id = id.replace("=", "/")
+                            id = id[:-5]
                             htids.add(id)
     return htids
 
@@ -79,6 +96,18 @@ def buildHTIDs(in_dir):
 # class definition above, write the method(s) for building it, and add it to
 # this method along with the buildJson method below.
 def addContent(text, file):
+    sentences = re.split('(?<=[.!?]) +', text)
+    for sentence in sentences:
+        sentence = cleanText(sentence)
+        if len(sentence) > 1:
+            file.add_content_sent(" ".join(sentence))
+            sentence_stemmed = stemText(sentence)
+            file.add_stemmed_sent(" ".join(sentence_stemmed))
+            sentence_filtered = filterText(sentence)
+            if len(sentence_filtered) > 1:
+                file.add_filtered_sent(" ".join(sentence_filtered))
+                sentence_filtered_stemmed = stemText(sentence_filtered)
+                file.add_filtered_stemmed_sent(" ".join(sentence_filtered_stemmed))
     text_list = cleanText(text)
     # full text
     file.add_content(text_list)
@@ -111,7 +140,7 @@ def cleanText(text):
 
 # removes stop words from a text
 def filterText(text_list):
-    filtered_words = set(stopwords.words('english'))
+    filtered_words = set(nltk.corpus.stopwords.words('english'))
     # Loop backwards because delete changes index
     for i in range(len(text_list) - 1, -1, -1):
         # Delete empty strings or stopwords
@@ -184,7 +213,7 @@ def main():
                                             with open(args.e + csv_file, 'r') as csvfile:
                                                 readCSV = csv.reader(csvfile, delimiter=',')
                                                 for row in readCSV:
-                                                    if row[0] == htid:
+                                                    if row[0][:-5] == htid:
                                                         try:
                                                             obj.a = row[4]
                                                             obj.p = row[5]
@@ -195,7 +224,8 @@ def main():
                                                             except IndexError:
                                                                 obj.d = "No Doctype Listed"
                                                         except UnicodeDecodeError:
-                                                            fail("Make sure the CSV files you are referencing are UTF-8 encoded.")
+                                                            fail("Make sure the CSV files you are "
+                                                                 "referencing are UTF-8 encoded.")
                                 with open(args.o + str(obj.h) + ".json", 'w', encoding='utf-8') as out:
                                     out.write(buildJson(obj))
 
