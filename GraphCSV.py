@@ -53,6 +53,7 @@ def main():
     parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
     parser.add_argument("-wf", help="if plotting from word frequency script results", action="store_true")
     parser.add_argument("-sa", help="if plotting from sentiment analysis script results", action="store_true")
+    parser.add_argument("-yaxis", help="argument for setting the y-axis min/max values", action="store")
 
     try:
         args = parser.parse_args()
@@ -90,7 +91,10 @@ def main():
                     if args.sa:
                         for row in read_csv:
                             if row[0] == "word" and row[1] == "sent avg":
+                                # list of periods
                                 years = row[5].split()
+                                # number of documents for each period
+                                docs = row[6].split()
                                 for year in years:
                                     year_list.append(int(year))
                             elif row[0] == "Average Sentiment Across Corpus":
@@ -103,9 +107,15 @@ def main():
                                 if args.min:
                                     graphed.append((row[0], string_to_floats(row[3])))
 
-    # determine maximum y-coordinate
-    g_max = findMax(graphed)
-    g_min = findMin(graphed, g_max)
+    try:
+        y_vals = args.yaxis.split()
+    except AttributeError:
+        # determine maximum y-coordinate
+        tmp_max = findMax(graphed)
+        g_max = tmp_max + float(tmp_max/8)
+        tmp_min = findMin(graphed, tmp_max)
+        g_min = tmp_min - float(tmp_min/8)
+        y_vals = [g_min, g_max]
 
     # set x-axis
     index = np.array(sorted(year_list))
@@ -161,9 +171,9 @@ def main():
     # the end of the last period being counted) because you need space for the bars. With the line graph, though, you
     # don't want it because it just flatlines there; all you need is the point.
     if args.bar:
-        plt.axis([year_list[0], year_list[len(year_list) - 1], g_min - int(g_min/8), g_max + int(g_max/8)])
+        plt.axis([year_list[0], year_list[len(year_list) - 1], float(y_vals[0]), float(y_vals[1])])
     else:
-        plt.axis([year_list[0], year_list[len(year_list) - 2], g_min - int(g_min/8), g_max + int(g_max/8)])
+        plt.axis([year_list[0], year_list[len(year_list) - 2], float(y_vals[0]), float(y_vals[1])])
     plt.legend()
     plt.show()
 
