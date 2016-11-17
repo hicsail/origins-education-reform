@@ -61,15 +61,17 @@ def parse_json(in_dir, out_dir, keywords):
                                 word_set = set(keyword.split("/"))
                                 words = keyword.split("/")
                                 for i in range(len(text)):
-                                    if text[i] in word_set:
-                                        word = text[i]
-                                        sub_index += 1
-                                        # build jsondoc out of text chunk around text[i]
-                                        sub_text = text[(i - int(length/2)):(i + int(length/2))]
-                                        with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
-                                                          + str(index) + "-" + str(sub_index)
-                                                          + '.json', 'w', encoding='utf-8') as out:
-                                            out.write(build_json(title, author, word, year, sub_text))
+                                    for word in text[i].split():
+                                        if word in word_set:
+                                            sub_index += 1
+                                            # build jsondoc out of text chunk around word
+                                            sub_text = " ".join(text[(i - int(length/2)):(i + int(length/2))])
+                                            sub_words = sub_text.split()
+                                            with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
+                                                              + str(index) + "-" + str(sub_index)
+                                                              + '.json', 'w', encoding='utf-8') as out:
+                                                out.write(build_json(title, author, "_".join(words), year, sub_text,
+                                                                     sub_words))
                             else:
                                 words = []
                                 # build a list of tuples
@@ -77,23 +79,27 @@ def parse_json(in_dir, out_dir, keywords):
                                     words.append("-".join(wd for wd in keyword[i]))
                                 # for each tuple, search the text for occurrences of it
                                 for i in range(len(keyword)):
-                                    for j in range(len(text) - 1):
-                                        if text[j] == keyword[i][0] and text[j+1] == keyword[i][1]:
-                                            sub_index += 1
-                                            sub_text = text[(j - int(length/2)):(j + int(length/2))]
-                                            # write extracted text to file
-                                            with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
-                                                              + str(index) + "-" + str(sub_index)
-                                                              + '.json', 'w', encoding='utf-8') as out:
-                                                word = " ".join(wd for wd in keyword[i])
-                                                out.write(build_json(title, author, word, year, sub_text))
+                                    for j in range(len(text)):
+                                        for k in range(len(text[j].split()) - 1):
+                                            if text[k] == keyword[i][0] and text[k+1] == keyword[i][1]:
+                                                sub_index += 1
+                                                sub_text = " ".join(text[(j - int(length/2)):(j + int(length/2))])
+                                                sub_words = sub_text.split()
+                                                # write extracted text to file
+                                                with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
+                                                                  + str(index) + "-" + str(sub_index)
+                                                                  + '.json', 'w', encoding='utf-8') as out:
+                                                    # word = " ".join(wd for wd in keyword[i])
+                                                    out.write(build_json(title, author, "_".join(words), year, sub_text,
+                                                                         sub_words))
 
 
 # json file to hold extracted text. in addition to extracted text, it also contains publication
 # date (for sentiment analysis by period), title & author (to reference the book it came from)
 # and the keyword itself, for reference.
-def build_json(title, author, keyword, year, text):
-    jfile = json.dumps({'Title': title, 'Author': author, 'Keyword': keyword, 'Year Published': year, 'Text': text},
+def build_json(title, author, keyword, year, text, words):
+    jfile = json.dumps({'Title': title, 'Author': author, 'Keyword': keyword, 'Year Published': year, 'Text': text,
+                        'Words': words},
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
