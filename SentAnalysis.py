@@ -67,25 +67,6 @@ def build_dict_of_nums(year_list, keywords):
     return results
 
 
-# build dict of words corresponding to the AFINN word list and their pos/neg values
-# update - currently unused, handled by importing afinn package instead. just keeping
-# this method around in case it ends up being faster than using the package
-def build_afinn_dict(filepath):
-    afinn = {}
-    with open(filepath, 'r', encoding='utf-8') as in_file:
-        lines = [line.rstrip('\n') for line in in_file]
-        for ws in lines:
-            line = ws.split()
-            try:
-                wd = line[0].strip()
-                sent = (line[1].strip())
-                sent = int(sent)
-                afinn[wd] = sent
-            except ValueError:
-                pass
-    return afinn
-
-
 # helper method to group json docs into periods
 def determine_year(year, year_list):
     # determine which period it falls within
@@ -111,7 +92,7 @@ def sort_sent_dict(year_list, key_list, sent_results):
 
 
 # build dict needed to calculate average sentiment across corpus, per N words
-def populate_overall_sentiment(directory, overall_list, year_list, afinn, extract_length):
+def populate_overall_sentiment(directory, overall_list, year_list, afinn):
     overall_sent = build_dict_of_lists(year_list, overall_list)
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
@@ -119,19 +100,18 @@ def populate_overall_sentiment(directory, overall_list, year_list, afinn, extrac
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                     sentiment = 0
                     jsondata = json.load(inpt)
-                    text = jsondata["Full Text"]
-                    truncated = float(len(text)/extract_length)
+                    text = jsondata["Filtered Sentences"]
+                    #truncated = float(len(text)/extract_length)
                     year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         # determine which period it falls within
                         target = determine_year(year, year_list)
-                        for i in range(0, len(text), extract_length):
-                            snippet = " ".join(text[i:i+extract_length])
-                            sentiment += afinn.score(snippet)
+                        for i in range(len(text)):
+                            sentiment += afinn.score(text[i])
                             # even though overall_list only has one keyword, this looks
                             # better than just hard-coding "all" within the method
-                        truncated_sentiment = float(sentiment/truncated)
+                        truncated_sentiment = float(sentiment/len(text))
                         for keyword in overall_list:
                             # append entry as tuple rather than just sentiment score
                             # so I can use sent_calcs to get average
@@ -171,7 +151,7 @@ def populate_sent_dict(directory, key_list, year_list, afinn):
                             # check to make sure it's within range specified by user
                             if yrange_min <= year < yrange_max:
                                 target = determine_year(year, year_list)
-                                sentiment += afinn.score(" ".join(text))
+                                sentiment += afinn.score(text)
                                 sent_dict[target][subdir].append((jsondoc, sentiment))
     sent_dict_sorted = sort_sent_dict(year_list, key_list, sent_dict)
     return sent_dict_sorted
@@ -309,7 +289,6 @@ def main():
     parser.add_argument("-txt", help="file path to txt output", action="store")
     parser.add_argument("-language", help="language for AFINN word list. \'en\' for english, "
                                           "\'da\' for danish", action="store")
-    parser.add_argument("-afinn", help='file path to afinn wordlist', action="store")
 
     try:
         args = parser.parse_args()
@@ -354,12 +333,12 @@ def main():
     # afinn = build_afinn_dict(args.afinn)
     afinn = Afinn(language=args.language)
     key_list = build_key_list(directory)
-    extract_len = determine_text_length(directory)
+    # extract_len = determine_text_length(directory)
     overall_list = ["Average Sentiment Across Corpus"]
 
     # master dict with raw sent scores and their corresponding json doc file names
     sent_results = populate_sent_dict(directory, key_list, year_list, afinn)
-    overall_sent = populate_overall_sentiment(corpus_path, overall_list, year_list, afinn, extract_len)
+    overall_sent = populate_overall_sentiment(corpus_path, overall_list, year_list, afinn)
 
     # individual sentiment score calculations
     sent_avg = sent_calcs(year_list, key_list, sent_results, "avg")
@@ -399,10 +378,15 @@ def main():
     with open(args.csv + '.csv', 'w', newline='', encoding='utf-8') as csv_out:
         csvwriter = csv.writer(csv_out, delimiter=',')
         year_list_str = []
+        num_docs_str = []
         for year in year_list:
             year_list_str.append(str(year))
+            for keyword in key_list:
+                num_docs_str.append(str(len(sent_results[year][keyword])))
         year_string = " ".join(year_list_str)
-        csvwriter.writerow(['word', 'sent avg', 'sent max', 'sent min', 'sent total', year_string])
+        num_docs_string = " ".join(num_docs_str)
+
+        csvwriter.writerow(['word', 'sent avg', 'sent max', 'sent min', 'sent total', year_string, num_docs_string])
         for keyword in key_list:
             # populate each line with each sentiment calculation
             csvwriter.writerow([keyword, list_to_string(build_graph_list(keyword, year_list, sent_avg)),
@@ -412,6 +396,7 @@ def main():
         # write average sentiment across corpus in last line of csv file
         for keyword in overall_list:
             csvwriter.writerow([keyword, list_to_string(build_graph_list(keyword, year_list, overall_avg))])
+
 
 if __name__ == '__main__':
     main()
