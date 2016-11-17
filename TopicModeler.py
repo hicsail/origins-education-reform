@@ -1,5 +1,5 @@
-import gensim, os, argparse, json, collections, re
-import logging
+import gensim, os, argparse, json, collections, re, nltk
+
 
 
 # construct list of year periods, if user wants to model topics by year
@@ -57,7 +57,7 @@ def build_dict_of_dicts(year_list, key_list):
 # separate year / keyword pairs into lists of texts. this dictionary is used in
 # conjunction with the build_frequency_dict function to yield a dictionary of
 # 'bag of words' representations of each individual document.
-def init_sent_doc_dict(input_dir, key_list, year_list):
+def init_sent_doc_dict(input_dir, key_list, year_list, stopwords):
     doc_dict = build_dict_of_lists(year_list, key_list)
     for dirs, subdirs, files in os.walk(input_dir):
         # 'subdir' corresponds to each keyword
@@ -68,6 +68,11 @@ def init_sent_doc_dict(input_dir, key_list, year_list):
                         with open(dirs + "/" + subdir + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                             jsondata = json.load(inpt)
                             text = jsondata[text_type]
+                            # remove stopwords
+                            for i in range(len(text) - 1, -1, -1):
+                                # Delete empty strings
+                                if text[i] in stopwords:
+                                    del text[i]
                             year = int(jsondata["Year Published"])
                             # check to make sure it's within range specified by user
                             if yrange_min <= year < yrange_max:
@@ -111,17 +116,27 @@ def main():
     parser.add_argument("-type", action="store", help="name of text field in json doc")
     parser.add_argument("-num_topics", action="store", help="number of topics to display")
     parser.add_argument("-num_words", action="store", help="number of words per topic")
+    parser.add_argument("-lang", action="store", help="language")
+    parser.add_argument("-ignore", action="store", help="path to ignored list json file")
     parser.add_argument("-p", help="boolean to analyze by different periods rather than a fixed increment value",
                         action="store_true")
     parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
                         action="store")
+    parser.add_argument("-lda", help="Topic modeling via LDA", action="store_true")
+    parser.add_argument("-lsi", help="Topic modeling vida LSI", action="store_true")
 
     try:
         args = parser.parse_args()
-    except IOError:
-        pass
+    except IOError as msg:
+        print(parser.error(str(msg)))
 
-    # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    def fail(msg):
+        print(msg)
+        os._exit(1)
+
+    if 1 > int(args.lsi) + int(args.lda) > 1:
+        err = "Please use either LSI or LDA modeling (not neither or both)"
+        fail(err)
 
     # build separate doc lists for each subdir, compute topic models on each doc list
 
@@ -130,6 +145,8 @@ def main():
 
     text_type = args.type
     periods = args.p
+    lsi = args.lsi
+    lda = args.lda
 
     # if periods flag is not set, set up variables for fixed increments
     if not periods:
@@ -161,23 +178,40 @@ def main():
     # build list of keywords that we'll be making topic models for
     key_list = build_key_list(args.i)
 
-    # doc_dict = build_dict_of_dicts(year_list, key_list)
+    stopwords = set(nltk.corpus.stopwords.words(args.lang))
 
-    doc_dict = init_sent_doc_dict(args.i, key_list, year_list)
+    with open(args.ignore, 'r', encoding='utf-8') as ignored_list:
+        jsondata = json.load(ignored_list)
+        ignored = jsondata["Ignored"]
+        for word in ignored:
+            stopwords.add(word)
+
+    doc_dict = init_sent_doc_dict(args.i, key_list, year_list, stopwords)
     dictionary_dict = build_frequency_dict(doc_dict, key_list, year_list)
 
     corpus_dict = build_dict_of_lists(year_list, key_list)
-    lda_dict = build_dict_of_lists(year_list, key_list)
+    if lda:
+        lda_dict = build_dict_of_lists(year_list, key_list)
+    if lsi:
+        tfidf_dict = build_dict_of_lists(year_list, key_list)
+        lsi_dict = build_dict_of_lists(year_list, key_list)
     for year in year_list:
         for key in key_list:
             corpus_dict[year][key] = [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
-            # gensim.corpora.MmCorpus.serialize('/tmp/{0}{1}.mm'.format(year, key), corpus_dict[year][key])
-            # corpus_dict[year][key] = gensim.corpora.MmCorpus('/tmp/{0}{1}.mm'.format(year, key))
-            try:
-                lda_dict[year][key] = gensim.models.LdaModel(
-                    corpus_dict[year][key], id2word=dictionary_dict[year][key], num_topics=int(args.num_topics))
-            except ValueError:
-                lda_dict[year][key] = "No Documents for this period."
+            if lda:
+                try:
+                    lda_dict[year][key] = gensim.models.LdaModel(
+                        corpus_dict[year][key], id2word=dictionary_dict[year][key], num_topics=int(args.num_topics))
+                except ValueError:
+                    lda_dict[year][key] = "No Documents for this period."
+            if lsi:
+                try:
+                    tfidf_dict[year][key] = gensim.models.TfidfModel(corpus_dict[year][key])
+                    tfidf = tfidf_dict[year][key]
+                    lsi_dict[year][key] = gensim.models.LsiModel(
+                        tfidf[corpus_dict[year][key]], id2word=dictionary_dict[year][key], num_topics=int(args.num_topics))
+                except ValueError:
+                    lsi_dict[year][key] = "No Documents for this period."
 
     with open(args.txt + '.txt', 'w') as txt_out:
         txt_out.write("Topics per period / keyword pair: " + "\n")
@@ -186,8 +220,15 @@ def main():
             for key in key_list:
                 txt_out.write("For extracted documents around {0}:".format(str(key)) + "\n")
                 try:
-                    topics = lda_dict[year_list[i]][key].show_topics(
-                        num_topics=int(args.num_topics), num_words=int(args.num_words))
+                    if lda:
+                        topics = lda_dict[year_list[i]][key].show_topics(
+                            num_topics=int(args.num_topics), num_words=int(args.num_words))
+                    if lsi:
+                        try:
+                            topics = lsi_dict[year_list[i]][key].show_topics(
+                                num_topics=int(args.num_topics), num_words=int(args.num_words))
+                        except TypeError:
+                            topics = ["There were no documents for this period."]
                     j = 1
                     for topic in topics:
                         topic = str(topic)
