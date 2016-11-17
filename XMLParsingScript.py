@@ -23,6 +23,18 @@ class Parsed:
         self.cstem = []
         self.tx = []
         self.txstem = []
+        self.c_sent = []
+        self.tx_sent = []
+        self.cstem_sent = []
+        self.txstem_sent = []
+    def add_content_sent(self, text):
+        self.c_sent.append(text)
+    def add_filtered_sent(self, text):
+        self.tx_sent.append(text)
+    def add_stemmed_sent(self, text):
+        self.cstem_sent.append(text)
+    def add_filtered_stemmed_sent(self, text):
+        self.txstem_sent.append(text)
     def add_content(self, text):
         self.c.extend(text)
     def add_filtered(self, text):
@@ -336,8 +348,22 @@ def filterChapters(chapters):
 # (lemmatization, etc.) to a Parsed object, you just need to define it in the
 # class definition above, write the method(s) for building it, and add it to
 # this method along with the buildJson method below.
+
+
 def addContent(root, file):
     text = str(root.text) + str(root.tail)
+    sentences = re.split('(?<=[.!?]) +', text)
+    for sentence in sentences:
+        sentence = cleanText(sentence)
+        if len(sentence) > 1:
+            file.add_content_sent(" ".join(sentence))
+            sentence_stemmed = stemText(sentence)
+            file.add_stemmed_sent(" ".join(sentence_stemmed))
+            sentence_filtered = filterText(sentence)
+            if len(sentence_filtered) > 1:
+                file.add_filtered_sent(" ".join(sentence_filtered))
+                sentence_filtered_stemmed = stemText(sentence_filtered)
+                file.add_filtered_stemmed_sent(" ".join(sentence_filtered_stemmed))
     text_list = cleanText(text)
     # full text
     file.add_content(text_list)
@@ -412,8 +438,10 @@ def buildJson(file):
     jfile = json.dumps({'Title': file.t, 'Author': file.a, 'Publisher': file.p, 'Year Published': file.y,
                         'ISBN': file.i, 'Document Type': file.d, 'List of chapters': file.ch,
                         'Full Text': file.c, 'Full Text Stemmed': file.cstem, 'Filtered Text': file.tx,
-                        'Filtered Text Stemmed': file.txstem}, sort_keys=True, indent=4, separators=(',', ': '),
-                       ensure_ascii=False)
+                        'Filtered Text Stemmed': file.txstem, 'Full Sentences': file.c_sent,
+                        'Filtered Sentences': file.tx_sent, 'Stemmed Sentences': file.cstem_sent,
+                        'Filtered Stemmed Sentences': file.txstem_sent},
+                       sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
 
