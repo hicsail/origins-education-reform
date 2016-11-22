@@ -113,10 +113,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
     parser.add_argument("-txt", help="output text file argument", action="store")
-    parser.add_argument("-type", action="store", help="name of text field in json doc")
     parser.add_argument("-num_topics", action="store", help="number of topics to display")
     parser.add_argument("-num_words", action="store", help="number of words per topic")
     parser.add_argument("-lang", action="store", help="language")
+    parser.add_argument("-type", action="store", help="json field to analyze")
     parser.add_argument("-ignore", action="store", help="path to ignored list json file")
     parser.add_argument("-p", help="boolean to analyze by different periods rather than a fixed increment value",
                         action="store_true")
@@ -143,7 +143,10 @@ def main():
     # set up global values
     global yrange_min, yrange_max, periods, text_type
 
-    text_type = args.type
+    if args.type is not None:
+        text_type = args.type
+    else:
+        text_type = "Words"
     periods = args.p
     lsi = args.lsi
     lda = args.lda
