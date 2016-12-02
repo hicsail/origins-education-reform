@@ -115,6 +115,7 @@ def main():
     parser.add_argument("-txt", help="output text file argument", action="store")
     parser.add_argument("-num_topics", action="store", help="number of topics to display")
     parser.add_argument("-num_words", action="store", help="number of words per topic")
+    parser.add_argument("-weights", action="store_true", help="display topic weights with topics")
     parser.add_argument("-lang", action="store", help="language")
     parser.add_argument("-type", action="store", help="json field to analyze")
     parser.add_argument("-ignore", action="store", help="path to ignored list json file")
@@ -157,6 +158,7 @@ def main():
     else:
         text_type = "Words"
 
+    weights = args.weights
     periods = args.p
     lsi = args.lsi
     lda = args.lda
@@ -251,14 +253,33 @@ def main():
                             topics = ["There were no documents for this period."]
                     j = 1
                     for topic in topics:
-                        topic = str(topic)
-                        filtered = re.split('\W[0-9]*', topic)
-                        for k in range(len(filtered) - 1, -1, -1):
-                            if filtered[k] == "" or filtered[k] == "None":
-                                del filtered[k]
+                        if weights:
+                            topic = str(topic[1])
+                            filtered = topic.split('+')
+                            for k in range(len(filtered) - 1, -1, -1):
+                                if filtered[k] == "" or filtered[k] == "None":
+                                    del filtered[k]
+                                else:
+                                    filtered[k] = filtered[k].split('*')
+                            for k in range(len(filtered)):
+                                if k == 0:
+                                    txt_out.write("Topic {0}: {1} ({2}), "
+                                                  .format(str(j), filtered[k][1].strip(), filtered[k][0].strip()))
+                                elif k == len(filtered) - 1:
+                                    txt_out.write("{0} ({1})"
+                                                  .format(filtered[k][1].strip(), filtered[k][0].strip()))
+                                else:
+                                    txt_out.write("{0} ({1}), "
+                                                  .format(filtered[k][1].strip(), filtered[k][0].strip()))
+                        else:
+                            topic = str(topic)
+                            filtered = re.split('\W[0-9]*', topic)
+                            for k in range(len(filtered) - 1, -1, -1):
+                                if filtered[k] == "" or filtered[k] == "None":
+                                    del filtered[k]
                             else:
                                 filtered[k] = filtered[k].lower()
-                        txt_out.write("Topic {0}: {1}".format(str(j), ", ".join(filtered)))
+                            txt_out.write("Topic {0}: {1}".format(str(j), ", ".join(filtered)))
                         j += 1
                         txt_out.write("\n")
                     txt_out.write("\n")
