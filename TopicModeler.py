@@ -71,7 +71,7 @@ def init_sent_doc_dict(input_dir, key_list, year_list, stopwords):
                             # remove stopwords
                             for i in range(len(text) - 1, -1, -1):
                                 # Delete empty strings
-                                if text[i] in stopwords:
+                                if text[i] in stopwords or len(text[i]) < 2:
                                     del text[i]
                             year = int(jsondata["Year Published"])
                             # check to make sure it's within range specified by user
@@ -134,19 +134,29 @@ def main():
         print(msg)
         os._exit(1)
 
+    # set up global values
+    global yrange_min, yrange_max, periods, text_type
+
+    # check user input
     if 1 > int(args.lsi) + int(args.lda) > 1:
         err = "Please use either LSI or LDA modeling (not neither or both)"
         fail(err)
 
-    # build separate doc lists for each subdir, compute topic models on each doc list
+    if args.num_topics is None:
+        num_topics = 10
+    else:
+        num_topics = int(args.num_topics)
 
-    # set up global values
-    global yrange_min, yrange_max, periods, text_type
+    if args.num_words is None:
+        num_words = 10
+    else:
+        num_words = int(args.num_words)
 
     if args.type is not None:
         text_type = args.type
     else:
         text_type = "Words"
+
     periods = args.p
     lsi = args.lsi
     lda = args.lda
@@ -178,16 +188,21 @@ def main():
         # initialize list of years
         year_list = build_year_list(increment, range_years)
 
+    stopwords = set(nltk.corpus.stopwords.words(args.lang))
+
     # build list of keywords that we'll be making topic models for
     key_list = build_key_list(args.i)
 
-    stopwords = set(nltk.corpus.stopwords.words(args.lang))
+    for key in key_list:
+        stopwords.add(key)
 
-    with open(args.ignore, 'r', encoding='utf-8') as ignored_list:
-        jsondata = json.load(ignored_list)
-        ignored = jsondata["Ignored"]
-        for word in ignored:
-            stopwords.add(word)
+    # add words in json file to stopwords set
+    if args.ignore is not None:
+        with open(args.ignore, 'r', encoding='utf-8') as ignored_list:
+            jsondata = json.load(ignored_list)
+            ignored = jsondata["Ignored"]
+            for word in ignored:
+                stopwords.add(word)
 
     doc_dict = init_sent_doc_dict(args.i, key_list, year_list, stopwords)
     dictionary_dict = build_frequency_dict(doc_dict, key_list, year_list)
@@ -200,11 +215,12 @@ def main():
         lsi_dict = build_dict_of_lists(year_list, key_list)
     for year in year_list:
         for key in key_list:
-            corpus_dict[year][key] = [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
+            corpus_dict[year][key] = \
+                [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
             if lda:
                 try:
                     lda_dict[year][key] = gensim.models.LdaModel(
-                        corpus_dict[year][key], id2word=dictionary_dict[year][key], num_topics=int(args.num_topics))
+                        corpus_dict[year][key], id2word=dictionary_dict[year][key], num_topics=num_topics)
                 except ValueError:
                     lda_dict[year][key] = "No Documents for this period."
             if lsi:
@@ -212,7 +228,8 @@ def main():
                     tfidf_dict[year][key] = gensim.models.TfidfModel(corpus_dict[year][key])
                     tfidf = tfidf_dict[year][key]
                     lsi_dict[year][key] = gensim.models.LsiModel(
-                        tfidf[corpus_dict[year][key]], id2word=dictionary_dict[year][key], num_topics=int(args.num_topics))
+                        tfidf[corpus_dict[year][key]], id2word=dictionary_dict[year][key],
+                        num_topics=int(args.num_topics))
                 except ValueError:
                     lsi_dict[year][key] = "No Documents for this period."
 
@@ -225,22 +242,22 @@ def main():
                 try:
                     if lda:
                         topics = lda_dict[year_list[i]][key].show_topics(
-                            num_topics=int(args.num_topics), num_words=int(args.num_words))
+                            num_topics=num_topics, num_words=num_words)
                     if lsi:
                         try:
                             topics = lsi_dict[year_list[i]][key].show_topics(
-                                num_topics=int(args.num_topics), num_words=int(args.num_words))
+                                num_topics=num_topics, num_words=num_words)
                         except TypeError:
                             topics = ["There were no documents for this period."]
                     j = 1
                     for topic in topics:
                         topic = str(topic)
                         filtered = re.split('\W[0-9]*', topic)
-                        for i in range(len(filtered) - 1, -1, -1):
-                            if filtered[i] == "" or filtered[i] == "None":
-                                del filtered[i]
+                        for k in range(len(filtered) - 1, -1, -1):
+                            if filtered[k] == "" or filtered[k] == "None":
+                                del filtered[k]
                             else:
-                                filtered[i] = filtered[i].lower()
+                                filtered[k] = filtered[k].lower()
                         txt_out.write("Topic {0}: {1}".format(str(j), ", ".join(filtered)))
                         j += 1
                         txt_out.write("\n")
