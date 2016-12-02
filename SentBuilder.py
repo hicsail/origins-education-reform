@@ -187,23 +187,27 @@ def main():
 
     # determine which json field to parse based on input
     if by_words:
-        if type == "Full":
+        if type.lower() == "full":
             text_type = "Full Text"
-        if type == "Filtered":
+        elif type.lower() == "filtered":
             text_type = "Filtered Text"
-        if type == "Stemmed":
+        elif type.lower() == "stemmed":
             text_type = "Full Text Stemmed"
-        if type == "Filtered Stemmed":
+        elif type.lower() == "filtered stemmed":
             text_type = "Filtered Text Stemmed"
-    if by_sentences:
-        if type == "Full":
+        else:
+            text_type = type
+    elif by_sentences:
+        if type.lower() == "full":
             text_type = "Full Sentences"
-        if type == "Filtered":
+        elif type.lower() == "filtered":
             text_type = "Filtered Sentences"
-        if type == "Stemmed":
+        elif type.lower() == "stemmed":
             text_type = "Stemmed Sentences"
-        if type == "Filtered Stemmed":
+        elif type.lower() == "filtered stemmed":
             text_type = "Filtered Stemmed Sentences"
+        else:
+            text_type = type
 
     # set up input directory and key list values
     in_dir = args.i
