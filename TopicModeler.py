@@ -1,7 +1,6 @@
 import gensim, os, argparse, json, collections, re, nltk
 
 
-
 # construct list of year periods, if user wants to model topics by year
 def build_year_list(increment, range_years):
     if not periods:
@@ -182,7 +181,7 @@ def main():
 
     # set up variables for periods rather than fixed increments
     else:
-        range_years = args.periods.split()
+        range_years = args.y.split()
         yrange_min = int(range_years[0])
         yrange_max = int(range_years[len(range_years) - 1])
         increment = 0
@@ -196,15 +195,35 @@ def main():
     key_list = build_key_list(args.i)
 
     for key in key_list:
-        stopwords.add(key)
+        sub_keys = key.split("_")
+        for wd in sub_keys:
+            stopwords.add(wd)
 
     # add words in json file to stopwords set
     if args.ignore is not None:
         with open(args.ignore, 'r', encoding='utf-8') as ignored_list:
             jsondata = json.load(ignored_list)
-            ignored = jsondata["Ignored"]
-            for word in ignored:
+            general = jsondata["General"]
+            names = jsondata["Names"]
+            nonsense = jsondata["Nonsense"]
+            verbs = jsondata["Verbs"]
+            adjectives = jsondata["Adjectives"]
+            pronouns = jsondata["Pronouns"]
+            nouns = jsondata["Nouns"]
+            for noun in nouns:
+                stopwords.add(noun)
+            for adjective in adjectives:
+                stopwords.add(adjective)
+            for pronoun in pronouns:
+                stopwords.add(pronoun)
+            for verb in verbs:
+                stopwords.add(verb)
+            for word in nonsense:
                 stopwords.add(word)
+            for word in general:
+                stopwords.add(word)
+            for name in names:
+                stopwords.add(name)
 
     doc_dict = init_sent_doc_dict(args.i, key_list, year_list, stopwords)
     dictionary_dict = build_frequency_dict(doc_dict, key_list, year_list)
@@ -219,10 +238,13 @@ def main():
         for key in key_list:
             corpus_dict[year][key] = \
                 [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
+            numdocs = len(corpus_dict[year][key])
+            chunks = int(numdocs/5)
             if lda:
                 try:
                     lda_dict[year][key] = gensim.models.LdaModel(
-                        corpus_dict[year][key], id2word=dictionary_dict[year][key], num_topics=num_topics)
+                        corpus_dict[year][key], chunksize=chunks, passes=2, id2word=dictionary_dict[year][key],
+                        num_topics=num_topics)
                 except ValueError:
                     lda_dict[year][key] = "No Documents for this period."
             if lsi:
@@ -240,7 +262,7 @@ def main():
         for i in range(len(year_list) - 1):
             txt_out.write("Period: {0} - {1}".format(str(year_list[i]), str(year_list[i+1])) + "\n")
             for key in key_list:
-                txt_out.write("For extracted documents around {0}:".format(str(key)) + "\n")
+                txt_out.write("For extracted documents around {0}:".format(str(key).replace("_", "/")) + "\n")
                 try:
                     if lda:
                         topics = lda_dict[year_list[i]][key].show_topics(
