@@ -203,27 +203,36 @@ def main():
     if args.ignore is not None:
         with open(args.ignore, 'r', encoding='utf-8') as ignored_list:
             jsondata = json.load(ignored_list)
-            general = jsondata["General"]
-            names = jsondata["Names"]
-            nonsense = jsondata["Nonsense"]
-            verbs = jsondata["Verbs"]
-            adjectives = jsondata["Adjectives"]
-            pronouns = jsondata["Pronouns"]
-            nouns = jsondata["Nouns"]
-            for noun in nouns:
-                stopwords.add(noun)
-            for adjective in adjectives:
-                stopwords.add(adjective)
-            for pronoun in pronouns:
-                stopwords.add(pronoun)
-            for verb in verbs:
-                stopwords.add(verb)
-            for word in nonsense:
-                stopwords.add(word)
-            for word in general:
-                stopwords.add(word)
-            for name in names:
-                stopwords.add(name)
+            try:
+                ignored = jsondata["Ignored"]
+                ignore_flag = True
+            except KeyError:
+                ignore_flag = False
+            if ignore_flag:
+                for ignore in ignored:
+                    stopwords.add(ignore)
+            else:
+                general = jsondata["General"]
+                names = jsondata["Names"]
+                nonsense = jsondata["Nonsense"]
+                verbs = jsondata["Verbs"]
+                adjectives = jsondata["Adjectives"]
+                pronouns = jsondata["Pronouns"]
+                nouns = jsondata["Nouns"]
+                for noun in nouns:
+                    stopwords.add(noun)
+                for adjective in adjectives:
+                    stopwords.add(adjective)
+                for pronoun in pronouns:
+                    stopwords.add(pronoun)
+                for verb in verbs:
+                    stopwords.add(verb)
+                for word in nonsense:
+                    stopwords.add(word)
+                for word in general:
+                    stopwords.add(word)
+                for name in names:
+                    stopwords.add(name)
 
     doc_dict = init_sent_doc_dict(args.i, key_list, year_list, stopwords)
     dictionary_dict = build_frequency_dict(doc_dict, key_list, year_list)
