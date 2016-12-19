@@ -248,7 +248,10 @@ def main():
             corpus_dict[year][key] = \
                 [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
             numdocs = len(corpus_dict[year][key])
-            chunks = min(10000, int(numdocs/5))
+            if numdocs == 0:
+                chunks = 10000
+            else:
+                chunks = min(10000, int(numdocs/5))
             if lda:
                 try:
                     lda_dict[year][key] = gensim.models.LdaModel(
