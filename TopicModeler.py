@@ -248,7 +248,7 @@ def main():
             corpus_dict[year][key] = \
                 [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
             numdocs = len(corpus_dict[year][key])
-            if numdocs == 0:
+            if numdocs < 5:
                 chunks = 10000
             else:
                 chunks = min(10000, int(numdocs/5))
