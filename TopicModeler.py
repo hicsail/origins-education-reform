@@ -247,15 +247,11 @@ def main():
         for key in key_list:
             corpus_dict[year][key] = \
                 [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
-            numdocs = len(corpus_dict[year][key])
-            if numdocs < 5:
-                chunks = 10000
-            else:
-                chunks = min(10000, int(numdocs/5))
+            # numdocs = len(corpus_dict[year][key])
             if lda:
                 try:
                     lda_dict[year][key] = gensim.models.LdaModel(
-                        corpus_dict[year][key], chunksize=chunks, passes=2, id2word=dictionary_dict[year][key],
+                        corpus_dict[year][key], passes=2, id2word=dictionary_dict[year][key],
                         num_topics=num_topics)
                 except ValueError:
                     lda_dict[year][key] = "No Documents for this period."
@@ -269,7 +265,7 @@ def main():
                 except ValueError:
                     lsi_dict[year][key] = "No Documents for this period."
 
-    with open(args.txt + '.txt', 'w') as txt_out:
+    with open(args.txt + '.txt', 'w', encoding='utf8') as txt_out:
         txt_out.write("Topics per period / keyword pair: " + "\n")
         for i in range(len(year_list) - 1):
             txt_out.write("Period: {0} - {1}".format(str(year_list[i]), str(year_list[i+1])) + "\n")
