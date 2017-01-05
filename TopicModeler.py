@@ -1,4 +1,4 @@
-import gensim, os, argparse, json, collections, re, nltk
+import gensim, os, argparse, json, collections, re, nltk, numpy
 
 
 # construct list of year periods, if user wants to model topics by year
@@ -124,6 +124,8 @@ def main():
                         action="store")
     parser.add_argument("-lda", help="Topic modeling via LDA", action="store_true")
     parser.add_argument("-lsi", help="Topic modeling vida LSI", action="store_true")
+    parser.add_argument("-include_keys", help="don't filter keywords from topics", action="store_true")
+    parser.add_argument("-passes", help="number of passes on corpus", action="store")
 
     try:
         args = parser.parse_args()
@@ -157,10 +159,16 @@ def main():
     else:
         text_type = "Words"
 
+    if args.passes is None:
+        passes = 1
+    else:
+        passes = int(args.passes)
+
     weights = args.weights
     periods = args.p
     lsi = args.lsi
     lda = args.lda
+    include_keys = args.include_keys
 
     # if periods flag is not set, set up variables for fixed increments
     if not periods:
@@ -194,10 +202,13 @@ def main():
     # build list of keywords that we'll be making topic models for
     key_list = build_key_list(args.i)
 
-    for key in key_list:
-        sub_keys = key.split("_")
-        for wd in sub_keys:
-            stopwords.add(wd)
+    # add keywords to ignore list (since they tend to appear in every topic)
+
+    if not include_keys:
+        for key in key_list:
+            sub_keys = key.split("_")
+            for wd in sub_keys:
+                stopwords.add(wd)
 
     # add words in json file to stopwords set
     if args.ignore is not None:
@@ -240,6 +251,7 @@ def main():
     corpus_dict = build_dict_of_lists(year_list, key_list)
     if lda:
         lda_dict = build_dict_of_lists(year_list, key_list)
+        # rands = numpy.random.RandomState(1)
     if lsi:
         tfidf_dict = build_dict_of_lists(year_list, key_list)
         lsi_dict = build_dict_of_lists(year_list, key_list)
@@ -250,9 +262,17 @@ def main():
             # numdocs = len(corpus_dict[year][key])
             if lda:
                 try:
+
+                    # stochastic
                     lda_dict[year][key] = gensim.models.LdaModel(
-                        corpus_dict[year][key], passes=2, id2word=dictionary_dict[year][key],
-                        num_topics=num_topics)
+                        corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
+                        num_topics=num_topics, passes=passes)
+                    '''
+                    # deterministic (ish)
+                    lda_dict[year][key] = gensim.models.LdaModel(
+                        corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
+                        num_topics=num_topics, random_state=rands, passes=passes)
+                    '''
                 except ValueError:
                     lda_dict[year][key] = "No Documents for this period."
             if lsi:
@@ -260,8 +280,8 @@ def main():
                     tfidf_dict[year][key] = gensim.models.TfidfModel(corpus_dict[year][key])
                     tfidf = tfidf_dict[year][key]
                     lsi_dict[year][key] = gensim.models.LsiModel(
-                        tfidf[corpus_dict[year][key]], id2word=dictionary_dict[year][key],
-                        num_topics=int(args.num_topics))
+                        corpus=tfidf[corpus_dict[year][key]], id2word=dictionary_dict[year][key],
+                        num_topics=200)
                 except ValueError:
                     lsi_dict[year][key] = "No Documents for this period."
 
