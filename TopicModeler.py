@@ -126,6 +126,7 @@ def main():
     parser.add_argument("-lsi", help="Topic modeling vida LSI", action="store_true")
     parser.add_argument("-include_keys", help="don't filter keywords from topics", action="store_true")
     parser.add_argument("-passes", help="number of passes on corpus", action="store")
+    parser.add_argument("-seed", help="generator seed for deterministic(ish) modeling", action="store")
 
     try:
         args = parser.parse_args()
@@ -164,11 +165,18 @@ def main():
     else:
         passes = int(args.passes)
 
+    if args.seed is None:
+        deterministic = False
+    else:
+        deterministic = True
+        seed = int(args.seed)
+
     weights = args.weights
     periods = args.p
     lsi = args.lsi
     lda = args.lda
     include_keys = args.include_keys
+
 
     # if periods flag is not set, set up variables for fixed increments
     if not periods:
@@ -251,7 +259,9 @@ def main():
     corpus_dict = build_dict_of_lists(year_list, key_list)
     if lda:
         lda_dict = build_dict_of_lists(year_list, key_list)
-        # rands = numpy.random.RandomState(1)
+        if deterministic:
+            # generator seed
+            rands = numpy.random.RandomState(seed)
     if lsi:
         tfidf_dict = build_dict_of_lists(year_list, key_list)
         lsi_dict = build_dict_of_lists(year_list, key_list)
@@ -262,17 +272,17 @@ def main():
             # numdocs = len(corpus_dict[year][key])
             if lda:
                 try:
+                    if not deterministic:
+                        # stochastic
+                        lda_dict[year][key] = gensim.models.LdaModel(
+                            corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
+                            num_topics=num_topics, passes=passes)
+                    else:
+                        # deterministic (ish)
+                        lda_dict[year][key] = gensim.models.LdaModel(
+                            corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
+                            num_topics=num_topics, random_state=rands, passes=passes)
 
-                    # stochastic
-                    lda_dict[year][key] = gensim.models.LdaModel(
-                        corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
-                        num_topics=num_topics, passes=passes)
-                    '''
-                    # deterministic (ish)
-                    lda_dict[year][key] = gensim.models.LdaModel(
-                        corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
-                        num_topics=num_topics, random_state=rands, passes=passes)
-                    '''
                 except ValueError:
                     lda_dict[year][key] = "No Documents for this period."
             if lsi:
