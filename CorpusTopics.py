@@ -182,6 +182,8 @@ def main():
         print(msg)
         os._exit(1)
 
+    print("Initializing Variables.")
+
     # set up global values
     global yrange_min, yrange_max, periods, text_type, language
 
@@ -238,19 +240,27 @@ def main():
     # build list of keywords that we'll be making topic models for
     key_list = build_key_list(args.i)
 
+    print("Building Ignore List.")
+
     # add words in json file to stopwords set
     if args.ignore is not None:
         stopwords = build_ignore_list(args.ignore)
     else:
         stopwords = set(nltk.corpus.stopwords.words(language))
 
+    print("Building Corpus Dictionary.")
+
     doc_dict = init_sent_doc_dict(args.i, year_list, stopwords)
+
+    print("Building Frequency Dictionary.")
+
     dictionary_dict = build_frequency_dict(doc_dict, year_list)
 
     corpus_dict = build_dict_of_lists(year_list)
 
     lda_dict = build_dict_of_lists(year_list)
 
+    print("Building LDA Models")
     for year in year_list:
         try:
             corpus_dict[year] = \
