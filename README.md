@@ -1,30 +1,31 @@
 # origins-education-reform
 
 A collection of scripts for performing natural language processing tasks on digitized texts.
+
+1.
 * ``XMLParsingScript.py -i input_files_folder_path -o output_files_folder_path``
 
-    A script for converting the XML files that conform to the [Text Encoding Initiative (TEI)](http://www.tei-c.org/index.xml) format to a custom JSON format amenable to NLP transformations.
+    A script for converting the XML files that conform to the [Text Encoding Initiative (TEI)](http://www.tei-c.org/index.xml) format to a custom JSON format amenable to NLP transformations. Specific to this project, this script is used on the Danish XML corpus.
+    
     * ``-i input_files_folder_path``
 
         Specify filepath to directory containing the input files (required).
     * ``-o output_files_folder_path``
 
         Specify filepath to output directory (required). The script will create a directory with the name you specify, so make sure the filepath you enter isn't already occupied by a directory of the same name.
-    *"-f"
-        
-        Filter the raw text by removing stop-words and unnecessary characters, returning an array of individual words in each Json file. Note that if you specify the filtering argument, the script will take ~1 hour to run.
     
 Example usage:
 
     python3 XMLParsingScript.py -i /Users/Ketchup/Desktop/Danish_Archive/ -o /Users/Ketchup/Desktop/Text_Out/
     
+2.
 * ``WordFrequency.py``
 
-    A script for performing a word frequency analysis.
+    A script for performing word frequency analysis.
     
     * ``-i input_files_folder_path``
         
-        Specify filepath to director containing the input files(required).
+        Specify filepath to directory containing the input files(required).
         
     * ``-txt output_file_path``
     
@@ -32,19 +33,19 @@ Example usage:
     
     * ``-csv output_file_path``
     
-        Specify filepath to output csv file (required). The filepath will be printed in the txt file for each run as well, to so the user can keep track. The csv file created is used as input to GraphCSV.py.
+        Specify filepath to output csv file (required). The filepath will be printed in the txt file for each run as well, to so the user can keep track. (The csv file created is used as input to GraphCSV.py)
         
     * ``-k "list_of_keywords"``
     
-        Specify which keywords you wish to perform a frequency analysis on. Separate unique words by commas. If you would like to count certain words together (e.g. "train" & "trains"), then separate them with a forward slash ("/") character. They will then be treated as the same keyword. Surround the entire list with quotes.
+        Specify which keywords you wish to perform a frequency analysis on (required). Separate unique words by commas. If you would like to count certain words together, then separate them with a forward slash ("/") character (e.g. "train/trains"). They will then be treated as the same keyword. Surround the entire list with quotes.
         
     * ``-b ``
         
-        Flag that tells the script to search for bigrams rather than individual words. Rules for building a bigram key list are the same as with single keywords, just separate words within a bigram with a whitespace.
+        Flag that tells the script to search for bigrams rather than individual words. Rules for building a bigram key list are the same as with single keywords, just separate words within a bigram with a whitespace (e.g. "the train/the trains").
         
     * ``-y "min max inc" ``
     
-        Specify the min and max for which years you would like the program to run the word count on, as well as the increment value. Separate each value by a space, and surround with quotes.
+        Specify the min and max for which years you would like the program to run the word count on, as well as the increment (inc) value. Separate each value by a space, and surround with quotes.
         
     * ``-p`` 
     
@@ -54,17 +55,25 @@ Example usage:
     
         Specifies the begin and end date for each period the user would like to analyze. The periods are exclusive, so the string above instructs the script to look for text from years int1 to (int2 - 1), int2 to (int3 - 1), and so on.
         
+    * NOTE: Only -y or -p & -periods can be used (not both).
+        
     * ``-num "integer" `` 
     
-        Tells the script how many top words per decade to display.
+        Tells the script how many top words per decade to display in the text file.
     
     * ``-type "text_type"``
     
-        Tells the script which field of the Json documents to analyze. For example, if you wanted to analyze a field called "Happy Text" within the Json docs of your corpus, your input would look like -type "Happy Text".
+        Tells the script which field of the Json documents to analyze. For example, if you wanted to analyze a field called "Happy Text" within the Json docs of your corpus, your input would look like -type "Happy Text". The Json documents we use have eight fields entitled: "Full Text", "Full Text Stemmed", "Filtered Text Stemmed, "Filtered Text", "Full Sentences", "Filtered Sentences", "Stemmed Sentences", & "Filtered Stemmed Sentences".
+        
+    * Note: If you're running this script on our Json documents, do not use the sentences text types, as this script takes in lists of words, not sentences.
     
 Example usage:
 
-    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -txt /Users/Ketchup/Desktop/Word_Frequency -csv /Users/Ketchup/Desktop/Wordcsv -k "test1 test2/test3 test4 test5/test6/test7 test8" -y "1700 1940 5" 
+    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -txt /Users/Ketchup/Desktop/Word_Frequency -csv /Users/Ketchup/Desktop/Wordcsv -k "test1 test2/test3 test4 test5/test6/test7 test8" -y "1700 1940 5" -num "10" -type "Filtered Text"
+    
+    OR
+    
+    python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -txt /Users/Ketchup/Desktop/Word_Frequency -csv /Users/Ketchup/Desktop/Wordcsv -k "test1 test2/test3 test4 test5/test6/test7 test8" -p -periods "1700 1740 1800 1880" -num "10" -type "Filtered Text"
     
 * ``SentBuilder.py``
 
@@ -77,6 +86,7 @@ Example usage:
     * `` -o <filepath to output directory> ``
     
         Filepath to output directory. 
+        
     * `` -k "list of keywords" ``
     
         List of keywords. The syntax for the argument itself is identical to the scripts above. 
@@ -91,7 +101,7 @@ Example usage:
         
     * `` -type "text_type" ``
     
-        Indicates which subfield of each Json document you'd like to parse. For example, our current corpus has four sub-fields: "Full Text", "Filtered Text", "Full Text Stemmed", and "Filtered Text Stemmed". 
+        Indicates which subfield of each Json document you'd like to parse. This script supports four arguments w/r/t to our current corpus: "Full", "Filtered", "Stemmed", and "Filtered Stemmed".
         
     * `` -y "min_year max_year" ``
     
