@@ -75,6 +75,7 @@ Example usage:
     
     python3 WordFrequency.py -i /Users/Ketchup/Desktop/Danish_Json_Corpus/ -txt /Users/Ketchup/Desktop/Word_Frequency -csv /Users/Ketchup/Desktop/Wordcsv -k "test1 test2/test3 test4 test5/test6/test7 test8" -p -periods "1700 1740 1800 1880" -num "10" -type "Filtered Text"
     
+3.
 * ``SentBuilder.py``
 
     A script for parsing a corpus of text and outputting snippets of text surrounding the occurrence of keywords.
@@ -93,11 +94,15 @@ Example usage:
         
     * `` -b ``
     
-        Controls whether your list of keywords is interpreted as a list of bigrams or individual keywords.
+        Controls whether your list of keywords should be interpreted as a list of bigrams or individual keywords.
         
     * `` -len "integer" ``
     
-        Number of words around each occurence of a keyword to extract.
+        Number of words/sentences around each occurence of a keyword to extract.
+    
+    * `` -words `` or  `` -sentences ``
+        
+        The -len keyword will be interpreted as extracting x number of words or sentences around any keyword. Choose one or the other but not both.
         
     * `` -type "text_type" ``
     
@@ -106,7 +111,8 @@ Example usage:
     * `` -y "min_year max_year" ``
     
         Range of years you'd like to include.
-        
+  
+4.
 * ``SentAnalysis.py``
 
     A script for parsing the output of SentBuilder.py and returning sentiment scores for text around keywords over time. The input directory is required to be of the same structure as the output of SentBuilder.py, i.e. - the filepath to the top level directory is the input directory ( `` -i ``), and within it there are subdirectories corresponding to each keyword that you'd like to to analyze. The other input arguments are used as follows:
@@ -135,7 +141,7 @@ Example usage:
     
         Filepath to outputted text file. This file contains more specific information about the run.
 
-
+5.
 * ``GraphCSV.py``
 
     Reads from CSV files and produces graphs representing the statistics stored in them. Can produce either line graphs or bar graphs.
@@ -163,11 +169,13 @@ Example usage:
         * ``-percent``
         
             Graph basic term frequency as a percentage of total words for each decade.
-            
+
+6.
 * ``YearScraping.py``
     
     Parses an XML Directory and writes each XML file's Title/Author/Year of publication to a .txt file. It ignores XML documents whose chapter/text fields are empty. We're just using it to simplify the process of assigning years to documents, since the bulk of it will have to be done manually. The I/O is identical to XMLParsingScript.py above.
 
+7.
 * ``HT_Parsing.py``
 
     Navigates the HT directories and extracts .txt files and their corresponding HTIDs. Then pairs each HTID with it's corresponding row in the HT CSV files and builds a Json file similar to those created by XMLParsingScript.py above.
@@ -185,6 +193,59 @@ Example usage:
         Make absolutely sure that the CSV file is UTF-8 encoded, or the script will fail. If you do not know which encoding your CSV
         file uses, then open it with Notepad++ or SublimeText (or some text editor that lets you change encodings) and switch the 
         encoding of the file to UTF-8.
+
+8.
+* `` TopicModeler.py ``
+
+    Produces Topic Models (LDA or LSI) for a corpora of text.
+    
+    * `` -i input_directory_file_path ``
+    
+        Input directory, required. The directory structure must have a top level directory which is this filepath, within which are subdirectories corresponding to different corpora you'd like to build topic models for. If your input argument is the output of SentBuilder.py, then don't worry about this, as it's already in the required format.
+        
+    * `` -txt output_text_file_path ``
+    
+        This script outputs a text file with the topics listed, this is the filepath to it.
+        
+    * `` -lda `` or `` -lsi ``
+    
+        These are the two topic modeling algorithms available. Pick one or the either, but not both.
+        
+    * `` -y "year1 year2 inc" `` or `` -p -y "period1 period2 period3 .... periodn" ``
+    
+        The topics are organized in terms of periods of years. This argument functions identically to it's corresponding arguments in SentAnalysis.py.
+        
+    * `` -lang "language" ``
+    
+        Which language your corpus is in. Currently we're just doing English and Danish. 
+        
+    * `` -ignore path_to_ignore_file ``
+    
+        (Optional) Path to a Json file with a list of words to ignore when building the topic models (he, her, is, etc.). 
+        
+    * `` -num_topics "integer" ``
+    
+        (Optional) Number of topics you'd like the algorithm to search for. Default is 10.
+    
+    * `` -num_words "integer" ``
+    
+        (Optional) Number of words you'd like to print out along with each topic. Default is 10.
+        
+    * `` -passes "integer" ``
+    
+        (Optional) Number of passes over the data set that you'd like the algorithm to make. Default is 1, higher numbers are more interesting but take more time.
+        
+    * `` -weights ``
+    
+        (Optional) Each word within each topic is associated with a certain 'weight' which is a decimal (<1) that reflects the general importance of that word within the topic. This argument tells the script to display those weights in the printout.
+        
+    * `` -include_keys ``
+    
+        (Optional) If you're using output of SentBuilder.py, then every document in your corpus has a certain keyword in it. This obviously leads every topic generated by the model to include that keyword in it, which isn't interesting. This argument filters the keys out of the model.
+        
+    * `` -seed "integer" ``
+    
+        (Optional) Gensim allows you to seed the model with a Numpy RandomState object, which is supposed to make it behave more deterministically. If you'd like to try that out then use this argument; the seed can be any integer.
 
 ### Rsync Instructions:
 
