@@ -50,6 +50,8 @@ def main():
     parser.add_argument("-min", help="take tf_idf / sentiment min for each decade", action="store_true")
     parser.add_argument("-percent", help="graph word frequency as a percentage of total words (not tfidf)",
                         action="store_true")
+    parser.add_argument("-mean", help="display arithmetic mean", action="store_true")
+    parser.add_argument("-var", help="display variance", action="store_true")
     parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
     parser.add_argument("-wf", help="if plotting from word frequency script results", action="store_true")
     parser.add_argument("-sa", help="if plotting from sentiment analysis script results", action="store_true")
@@ -75,7 +77,8 @@ def main():
                     if args.wf:
                         for row in read_csv:
                             if row[0] == "word" and row[1] == "tf-idf avg":
-                                years = row[5].split()
+                                years = row[7].split()
+                                numdocs = row[8].split()
                                 for year in years:
                                     year_list.append(int(year))
                             else:
@@ -87,6 +90,12 @@ def main():
                                     graphed.append((row[0], string_to_floats(row[3])))
                                 if args.percent:
                                     graphed.append((row[0], string_to_floats(row[4])))
+                                if args.mean:
+                                    graphed.append(("Mean for {0}".format(row[0]), string_to_floats(row[5])))
+                                if args.var:
+                                    graphed.append(("Variance for {0}".format(row[0]), string_to_floats(row[6])))
+                                # mean and variance
+
                     # graph results from SentAnalysis.py
                     if args.sa:
                         for row in read_csv:
