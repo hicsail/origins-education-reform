@@ -1,7 +1,9 @@
-import json, math, os, nltk, argparse, csv
+import math, os, nltk, argparse, csv
+import cProfile
+import json
 
 
-#                           *** WordFrequencyScript.py ***
+#                           *** WordFrequency.py ***
 #
 # Takes Json documents as input and performs various statistics on them w/r/t keywords provided
 # by the user. As of 9/1/16 this script supports avg/max/min calculations for tf-idf scoring as
@@ -17,7 +19,6 @@ import json, math, os, nltk, argparse, csv
 #
 
 
-# This method is modified, tested, and not broken
 # construct list of keywords
 def buildKeyList(keywords):
     key_list = keywords.lower().split(",")
@@ -323,7 +324,7 @@ def tf_idfMax(year_list, keywords, tf_idf_results):
 # returns minimum tf-idf score for each decade
 def tf_idfMin(year_list, keywords, tf_idf_results):
     tf_idf_min = buildDictOfNums(year_list, keywords)
-    # Take max of tf-idf results
+    # Take min of tf-idf results
     for i in range(len(year_list)):
         for keyword in keywords:
             try:
@@ -354,6 +355,7 @@ def totalWordCount(year_list, directory):
                     jsondata = json.load(in_file)
                     text = jsondata[text_type]
                     if bigrams:
+                        # TODO Slow, 120 sec
                         text = nltk.bigrams(text)
                     words = len(list(text))
                     year = int(jsondata["Year Published"])
@@ -380,6 +382,7 @@ def totalWordCount(year_list, directory):
 # returns total keyword count for each keyword/decade pair
 def keywordCount(year_list, keywords, directory):
     keyword_totals = buildDictOfNums(year_list, keywords)
+    frequency_list = buildDictOfLists(year_list, keywords)
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
             if jsondoc[0] != ".":
@@ -414,11 +417,14 @@ def keywordCount(year_list, keywords, directory):
                                 for i in range(len(keyword)):
                                     word_count += fdist[keyword[i]]
                             try:
+                                # add word count to frequency totals (for frequency as percentage of total words)
                                 keyword_totals[target][keyword] += word_count
+                                # append word count to frequency list (for mean & variance of samples)
+                                frequency_list[target][keyword].append(word_count)
                             except KeyError:
                                 # decade out of range (specified by user)
                                 pass
-    return keyword_totals
+    return [keyword_totals, frequency_list]
 
 
 # calculates term frequency for each keyword/decade pair as a
@@ -443,6 +449,22 @@ def takeKeywordPercentage(year_list, keywords, total_words, keyword_totals):
                     percent = 0
                 keyword_percentages[year_list[i]][keyword] = percent
     return keyword_percentages
+
+
+# take average keyword occurence across all volumes, using dict that stores list of individual frequencies
+def avg_and_var(year_list, keywords, frequency_lists):
+    averages = buildDictOfNums(year_list, keywords)
+    variances = buildDictOfNums(year_list, keywords)
+    for year in year_list:
+        for keyword in keywords:
+            averages[year][keyword] = \
+                sum(frequency_lists[year][keyword]) / len(frequency_lists[year][keyword])
+            var = []
+            for freq in frequency_lists[year][keyword]:
+                variance = math.pow((freq - averages[year][keyword]), 2)
+                var.append(variance)
+            variances[year][keyword] = sum(var) / len(var)
+    return [averages, variances]
 
 
 # first need a list of all the words for frequency distribution
@@ -655,6 +677,9 @@ def main():
         year_list = buildYearList(increment, range_years)
         years_tally = buildYearsTally(directory, year_list)
 
+    numdocs = []
+    for year in year_list:
+        numdocs.append(years_tally[year])
     # build/populate dicts
     idf_results = calculateIDFResults(keywords, year_list, years_tally, directory)
     tf_idf_results = calculateTF_IDFResults(year_list, keywords, directory, idf_results)
@@ -665,7 +690,10 @@ def main():
     # take percent over total words for each keyword
     total_words = totalWordCount(year_list, directory)
     keyword_totals = keywordCount(year_list, keywords, directory)
-    keyword_percentage = takeKeywordPercentage(year_list, keywords, total_words, keyword_totals)
+    keyword_percentage = takeKeywordPercentage(year_list, keywords, total_words, keyword_totals[0])
+    avg_var = avg_and_var(year_list, keywords, keyword_totals[1])
+    keyword_averages = avg_var[0]
+    keyword_variances = avg_var[1]
 
     # calculate top N words for each period, check if user set -num first
     try:
@@ -679,14 +707,21 @@ def main():
                       "following filepath: {0}".format(args.csv) + "\n")
         for i in range(len(year_list) - 1):
             txt_out.write("Period: {0} - {1}".format(str(year_list[i]), str(year_list[i+1])) + "\n")
-            txt_out.write("Number of books for this period: {0}".format(str(years_tally[year_list[i]])) + "\n")
+            txt_out.write("Number of volumes for this period: {0}".format(str(years_tally[year_list[i]])) + "\n")
             for keyword in keywords:
                 txt_out.write("{0}:".format(str(keyword)) + "\n")
-                txt_out.write("Avg TFIDF score for this period: {0}".format(str(tf_idf_avg[year_list[i]][keyword]) + "\n"))
-                txt_out.write("Max TFIDF score for this period: {0}".format(str(tf_idf_max[year_list[i]][keyword]) + "\n"))
-                txt_out.write("Min TFIDF score for this period: {0}".format(str(tf_idf_min[year_list[i]][keyword]) + "\n"))
-                txt_out.write("Word frequency for \"{0}\" (as percentage of total words) for this period: {1}".format(
-                    keyword, str(keyword_percentage[year_list[i]][keyword]) + "\n"))
+                txt_out.write("Average frequency of {0} for this period: {1}"
+                              .format(keyword, str(keyword_averages[year_list[i]][keyword])) + "\n")
+                txt_out.write("Variance for {0}: {1}"
+                              .format(keyword, str(keyword_variances[year_list[i]][keyword])) + "\n")
+                txt_out.write("Avg TFIDF score for this period: {0}"
+                              .format(str(tf_idf_avg[year_list[i]][keyword]) + "\n"))
+                txt_out.write("Max TFIDF score for this period: {0}"
+                              .format(str(tf_idf_max[year_list[i]][keyword]) + "\n"))
+                txt_out.write("Min TFIDF score for this period: {0}"
+                              .format(str(tf_idf_min[year_list[i]][keyword]) + "\n"))
+                txt_out.write("Word frequency for \"{0}\" (as percentage of total words) for this period: {1}"
+                              .format(keyword, str(keyword_percentage[year_list[i]][keyword]) + "\n"))
                 try:
                     listMaxDocs(txt_out, year_list[i], keyword, tf_idf_results, args.num)
                     listMinDocs(txt_out, year_list[i], keyword, tf_idf_results, args.num)
@@ -706,12 +741,16 @@ def main():
         for year in year_list:
             year_list_str.append(str(year))
         year_string = " ".join(year_list_str)
-        csvwriter.writerow(['word', 'tf-idf avg', 'tf-idf max', 'tf-idf min', 'word frequency', year_string])
+        csvwriter.writerow(['word', 'tf-idf avg', 'tf-idf max', 'tf-idf min', 'word frequency', 'average frequency',
+                            'variance', year_string, numdocs])
         for keyword in keywords:
             csvwriter.writerow([keyword, listToString(buildGraphList(keyword, year_list, tf_idf_avg)),
                                 listToString(buildGraphList(keyword, year_list, tf_idf_max)),
                                 listToString(buildGraphList(keyword, year_list, tf_idf_min)),
-                                listToString(buildGraphList(keyword, year_list, keyword_percentage))])
+                                listToString(buildGraphList(keyword, year_list, keyword_percentage)),
+                                listToString(buildGraphList(keyword, year_list, keyword_averages)),
+                                listToString(buildGraphList(keyword, year_list, keyword_variances))])
 
 if __name__ == '__main__':
-    main()
+    cProfile.runctx('main()', globals(), locals())
+    # main()
