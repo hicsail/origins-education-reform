@@ -62,7 +62,7 @@ def main():
 
     keywords = args.k.lower().split("/")
 
-    if args.type is not None:
+    if args.fc:
         if args.type.lower() == "full":
             text_type = "Full Text"
         elif args.type.lower() == "filtered":
