@@ -1,30 +1,11 @@
-import json, os, shutil, argparse
-
-
-# construct list of keywords
-def build_key_list(keywords):
-    key_list = keywords.lower().split(",")
-    key_list = [keyword.strip() for keyword in key_list]
-    if bigrams:
-        bigram_list = []
-        key_list = [tuple(keyword.split("/")) for keyword in key_list]
-        # if a bigram is by itself, i.e. - not associated with other bigrams via "/",
-        # then this loop will create a tuple with the second index empty. Keep an eye
-        # on it with the word frequency methods, I don't know if it will cause a
-        # problem yet.
-        for i in range(len(key_list)):
-            temp_list = list(key_list[i])
-            temp_list = [tuple(elem.split()) for elem in temp_list]
-            temp_list = tuple(temp_list)
-            bigram_list.append(temp_list)
-        return bigram_list
-    return key_list
+import json, os, shutil, argparse, common, tqdm
 
 
 # build subdirectories within output directory, each containing
 # documents where a single keyword / bigram occurs
 def build_subdirs(out_dir, keywords):
-    for keyword in keywords:
+    print("Building Subdirectories")
+    for keyword in tqdm.tqdm(keywords):
         if not bigrams:
             words = keyword.split("/")
             dir_name = "_".join(words)
@@ -39,21 +20,20 @@ def build_subdirs(out_dir, keywords):
 
 # iterate through corpus, extract text surrounding occurrences of each
 # keyword / bigram and write those to json files
-def parse_json(in_dir, out_dir, keywords):
+def parse_json(in_dir, out_dir, keywords, by_sentences):
     # index and sub index for file naming
     index = 0
     sub_index = 0
     for subdir, dirs, files in os.walk(in_dir):
-        for jsondoc in files:
+        print("Extracting snippets of text.")
+        for jsondoc in tqdm.tqdm(files):
             if jsondoc[0] != ".":
                 with open(in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     index += 1
                     jsondata = json.load(in_file)
                     year = int(jsondata["Year Published"])
                     if y_min <= year <= y_max:
-                        title = jsondata["Title"]
-                        author = jsondata["Author"]
-                        text = jsondata[text_type]
+                        title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type]
                         for keyword in keywords:
                             if not bigrams:
                                 # keep a set for more efficient word lookup,
@@ -70,23 +50,15 @@ def parse_json(in_dir, out_dir, keywords):
                                                 for sentence in snippet:
                                                     words_list.extend(sentence.split())
                                                 sub_text = " ".join(snippet)
-                                                # build jsondoc out of text chunk around word
-                                                with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
-                                                                  + str(index) + "-" + str(sub_index)
-                                                                  + '.json', 'w', encoding='utf-8') as out:
-                                                    out.write(build_json(title, author, "_".join(words), year, sub_text,
-                                                                         words_list))
-                                    if by_words:
+                                                write_to_file(out_dir, words, year, index, sub_index,
+                                                              title, author, sub_text, words_list)
+                                    else:
                                         if text[i] in word_set:
                                             sub_index += 1
                                             sub_words = text[(i - int(length/2)):(i + int(length/2))]
                                             sub_text = " ".join(sub_words)
-                                            # build jsondoc out of text chunk around word
-                                            with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
-                                                              + str(index) + "-" + str(sub_index)
-                                                              + '.json', 'w', encoding='utf-8') as out:
-                                                out.write(build_json(title, author, "_".join(words), year, sub_text,
-                                                                     sub_words))
+                                            write_to_file(out_dir, words, year, index, sub_index,
+                                                          title, author, sub_text, sub_words)
                             else:
                                 words = []
                                 # build a list of tuples
@@ -106,23 +78,24 @@ def parse_json(in_dir, out_dir, keywords):
                                                         for sent in snippet:
                                                             words_list.extend(sent.split())
                                                         sub_text = " ".join(snippet)
-                                                        # write extracted text to file
-                                                        with open(out_dir + "/" + "_".join(words) + "/" + str(year)
-                                                                          + "_" + str(index) + "-" + str(sub_index)
-                                                                          + '.json', 'w', encoding='utf-8') as out:
-                                                            out.write(build_json(title, author, "_".join(words), year,
-                                                                                 sub_text, words_list))
-                                        if by_words:
+                                                        write_to_file(out_dir, words, year, index, sub_index,
+                                                                      title, author, sub_text, words_list)
+                                        else:
                                             if text[j] == keyword[i][0] and text[j+1] == keyword[i][1]:
                                                 sub_index += 1
                                                 sub_words = text[(j - int(length/2)):(j + int(length/2))]
                                                 sub_text = " ".join(sub_words)
-                                                # write extracted text to file
-                                                with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
-                                                                  + str(index) + "-" + str(sub_index)
-                                                                  + '.json', 'w', encoding='utf-8') as out:
-                                                    out.write(build_json(title, author, "_".join(words), year, sub_text,
-                                                                         sub_words))
+                                                write_to_file(out_dir, words, year, index, sub_index,
+                                                              title, author, sub_text, sub_words)
+
+
+def write_to_file(out_dir, words, year, index, sub_index, title, author, sub_text, sub_words):
+    # write extracted text to file
+    with open(out_dir + "/" + "_".join(words) + "/" + str(year) + "_"
+                      + str(index) + "-" + str(sub_index)
+                      + '.json', 'w', encoding='utf-8') as out:
+        out.write(build_json(title, author, "_".join(words), year, sub_text,
+                             sub_words))
 
 
 # json file to hold extracted text. in addition to extracted text, it also contains publication
@@ -146,7 +119,6 @@ def main():
     parser.add_argument("-type", help="which text field from the json document you intend to analyze",
                         action="store")
     parser.add_argument("-y", help="year range", action="store")
-    parser.add_argument("-words", help="extract number of words rather than sentences", action="store_true")
     parser.add_argument("-sentences", help="extract number of sentences rather than words", action="store_true")
 
     try:
@@ -161,22 +133,19 @@ def main():
         shutil.rmtree(args.o)
         os.mkdir(args.o)
 
-    def fail(msg):
-        print(msg)
-        os._exit(1)
+    if args.len is None:
+        common.fail("Please specify snippet length.")
 
-    if int(args.words) + int(args.sentences) < 1:
-        msg = "Please select either -words or -sentences."
-        fail(msg)
-
-    if int(args.words) + int(args.sentences) > 1:
-        msg = "Please select either -words or -sentences, not both."
-        fail(msg)
+    if int(args.sentences) < 1:
+        print("Building snippets of {0} words around the specified keywords."
+              .format(args.len))
+    else:
+        print("Building snippets of {0} sentences around the specified keywords."
+              .format(args.len))
 
     # make some variables global to simplify the function parameters
-    global text_type, bigrams, length, y_min, y_max, by_words, by_sentences
+    global text_type, bigrams, length, y_min, y_max
 
-    by_words = args.words
     by_sentences = args.sentences
     type = args.type
     bigrams = args.b
@@ -186,18 +155,7 @@ def main():
     y_max = int(y_range[1])
 
     # determine which json field to parse based on input
-    if by_words:
-        if type.lower() == "full":
-            text_type = "Full Text"
-        elif type.lower() == "filtered":
-            text_type = "Filtered Text"
-        elif type.lower() == "stemmed":
-            text_type = "Full Text Stemmed"
-        elif type.lower() == "filtered stemmed":
-            text_type = "Filtered Text Stemmed"
-        else:
-            text_type = type
-    elif by_sentences:
+    if by_sentences:
         if type.lower() == "full":
             text_type = "Full Sentences"
         elif type.lower() == "filtered":
@@ -208,15 +166,26 @@ def main():
             text_type = "Filtered Stemmed Sentences"
         else:
             text_type = type
+    else:
+        if type.lower() == "full":
+            text_type = "Full Text"
+        elif type.lower() == "filtered":
+            text_type = "Filtered Text"
+        elif type.lower() == "stemmed":
+            text_type = "Full Text Stemmed"
+        elif type.lower() == "filtered stemmed":
+            text_type = "Filtered Text Stemmed"
+        else:
+            text_type = type
 
     # set up input directory and key list values
     in_dir = args.i
     out_dir = args.o
-    keywords = build_key_list(args.k)
+    keywords = common.build_key_list(args.k, bigrams)
 
     # build subdirectories and populate them
     build_subdirs(out_dir, keywords)
-    parse_json(in_dir, out_dir, keywords)
+    parse_json(in_dir, out_dir, keywords, by_sentences)
 
 if __name__ == '__main__':
     main()
