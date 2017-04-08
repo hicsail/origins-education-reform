@@ -1,23 +1,4 @@
-import gensim, os, argparse, json, collections, re, nltk, numpy
-
-
-# construct list of year periods, if user wants to model topics by year
-def build_year_list(increment, range_years):
-    if not periods:
-        num_elements = int(((yrange_max - yrange_min) / increment))
-        year_list = [None] * num_elements
-        i = 0
-        for num in range(yrange_min, yrange_max, increment):
-            year_list[i] = num
-            i += 1
-    else:
-        num_elements = len(range_years)
-        year_list = [None] * num_elements
-        i = 0
-        for num in range_years:
-            year_list[i] = int(num)
-            i += 1
-    return sorted(year_list)
+import gensim, os, argparse, json, collections, re, nltk, numpy, common, tqdm
 
 
 # build list of keywords
@@ -29,38 +10,15 @@ def build_key_list(directory):
     return key_list
 
 
-# build a nested dict with lists as values
-def build_dict_of_lists(year_list, key_list):
-    results = {}
-    for year in year_list:
-        for key in key_list:
-            try:
-                results[year][key] = []
-            except KeyError:
-                results[year] = {key: []}
-    return results
-
-
-# build a nested dict with lists as values
-def build_dict_of_dicts(year_list, key_list):
-    results = {}
-    for year in year_list:
-        for key in key_list:
-            try:
-                results[year][key] = {}
-            except KeyError:
-                results[year] = {key: {}}
-    return results
-
-
 # separate year / keyword pairs into lists of texts. this dictionary is used in
 # conjunction with the build_frequency_dict function to yield a dictionary of
 # 'bag of words' representations of each individual document.
-def init_sent_doc_dict(input_dir, key_list, year_list, stopwords):
-    doc_dict = build_dict_of_lists(year_list, key_list)
+def init_sent_doc_dict(input_dir, key_list, year_list, stopwords, yrange_min, yrange_max, text_type):
+    doc_dict = common.build_dict_of_lists(year_list, key_list)
     for dirs, subdirs, files in os.walk(input_dir):
         # 'subdir' corresponds to each keyword
-        for subdir in subdirs:
+        print("Building volumes dictionary.")
+        for subdir in tqdm.tqdm(subdirs):
             for folders, subfolders, file in os.walk(dirs + "/" + subdir):
                 for jsondoc in file:
                     if jsondoc[0] != ".":
@@ -75,16 +33,7 @@ def init_sent_doc_dict(input_dir, key_list, year_list, stopwords):
                             year = int(jsondata["Year Published"])
                             # check to make sure it's within range specified by user
                             if yrange_min <= year < yrange_max:
-                                # determine which period it falls within
-                                for i in range(len(year_list)):
-                                    if year_list[i] <= year < year_list[i + 1]:
-                                        target = year_list[i]
-                                        break
-                                    if year >= year_list[len(year_list) - 1]:
-                                        target = year_list[len(year_list) - 1]
-                                        break
-                                    else:
-                                        continue
+                                target = common.determine_year(year, year_list)
                                 try:
                                     doc_dict[target][subdir].append(text)
                                 except KeyError:
@@ -92,11 +41,13 @@ def init_sent_doc_dict(input_dir, key_list, year_list, stopwords):
     return doc_dict
 
 
+# TODO could I just do this all in place - i.e. without having to store the whole corpus in memory first?
 # yields word frequency for each document read in. used with init_sent_doc_dict
 # to construct the 'bag of words' representation for each document.
 def build_frequency_dict(doc_dict, key_list, year_list):
-    dictionary = build_dict_of_dicts(year_list, key_list)
-    for year in year_list:
+    dictionary = common.build_dict_of_dicts(year_list, key_list)
+    print("Building bag-of-words dictionary.")
+    for year in tqdm.tqdm(year_list):
         for key in key_list:
             frequency = collections.defaultdict(int)
             for doc in doc_dict[year][key]:
@@ -106,6 +57,36 @@ def build_frequency_dict(doc_dict, key_list, year_list):
                      for doc in doc_dict[year][key]]
             dictionary[year][key] = gensim.corpora.Dictionary(texts)
     return dictionary
+
+
+# declare / add to set of stopwords
+def build_ignore_list(path_to_file, language):
+    stopwords = set(nltk.corpus.stopwords.words(language))
+    with open(path_to_file, 'r', encoding='utf-8') as ignored_list:
+        jsondata = json.load(ignored_list)
+        # load different categories, add tokens to stopwords set
+        general = jsondata["General"]
+        names = jsondata["Names"]
+        nonsense = jsondata["Nonsense"]
+        verbs = jsondata["Verbs"]
+        adjectives = jsondata["Adjectives"]
+        pronouns = jsondata["Pronouns"]
+        nouns = jsondata["Nouns"]
+        for noun in nouns:
+            stopwords.add(noun)
+        for adjective in adjectives:
+            stopwords.add(adjective)
+        for pronoun in pronouns:
+            stopwords.add(pronoun)
+        for verb in verbs:
+            stopwords.add(verb)
+        for word in nonsense:
+            stopwords.add(word)
+        for word in general:
+            stopwords.add(word)
+        for name in names:
+            stopwords.add(name)
+    return stopwords
 
 
 def main():
@@ -133,17 +114,9 @@ def main():
     except IOError as msg:
         print(parser.error(str(msg)))
 
-    def fail(msg):
-        print(msg)
-        os._exit(1)
-
-    # set up global values
-    global yrange_min, yrange_max, periods, text_type
-
     # check user input
     if 1 > int(args.lsi) + int(args.lda) > 1:
-        err = "Please use either LSI or LDA modeling (not neither or both)"
-        fail(err)
+        common.fail("Please use either LSI or LDA modeling (not neither or both)")
 
     if args.num_topics is None:
         num_topics = 10
@@ -176,113 +149,62 @@ def main():
     lsi = args.lsi
     lda = args.lda
     include_keys = args.include_keys
+    language = args.lang
 
+    range_years = args.y.split()
+    year_params = common.year_params(range_years, periods)
+    increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
 
-    # if periods flag is not set, set up variables for fixed increments
-    if not periods:
-        range_years = args.y.split()
-        yrange_min = int(range_years[0])
-        increment = int(range_years[2])
-        difference = int(range_years[1]) - yrange_min
-        mod_val = difference % increment
-
-        # adjust list of years so the end bit doesn't get cut out
-        if mod_val != 0:
-            yrange_max = int(range_years[1]) + (increment - mod_val) + increment
-        else:
-            yrange_max = int(range_years[1]) + increment
-
-        # initialize list of years
-        year_list = build_year_list(increment, range_years)
-
-    # set up variables for periods rather than fixed increments
-    else:
-        range_years = args.y.split()
-        yrange_min = int(range_years[0])
-        yrange_max = int(range_years[len(range_years) - 1])
-        increment = 0
-
-        # initialize list of years
-        year_list = build_year_list(increment, range_years)
-
-    stopwords = set(nltk.corpus.stopwords.words(args.lang))
+    # initialize list of years and dict to keep track of
+    # how many books between each year range
+    year_list = common.build_year_list(increment, range_years, periods, yrange_max, yrange_min)
 
     # build list of keywords that we'll be making topic models for
     key_list = build_key_list(args.i)
 
-    # add keywords to ignore list (since they tend to appear in every topic)
+    # add words in json file to stopwords set, if filepath is given
+    if args.ignore is not None:
+        stopwords = build_ignore_list(args.ignore, language)
+    else:
+        stopwords = set(nltk.corpus.stopwords.words(language))
 
+    # add keywords in stopwords set if include_keys is not set
     if not include_keys:
         for key in key_list:
             sub_keys = key.split("_")
             for wd in sub_keys:
                 stopwords.add(wd)
 
-    # add words in json file to stopwords set
-    if args.ignore is not None:
-        with open(args.ignore, 'r', encoding='utf-8') as ignored_list:
-            jsondata = json.load(ignored_list)
-            try:
-                ignored = jsondata["Ignored"]
-                ignore_flag = True
-            except KeyError:
-                ignore_flag = False
-            if ignore_flag:
-                for ignore in ignored:
-                    stopwords.add(ignore)
-            else:
-                general = jsondata["General"]
-                names = jsondata["Names"]
-                nonsense = jsondata["Nonsense"]
-                verbs = jsondata["Verbs"]
-                adjectives = jsondata["Adjectives"]
-                pronouns = jsondata["Pronouns"]
-                nouns = jsondata["Nouns"]
-                for noun in nouns:
-                    stopwords.add(noun)
-                for adjective in adjectives:
-                    stopwords.add(adjective)
-                for pronoun in pronouns:
-                    stopwords.add(pronoun)
-                for verb in verbs:
-                    stopwords.add(verb)
-                for word in nonsense:
-                    stopwords.add(word)
-                for word in general:
-                    stopwords.add(word)
-                for name in names:
-                    stopwords.add(name)
-
-    doc_dict = init_sent_doc_dict(args.i, key_list, year_list, stopwords)
+    doc_dict = init_sent_doc_dict(args.i, key_list, year_list, stopwords, yrange_min, yrange_max, text_type)
     dictionary_dict = build_frequency_dict(doc_dict, key_list, year_list)
+    corpus_dict = common.build_dict_of_lists(year_list, key_list)
 
-    corpus_dict = build_dict_of_lists(year_list, key_list)
     if lda:
-        lda_dict = build_dict_of_lists(year_list, key_list)
+        lda_dict = common.build_dict_of_lists(year_list, key_list)
         if deterministic:
             # generator seed
             rands = numpy.random.RandomState(seed)
     if lsi:
-        tfidf_dict = build_dict_of_lists(year_list, key_list)
-        lsi_dict = build_dict_of_lists(year_list, key_list)
-    for year in year_list:
+        tfidf_dict = common.build_dict_of_lists(year_list, key_list)
+        lsi_dict = common.build_dict_of_lists(year_list, key_list)
+    print("Building topic models.")
+    for year in tqdm.tqdm(year_list):
         for key in key_list:
             corpus_dict[year][key] = \
                 [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
-            # numdocs = len(corpus_dict[year][key])
+            numdocs = len(corpus_dict[year][key])
             if lda:
                 try:
                     if not deterministic:
                         # stochastic
-                        lda_dict[year][key] = gensim.models.LdaModel(
+                        lda_dict[year][key] = (gensim.models.ldamulticore.LdaMulticore(
                             corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
-                            num_topics=num_topics, passes=passes)
+                            num_topics=num_topics, passes=passes), numdocs)
                     else:
                         # deterministic (ish)
-                        lda_dict[year][key] = gensim.models.LdaModel(
+                        lda_dict[year][key] = (gensim.models.ldamodel.LdaModel(
                             corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
-                            num_topics=num_topics, random_state=rands, passes=passes)
-
+                            num_topics=num_topics, random_state=rands, passes=passes), numdocs)
                 except ValueError:
                     lda_dict[year][key] = "No Documents for this period."
             if lsi:
@@ -301,9 +223,11 @@ def main():
             txt_out.write("Period: {0} - {1}".format(str(year_list[i]), str(year_list[i+1])) + "\n")
             for key in key_list:
                 txt_out.write("For extracted documents around {0}:".format(str(key).replace("_", "/")) + "\n")
+                txt_out.write("Number of documents for this period / keyword pair: {0}"
+                              .format(str(lda_dict[year_list[i]][key][1])) + "\n")
                 try:
                     if lda:
-                        topics = lda_dict[year_list[i]][key].show_topics(
+                        topics = lda_dict[year_list[i]][key][0].show_topics(
                             num_topics=num_topics, num_words=num_words)
                     if lsi:
                         try:
@@ -337,8 +261,8 @@ def main():
                             for k in range(len(filtered) - 1, -1, -1):
                                 if filtered[k] == "" or filtered[k] == "None":
                                     del filtered[k]
-                            else:
-                                filtered[k] = filtered[k].lower()
+                                else:
+                                    filtered[k] = filtered[k].lower()
                             txt_out.write("Topic {0}: {1}".format(str(j), ", ".join(filtered)))
                         j += 1
                         txt_out.write("\n")
