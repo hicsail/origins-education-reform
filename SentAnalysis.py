@@ -1,4 +1,4 @@
-import os, argparse, json, csv
+import os, argparse, json, csv, common, tqdm
 from afinn import Afinn
 
 
@@ -22,67 +22,6 @@ def build_key_list(directory):
     return key_list
 
 
-# construct list of year periods
-def build_year_list(increment, range_years):
-    if not periods:
-        # fixed increments
-        num_elements = int(((yrange_max - yrange_min) / increment))
-        year_list = [None] * num_elements
-        i = 0
-        for num in range(yrange_min, yrange_max, increment):
-            year_list[i] = num
-            i += 1
-    else:
-        # periods of arbitrary length
-        num_elements = len(range_years)
-        year_list = [None] * num_elements
-        i = 0
-        for num in range_years:
-            year_list[i] = int(num)
-            i += 1
-    return sorted(year_list)
-
-
-# build a 2D dict with lists as values
-def build_dict_of_lists(year_list, keywords):
-    results = {}
-    for year in year_list:
-        for keyword in keywords:
-            try:
-                results[year][keyword] = []
-            except KeyError:
-                results[year] = {keyword: []}
-    return results
-
-
-# build a 2D dict with individual numbers as values
-def build_dict_of_nums(year_list, keywords):
-    results = {}
-    for year in year_list:
-        for keyword in keywords:
-            try:
-                results[year][keyword] = 0
-            except KeyError:
-                results[year] = {keyword: 0}
-    return results
-
-
-# helper method to group json docs into periods
-def determine_year(year, year_list):
-    # determine which period it falls within
-    for i in range(len(year_list)):
-        if year_list[i] <= year < year_list[i + 1]:
-            # the year / period this document belongs in
-            target = year_list[i]
-            return target
-        if year >= year_list[len(year_list) - 1]:
-            # case when the document belongs in the last year / period of the list
-            target = year_list[len(year_list) - 1]
-            return target
-        else:
-            continue
-
-
 # sort dict entries in a list of tuples by second value (i.e. - sentiment score)
 def sort_sent_dict(year_list, key_list, sent_results):
     for year in year_list:
@@ -93,20 +32,21 @@ def sort_sent_dict(year_list, key_list, sent_results):
 
 # build dict needed to calculate average sentiment across corpus, per N words
 def populate_overall_sentiment(directory, overall_list, year_list, afinn):
-    overall_sent = build_dict_of_lists(year_list, overall_list)
+    overall_sent = common.build_dict_of_lists(year_list, overall_list)
     for subdir, dirs, files in os.walk(directory):
-        for jsondoc in files:
+        print("Calculating sentiment across entire corpus.")
+        for jsondoc in tqdm.tqdm(files):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                     sentiment = 0
                     jsondata = json.load(inpt)
-                    text = jsondata["Filtered Sentences"]
-                    #truncated = float(len(text)/extract_length)
+                    # TODO might be able to just iterate over sentences rather than words, see which is faster
+                    text = jsondata["Filtered Text"]
                     year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         # determine which period it falls within
-                        target = determine_year(year, year_list)
+                        target = common.determine_year(year, year_list)
                         for i in range(len(text)):
                             sentiment += afinn.score(text[i])
                             # even though overall_list only has one keyword, this looks
@@ -130,15 +70,16 @@ def determine_text_length(directory):
                     if jsondoc[0] != ".":
                         with open(dirs + "/" + subdir + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                             jsondata = json.load(inpt)
-                            text = jsondata["Text"]
+                            text = jsondata["Words"]
                             length = len(text)
                             return length
 
 
 # fill sent dict with sent results for each json doc w/r/t AFINN dict
 def populate_sent_dict(directory, key_list, year_list, afinn):
-    sent_dict = build_dict_of_lists(year_list, key_list)
+    sent_dict = common.build_dict_of_lists(year_list, key_list)
     for dirs, subdirs, files in os.walk(directory):
+        # 'subdir' corresponds to a keyword
         for subdir in subdirs:
             for folders, subfolders, file in os.walk(dirs + "/" + subdir):
                 for jsondoc in file:
@@ -150,7 +91,7 @@ def populate_sent_dict(directory, key_list, year_list, afinn):
                             year = int(jsondata["Year Published"])
                             # check to make sure it's within range specified by user
                             if yrange_min <= year < yrange_max:
-                                target = determine_year(year, year_list)
+                                target = common.determine_year(year, year_list)
                                 sentiment += afinn.score(text)
                                 sent_dict[target][subdir].append((jsondoc, sentiment))
     sent_dict_sorted = sort_sent_dict(year_list, key_list, sent_dict)
@@ -175,8 +116,9 @@ def handle_empty_entry(year_list, i, keyword, sent_result):
 # builds dicts for avg, max, and min sentiment scores. type of
 # score that gets calculated is inputted as the 'type' argument.
 def sent_calcs(year_list, key_list, sent_results, calc_type):
-    sent_result = build_dict_of_nums(year_list, key_list)
-    for i in range(len(year_list)):
+    sent_result = common.build_dict_of_nums(year_list, key_list)
+    print("Calculating average, max, and min sentiment scores.")
+    for i in tqdm.tqdm(range(len(year_list))):
         for keyword in key_list:
             length = len(sent_results[year_list[i]][keyword])
             if calc_type == "max":
@@ -218,64 +160,6 @@ def sent_calcs(year_list, key_list, sent_results, calc_type):
     return sent_result
 
 
-# writes N=num documents with highest sentiment scores for each period to a text file
-def list_max_docs(out, year, keyword, results, num):
-    list_length = len(results[year][keyword])
-    if int(num) <= list_length:
-        # make sure user requested less tf-idf scores than actually exist for that period
-        out.write("{0} highest sentiment scores for \"{1}\" in this period: ".format(str(num), str(keyword)) + "\n")
-        i = 1
-        for key_tup in results[year][keyword][list_length - int(num): list_length]:
-            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
-            i += 1
-        out.write("\n")
-    else:
-        # user requested more tf-idf scores than there are for that period
-        out.write("{0} highest sentiment scores for \"{1}\" in this period: ".format(str(list_length), str(keyword)) + "\n")
-        i = 1
-        for key_tup in results[year][keyword]:
-            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
-            i += 1
-        out.write("\n")
-
-
-# writes N=num documents with lowest sentiment scores for each period to a text file
-def list_min_docs(out, year, keyword, results, num):
-    list_length = len(results[year][keyword])
-    if int(num) <= list_length:
-        # make sure user requested less tf-idf scores than actually exist for that period
-        out.write("{0} lowest sentiment scores for \"{1}\" in this period: ".format(str(num), str(keyword)) + "\n")
-        i = 1
-        for key_tup in results[year][keyword][:int(num)]:
-            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
-            i += 1
-        out.write("\n")
-    else:
-        # user requested more tf-idf scores than there are for that period
-        out.write("{0} lowest sentiment scores for \"{1}\" in this period: ".format(str(list_length), str(keyword)) + "\n")
-        i = 1
-        for key_tup in results[year][keyword]:
-            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
-            i += 1
-        out.write("\n")
-
-
-# can't store lists in csv file, so need to store data in string
-def list_to_string(list_inpt):
-    return_string = ""
-    for wd in list_inpt:
-        return_string += (str(wd) + " ")
-    return return_string
-
-
-# returns a list of values to be plotted
-def build_graph_list(keyword, year_list, param):
-    a = [0] * len(year_list)
-    for i in range(len(year_list)):
-        a[i] += param[year_list[i]][keyword]
-    return a
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-dir', action="store", help="input directory argument")
@@ -301,39 +185,18 @@ def main():
     directory = args.i
     corpus_path = args.c
 
-    if not periods:
-        range_years = args.y.split()
-        yrange_min = int(range_years[0])
-        increment = int(range_years[2])
-        difference = int(range_years[1]) - yrange_min
-        mod_val = difference % increment
+    range_years = args.y.split()
+    year_params = common.year_params(range_years, periods)
+    increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
 
-        # adjust list of years so the end bit doesn't get cut out
-        if mod_val != 0:
-            yrange_max = int(range_years[1]) + (increment - mod_val) + increment
-        else:
-            yrange_max = int(range_years[1]) + increment
-
-        # initialize list of years and dict to keep track of
-        # how many samples between each year range
-        year_list = build_year_list(increment, range_years)
-
-    # set up variables for periods rather than fixed increments
-    else:
-        range_years = args.y.split()
-        yrange_min = int(range_years[0])
-        yrange_max = int(range_years[len(range_years) - 1])
-        increment = 0
-
-        # initialize list of years and dict to keep track of
-        # how many samples in each period
-        year_list = build_year_list(increment, range_years)
+    # initialize list of years and dict to keep track of
+    # how many books between each year range
+    year_list = common.build_year_list(increment, range_years, periods, yrange_max, yrange_min)
 
     # set up dicts for sentiment word list, keyword list, & results of sentiment analysis
-    # afinn = build_afinn_dict(args.afinn)
-    afinn = Afinn(language=args.language)
+    # 'en' == english, 'da' == danish
+    afinn = Afinn(language=args.language.lower())
     key_list = build_key_list(directory)
-    # extract_len = determine_text_length(directory)
     overall_list = ["Average Sentiment Across Corpus"]
 
     # master dict with raw sent scores and their corresponding json doc file names
@@ -367,8 +230,8 @@ def main():
                 txt_out.write("Min Sentiment score for {0} in this period: {1}"
                               .format(keyword, str(sent_min[year_list[i]][keyword]) + "\n"))
                 try:
-                    list_max_docs(txt_out, year_list[i], keyword, sent_results, args.num)
-                    list_min_docs(txt_out, year_list[i], keyword, sent_results, args.num)
+                    common.list_max_docs(txt_out, year_list[i], keyword, sent_results, args.num, "sentiment")
+                    common.list_min_docs(txt_out, year_list[i], keyword, sent_results, args.num, "sentiment")
                 except (AttributeError, UnboundLocalError, TypeError) as e:
                     # user didn't want max/min n words
                     pass
@@ -389,13 +252,14 @@ def main():
         csvwriter.writerow(['word', 'sent avg', 'sent max', 'sent min', 'sent total', year_string, num_docs_string])
         for keyword in key_list:
             # populate each line with each sentiment calculation
-            csvwriter.writerow([keyword, list_to_string(build_graph_list(keyword, year_list, sent_avg)),
-                                list_to_string(build_graph_list(keyword, year_list, sent_max)),
-                                list_to_string(build_graph_list(keyword, year_list, sent_min)),
-                                list_to_string(build_graph_list(keyword, year_list, sent_total))])
+            csvwriter.writerow([keyword, common.list_to_string(common.build_graph_list(keyword, year_list, sent_avg)),
+                                common.list_to_string(common.build_graph_list(keyword, year_list, sent_max)),
+                                common.list_to_string(common.build_graph_list(keyword, year_list, sent_min)),
+                                common.list_to_string(common.build_graph_list(keyword, year_list, sent_total))])
         # write average sentiment across corpus in last line of csv file
         for keyword in overall_list:
-            csvwriter.writerow([keyword, list_to_string(build_graph_list(keyword, year_list, overall_avg))])
+            csvwriter.writerow([keyword, common.list_to_string(
+                common.build_graph_list(keyword, year_list, overall_avg))])
 
 
 if __name__ == '__main__':
