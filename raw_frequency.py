@@ -1,4 +1,4 @@
-import json, csv, argparse, Common, os, tqdm, nltk, operator
+import json, csv, argparse, common, os, tqdm, nltk, operator
 
 
 # take either 0/1 occurrence values on snippets or word frequencies
@@ -50,14 +50,13 @@ def main():
     parser.add_argument("-type", help="set the name of the text field you're analyzing", action="store")
     parser.add_argument("-bin", help="track binary (0/1) occurrence, default is raw frequency", action="store_true")
 
-
     try:
         args = parser.parse_args()
     except IOError as msg:
-        Common.fail(parser.error(str(msg)))
+        common.fail(parser.error(str(msg)))
 
     if args.i is None:
-        Common.fail("Please specify input directory.")
+        common.fail("Please specify input directory.")
     else:
         corpus = args.i
 
