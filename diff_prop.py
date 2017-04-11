@@ -89,7 +89,7 @@ def main():
     year_params = common.year_params(range_years, periods)
     increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
 
-    year_list = common.buildYearList(increment, range_years, periods, yrange_max, yrange_min)
+    year_list = common.build_year_list(increment, range_years, periods, yrange_max, yrange_min)
 
     first = build_samples(csv_files[0], year_list, yrange_min, yrange_max)
     x1 = first[0]
