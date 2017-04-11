@@ -5,8 +5,8 @@ import scipy.stats
 
 def build_samples(csv_inpt, year_list, yrange_min, yrange_max):
     # set up observation and sample size dicts
-    p = common.buildSimpleDictOfNums(year_list)
-    n = common.buildSimpleDictOfNums(year_list)
+    p = common.build_simple_dict_of_nums(year_list)
+    n = common.build_simple_dict_of_nums(year_list)
     with open(csv_inpt, 'r') as csv_file:
         read_csv = csv.reader(csv_file, delimiter=',')
         row1 = next(read_csv)
