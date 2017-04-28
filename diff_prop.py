@@ -1,12 +1,12 @@
-import Common, csv, argparse, tqdm
+import common, csv, argparse, tqdm
 import statsmodels.api
 import scipy.stats
 
 
 def build_samples(csv_inpt, year_list, yrange_min, yrange_max):
     # set up observation and sample size dicts
-    p = Common.buildSimpleDictOfNums(year_list)
-    n = Common.buildSimpleDictOfNums(year_list)
+    p = common.build_simple_dict_of_nums(year_list)
+    n = common.build_simple_dict_of_nums(year_list)
     with open(csv_inpt, 'r') as csv_file:
         read_csv = csv.reader(csv_file, delimiter=',')
         row1 = next(read_csv)
@@ -22,7 +22,7 @@ def build_samples(csv_inpt, year_list, yrange_min, yrange_max):
                 # check to make sure it's within range specified by user
                 if yrange_min <= year < yrange_max:
                     # determine which period it falls within
-                    target = Common.determine_year(year, year_list)
+                    target = common.determine_year(year, year_list)
                     try:
                         if binary:
                             # one more volume to sample size w/r/t year period
@@ -73,23 +73,23 @@ def main():
     try:
         args = parser.parse_args()
     except IOError as msg:
-        Common.fail(msg)
+        common.fail(msg)
 
     if args.csv is None or len(args.csv.split()) != 2:
-        Common.fail("Please enter two csv files after -csv, separated by whitespace.")
+        common.fail("Please enter two csv files after -csv, separated by whitespace.")
     else:
         csv_files = args.csv.split()
 
     if args.txt is None:
-        Common.fail("Please enter output text file path.")
+        common.fail("Please enter output text file path.")
 
     periods = args.p
 
     range_years = args.y.split()
-    year_params = Common.year_params(range_years, periods)
+    year_params = common.year_params(range_years, periods)
     increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
 
-    year_list = Common.buildYearList(increment, range_years, periods, yrange_max, yrange_min)
+    year_list = common.build_year_list(increment, range_years, periods, yrange_max, yrange_min)
 
     first = build_samples(csv_files[0], year_list, yrange_min, yrange_max)
     x1 = first[0]
