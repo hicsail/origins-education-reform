@@ -64,6 +64,7 @@ def main():
 
     # list of tuples - (keyword, stats_list)
     graphed = []
+    numdocs = []
 
     # iterate over directory of csv files
     for subdir, dirs, files in os.walk(args.i):
@@ -78,7 +79,7 @@ def main():
                         for row in read_csv:
                             if row[0] == "word" and row[1] == "tf-idf avg":
                                 years = row[7].split()
-                                numdocs = row[8].split()
+                                numdocs.append(row[8].split())
                                 for year in years:
                                     year_list.append(int(year))
                             else:
@@ -94,7 +95,7 @@ def main():
                                     graphed.append(("Mean for {0}".format(row[0]), string_to_floats(row[5])))
                                 if args.var:
                                     graphed.append(("Variance for {0}".format(row[0]), string_to_floats(row[6])))
-                                # mean and variance
+                                    # mean and variance
 
                     # graph results from SentAnalysis.py
                     if args.sa:
@@ -103,7 +104,7 @@ def main():
                                 # list of periods
                                 years = row[5].split()
                                 # number of documents for each period
-                                docs = row[6].split()
+                                numdocs.append(row[8].split())
                                 for year in years:
                                     year_list.append(int(year))
                             elif row[0] == "Average Sentiment Across Corpus":
@@ -173,7 +174,12 @@ def main():
     for i in range(len(year_list) - 1):
         start = str(year_list[i])
         end = str(year_list[i + 1])
-        labels.append("{0}-{1}".format(start, end))
+        # labels.append("{0}-{1}".format(start, end))
+        if len(numdocs > 1):
+            labels.append("{0}-{1} \n Docs: {2}/{3}"
+                          .format(start, end, numdocs[0][i], numdocs[1][i]))
+        else:
+            labels.append("{0}-{1} \n Docs: {2}".format(start, end, numdocs[0][i]))
     plt.xticks(index, labels)
 
     # only different because with the bar graph, you want to include the space for the last year in year_list (i.e. -

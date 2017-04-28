@@ -40,7 +40,6 @@ def populate_overall_sentiment(directory, overall_list, year_list, afinn):
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                     sentiment = 0
                     jsondata = json.load(inpt)
-                    # TODO might be able to just iterate over sentences rather than words, see which is faster
                     text = jsondata["Filtered Text"]
                     year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user

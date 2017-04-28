@@ -481,8 +481,11 @@ def main():
         for year in year_list:
             year_list_str.append(str(year))
         year_string = " ".join(year_list_str)
+        num_docs_str = ""
+        for doc in num_docs:
+            num_docs_str += str(doc) + " "
         csvwriter.writerow(['word', 'tf-idf avg', 'tf-idf max', 'tf-idf min', 'word frequency', 'average frequency',
-                            'variance', year_string, num_docs])
+                            'variance', year_string, num_docs_str])
         print("Writing results to CSV")
         for keyword in tqdm.tqdm(keywords):
             csvwriter.writerow([keyword, common.list_to_string(common.build_graph_list(keyword, year_list, tf_idf_avg)),
