@@ -175,7 +175,7 @@ def main():
         start = str(year_list[i])
         end = str(year_list[i + 1])
         # labels.append("{0}-{1}".format(start, end))
-        if len(numdocs > 1):
+        if len(numdocs) > 1:
             labels.append("{0}-{1} \n Docs: {2}/{3}"
                           .format(start, end, numdocs[0][i], numdocs[1][i]))
         else:

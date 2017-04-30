@@ -25,7 +25,7 @@ def build_htids(csvfile):
                     htids[id] = [row[1], row[2], row[3]]
                 except UnicodeDecodeError:
                     common.fail("Make sure the CSV files you are "
-                                      "referencing are UTF-8 encoded.")
+                                "referencing are UTF-8 encoded.")
     return htids
 
 

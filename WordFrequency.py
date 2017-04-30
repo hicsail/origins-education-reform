@@ -372,6 +372,11 @@ def list_top_words(out, year, results, num):
     out.write("\n")
 
 
+def build_json(in_dict):
+    jfile = json.dumps(in_dict, sort_keys=False, indent=4, separators=(',', ': '), ensure_ascii=False)
+    return jfile
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
@@ -442,7 +447,7 @@ def main():
 
     # create txt file and write all the collected data to it
     with open(args.txt + '.txt', 'w') as txt_out:
-        txt_out.write("Corresponding CSV file for this text document is located on your machine at the "
+        txt_out.write("Corresponding Json file for this text document is located on your machine at the "
                       "following filepath: {0}".format(args.csv) + "\n")
         print("Writing results to text file")
         for i in tqdm.tqdm(range(len(year_list) - 1)):
@@ -474,6 +479,18 @@ def main():
                 # user didn't want top n words, so n_dict wasn't built
                 pass
             txt_out.write("\n")
+
+    jf = {}
+    jf['year list'] = year_list
+    jf['number of documents'] = num_docs
+    for keyword in keywords:
+        jf[keyword] = {}
+        jf[keyword]['tf-idf avg'] = common.build_graph_list(keyword, year_list, tf_idf_avg)
+        jf[keyword]['tf-idf max'] = common.build_graph_list(keyword, year_list, tf_idf_max)
+        jf[keyword]['tf-idf min'] = common.build_graph_list(keyword, year_list, tf_idf_min)
+        jf[keyword]['word frequency'] = common.build_graph_list(keyword, year_list, keyword_percentage)
+        jf[keyword]['average frequency'] = common.build_graph_list(keyword, year_list, keyword_averages)
+        jf[keyword]['variance'] = common.build_graph_list(keyword, year_list, keyword_variances)
 
     with open(args.csv + '.csv', 'w', newline='', encoding='utf-8') as csv_out:
         csvwriter = csv.writer(csv_out, delimiter=',')
