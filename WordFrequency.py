@@ -294,13 +294,17 @@ def avg_and_var(year_list, keywords, frequency_lists):
     variances = common.build_dict_of_nums(year_list, keywords)
     for year in year_list:
         for keyword in keywords:
-            averages[year][keyword] = \
-                sum(frequency_lists[year][keyword]) / len(frequency_lists[year][keyword])
-            var = []
-            for freq in frequency_lists[year][keyword]:
-                variance = math.pow((freq - averages[year][keyword]), 2)
-                var.append(variance)
-            variances[year][keyword] = sum(var) / len(var)
+            if len(frequency_lists[year][keyword]) > 0:
+                averages[year][keyword] = \
+                    sum(frequency_lists[year][keyword]) / len(frequency_lists[year][keyword])
+                var = []
+                for freq in frequency_lists[year][keyword]:
+                    variance = math.pow((freq - averages[year][keyword]), 2)
+                    var.append(variance)
+                variances[year][keyword] = sum(var) / len(var)
+            else:
+                averages[year][keyword] = 0
+                variances[year][keyword] = 0
     return [averages, variances]
 
 
