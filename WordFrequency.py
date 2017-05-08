@@ -381,7 +381,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
     parser.add_argument("-txt", help="output text file argument", action="store")
-    parser.add_argument("-csv", help="output csv file argument", action="store")
+    parser.add_argument("-json", help="output csv file argument", action="store")
     parser.add_argument("-b", help="boolean to control searching for bigrams rather than individual words",
                         action="store_true")
     parser.add_argument("-k", help="list of keywords argument, surround list with quotes", action="store")
@@ -448,7 +448,7 @@ def main():
     # create txt file and write all the collected data to it
     with open(args.txt + '.txt', 'w') as txt_out:
         txt_out.write("Corresponding Json file for this text document is located on your machine at the "
-                      "following filepath: {0}".format(args.csv) + "\n")
+                      "following filepath: {0}".format(args.json) + "\n")
         print("Writing results to text file")
         for i in tqdm.tqdm(range(len(year_list) - 1)):
             txt_out.write("Period: {0} - {1}".format(str(year_list[i]), str(year_list[i+1])) + "\n")
@@ -483,6 +483,7 @@ def main():
     jf = {}
     jf['year list'] = year_list
     jf['number of documents'] = num_docs
+    jf['keywords'] = keywords
     for keyword in keywords:
         jf[keyword] = {}
         jf[keyword]['tf-idf avg'] = common.build_graph_list(keyword, year_list, tf_idf_avg)
@@ -492,25 +493,8 @@ def main():
         jf[keyword]['average frequency'] = common.build_graph_list(keyword, year_list, keyword_averages)
         jf[keyword]['variance'] = common.build_graph_list(keyword, year_list, keyword_variances)
 
-    with open(args.csv + '.csv', 'w', newline='', encoding='utf-8') as csv_out:
-        csvwriter = csv.writer(csv_out, delimiter=',')
-        year_list_str = []
-        for year in year_list:
-            year_list_str.append(str(year))
-        year_string = " ".join(year_list_str)
-        num_docs_str = ""
-        for doc in num_docs:
-            num_docs_str += str(doc) + " "
-        csvwriter.writerow(['word', 'tf-idf avg', 'tf-idf max', 'tf-idf min', 'word frequency', 'average frequency',
-                            'variance', year_string, num_docs_str])
-        print("Writing results to CSV")
-        for keyword in tqdm.tqdm(keywords):
-            csvwriter.writerow([keyword, common.list_to_string(common.build_graph_list(keyword, year_list, tf_idf_avg)),
-                                common.list_to_string(common.build_graph_list(keyword, year_list, tf_idf_max)),
-                                common.list_to_string(common.build_graph_list(keyword, year_list, tf_idf_min)),
-                                common.list_to_string(common.build_graph_list(keyword, year_list, keyword_percentage)),
-                                common.list_to_string(common.build_graph_list(keyword, year_list, keyword_averages)),
-                                common.list_to_string(common.build_graph_list(keyword, year_list, keyword_variances))])
+    with open(args.json + '.json', 'w', encoding='utf-8') as jfile:
+        jfile.write(build_json(jf))
 
 if __name__ == '__main__':
     main()
