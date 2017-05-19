@@ -143,7 +143,7 @@ def determine_data_type(tavg, tmax, tmin, percent, mean, var):
 def plot_type(bar, width):
     if bar:
         if width is not None:
-            width = width
+            width = float(width)
         else:
             width = 5
     return [bar, width]
