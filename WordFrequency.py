@@ -29,7 +29,7 @@ def build_years_tally(directory, year_list, yrange_min, yrange_max):
         print("Counting number of volumes per period.")
         for jsondoc in tqdm.tqdm(files):
             if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                with open(directory + "/" + jsondoc, 'r', encoding='utf-8') as in_file:
                     jsondata = json.load(in_file)
                     year = int(jsondata["Year Published"])
                     # check to make sure it's within range specified by user
