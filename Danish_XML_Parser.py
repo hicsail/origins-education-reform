@@ -286,7 +286,7 @@ def main():
     try:
         args = parser.parse_args()
     except IOError:
-        pass
+        common.fail("IOError")
 
     if args.i is None:
         common.fail("Please specify input (-i) directory.")
@@ -295,13 +295,7 @@ def main():
     if args.csv is None:
         common.fail("Please specify csv (-csv) directory.")
 
-    # Checks if the output directory already exists. If it exists, the existing directory is
-    # deleted and a new directory is created in its place.
-    if not os.path.exists(args.o):
-        os.mkdir(args.o)
-    else:
-        shutil.rmtree(args.o)
-        os.mkdir(args.o)
+    common.build_out(args.o)
 
     thread_files = []
 

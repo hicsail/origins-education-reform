@@ -1,10 +1,22 @@
-import os, tqdm, math
+import os, tqdm, math, shutil
 
 
 # generic fail method
 def fail(msg):
     print(msg)
     os._exit(1)
+
+
+def build_out(out_dir):
+    if out_dir is not None:
+        # create / overwrite directory where results will be stored
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
+        else:
+            shutil.rmtree(out_dir)
+            os.mkdir(out_dir)
+    else:
+        fail("Please specify output directory.")
 
 
 # build list of keywords, supports individual keywords or bigrams

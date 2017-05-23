@@ -2,18 +2,6 @@ from selenium import webdriver
 import time, argparse, common, os, shutil, csv, tqdm
 
 
-def build_out(out_dir):
-    if out_dir is not None:
-        # create / overwrite directory where results will be stored
-        if not os.path.exists(out_dir):
-            os.mkdir(out_dir)
-        else:
-            shutil.rmtree(out_dir)
-            os.mkdir(out_dir)
-    else:
-        common.fail("Please specify output directory.")
-
-
 def get_urls(csv_file):
     urls = []
     with open(csv_file, 'r', encoding='utf-8') as csv_in:
@@ -57,7 +45,7 @@ def main():
     except IOError:
         common.fail("IOError")
 
-    build_out(args.o)
+    common.build_out(args.o)
     chrome_opts = webdriver.ChromeOptions()
     # set default download dir to specified output dir
     prefs = {"download.default_directory": args.o}

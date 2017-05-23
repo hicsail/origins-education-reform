@@ -77,31 +77,36 @@ def add_content(text, file, language):
 
 # helper function to write to a file object, same as above but for xml parsing
 def add_xml_content(root, file, language):
-    text = str(root.text) + str(root.tail)
-    sentences = re.split('(?<=[.!?]) +', text)
-    for sentence in sentences:
-        sentence = clean_text(sentence)
-        if len(sentence) > 1:
-            file.add_content_sent(" ".join(sentence))
-            sentence_stemmed = stem_text(sentence, language)
-            file.add_stemmed_sent(" ".join(sentence_stemmed))
-            sentence_filtered = filter_text(sentence, language)
-            if len(sentence_filtered) > 1:
-                file.add_filtered_sent(" ".join(sentence_filtered))
-                sentence_filtered_stemmed = stem_text(sentence_filtered, language)
-                file.add_filtered_stemmed_sent(" ".join(sentence_filtered_stemmed))
-    text_list = clean_text(text)
-    # full text
-    file.add_content(text_list)
-    # stem the full text
-    stemmed = stem_text(text_list, language)
-    file.add_stemmed(stemmed)
-    # filter the unstemmed full text
-    filtered = filter_text(text_list, language)
-    file.add_filtered(filtered)
-    # stem the filtered text
-    filtered_stemmed = stem_text(filtered, language)
-    file.add_filtered_stemmed(filtered_stemmed)
+    text = ''
+    if str(root.text) != 'None':
+        text += root.text
+    if str(root.tail) != 'None':
+        text += ' ' + root.tail
+    if text != '':
+        sentences = re.split('(?<=[.!?]) +', text)
+        for sentence in sentences:
+            sentence = clean_text(sentence)
+            if len(sentence) > 1:
+                file.add_content_sent(" ".join(sentence))
+                sentence_stemmed = stem_text(sentence, language)
+                file.add_stemmed_sent(" ".join(sentence_stemmed))
+                sentence_filtered = filter_text(sentence, language)
+                if len(sentence_filtered) > 1:
+                    file.add_filtered_sent(" ".join(sentence_filtered))
+                    sentence_filtered_stemmed = stem_text(sentence_filtered, language)
+                    file.add_filtered_stemmed_sent(" ".join(sentence_filtered_stemmed))
+        text_list = clean_text(text)
+        # full text
+        file.add_content(text_list)
+        # stem the full text
+        stemmed = stem_text(text_list, language)
+        file.add_stemmed(stemmed)
+        # filter the unstemmed full text
+        filtered = filter_text(text_list, language)
+        file.add_filtered(filtered)
+        # stem the filtered text
+        filtered_stemmed = stem_text(filtered, language)
+        file.add_filtered_stemmed(filtered_stemmed)
 
 
 # converts all letters to lowercase, removes non-alphabetic characters, removes empty strings
