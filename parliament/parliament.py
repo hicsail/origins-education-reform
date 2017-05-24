@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup as bs
 from urllib.request import urlopen
 from urllib.error import HTTPError
+from multiprocessing import Pool
 import argparse
 import json
 import os
@@ -31,25 +32,36 @@ def daterange(start_date, end_date):
 
 
 def get_sittings(save_dir, base_url, start_date, end_date):
+    pool = Pool()
+
+    url_list = []
     for date_args in daterange(start_date, end_date):
         date_url, doc_date = format_url_date(base_url, date_args)
-        soup = scrape(date_url)
+        url_list.append((save_dir, base_url, date_url, doc_date))
 
-        if soup != None:
-            for x in soup.find_all('span', class_='major-section'):
-                if u'xoxo' in x.parent.parent.parent['class']:
-                    sitting_atag = [d for d in x.children]
-                    # get the href and text in the html a-tag and store in tuple
-                    sitting_url = base_url + (sitting_atag[0].get('href'))
-                    sitting_soup = scrape(sitting_url)
+    pool.starmap(scrape_thread, url_list)
+    pool.close()
+    pool.join()
 
-                    # get actual text content of sitting
-                    sitting_content = []
-                    for s in sitting_soup.find_all('div', class_='house-of-commons-sitting'):
-                        sitting_content.append(s.get_text().strip())
-                    sitting = {'date': doc_date, 'url': sitting_url, 'content': ''.join(sitting_content),
-                               'title': sitting_atag[0].text.split('.')[0].lower(), 'author': 'UK Parliament'}
-                    save_doc(save_dir, sitting, sitting['date'] + '-' + sitting['title'])
+
+def scrape_thread(save_dir, base_url, date_url, doc_date):
+    soup = scrape(date_url)
+
+    if soup != None:
+        for x in soup.find_all('span', class_='major-section'):
+            if u'xoxo' in x.parent.parent.parent['class']:
+                sitting_atag = [d for d in x.children]
+                # get the href and text in the html a-tag and store in tuple
+                sitting_url = base_url + (sitting_atag[0].get('href'))
+                sitting_soup = scrape(sitting_url)
+
+                # get actual text content of sitting
+                sitting_content = []
+                for s in sitting_soup.find_all('div', class_='house-of-commons-sitting'):
+                    sitting_content.append(s.get_text().strip())
+                sitting = {'date': doc_date, 'url': sitting_url, 'content': ''.join(sitting_content),
+                           'title': sitting_atag[0].text.split('.')[0].lower(), 'author': 'UK Parliament'}
+                save_doc(save_dir, sitting, sitting['date'] + '-' + sitting['title'])
 
 
 def scrape(url):
@@ -94,7 +106,6 @@ def main():
     end_date = {'year': args.end_year, 'month': args.end_month, 'day': args.end_day}
 
     get_sittings(args.save_dir, base_url, start_date, end_date)
-
 
 if __name__ == "__main__":
     main()
