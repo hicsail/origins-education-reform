@@ -1,7 +1,7 @@
 import argparse, json, os, math, csv
 import matplotlib.pyplot as plt
 import numpy as np
-from scripts import common
+from nlp_scripts import common
 
 
 # csv has trouble handling lists explicitly, so need to store

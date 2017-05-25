@@ -1,5 +1,5 @@
 import math, os, nltk, argparse, json, tqdm
-from scripts import common
+from nlp_scripts import common
 
 #                           *** WordFrequency.py ***
 #

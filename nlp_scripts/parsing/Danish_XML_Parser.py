@@ -1,7 +1,7 @@
 import argparse, os, re, csv
 import xml.etree.ElementTree as ET
 from multiprocessing import Pool
-from scripts import common, parsing_help, parsed
+from nlp_scripts import common, parsing_help, parsed
 
 
 # This script navigates through a directory of XML files (organized according to

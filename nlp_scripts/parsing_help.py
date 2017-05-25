@@ -1,4 +1,4 @@
-import json, os, re
+import json, re
 from nltk.stem.snowball import SnowballStemmer
 from nltk.corpus import stopwords
 

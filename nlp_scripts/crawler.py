@@ -1,6 +1,6 @@
 from selenium import webdriver
 import time, argparse, csv, tqdm
-from scripts import common
+from nlp_scripts import common
 
 
 def get_urls(csv_file):

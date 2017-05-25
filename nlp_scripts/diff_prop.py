@@ -1,7 +1,7 @@
 import csv, argparse, tqdm
 import statsmodels.api
 import scipy.stats
-from scripts import common
+from nlp_scripts import common
 
 
 def build_samples(csv_inpt, year_list, yrange_min, yrange_max):

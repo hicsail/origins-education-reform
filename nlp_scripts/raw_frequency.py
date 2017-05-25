@@ -1,5 +1,5 @@
 import json, csv, argparse, os, tqdm, nltk, operator
-from scripts import common
+from nlp_scripts import common
 
 # take either 0/1 occurrence values on snippets or word frequencies
 # on fulltext files, method depends on value of text_type
