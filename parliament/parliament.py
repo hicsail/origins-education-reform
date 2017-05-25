@@ -82,6 +82,9 @@ def format_url_date(base_url, date_obj):
 
 
 def save_doc(save_dir, data, filename):
+    if len(filename) > 50:
+        filename = '_'.join(filename[:50].strip().split())
+
     with open(os.path.join(save_dir, filename + '.json'), 'w', encoding='utf-8') as doc:
         json.dump(data, doc)
 
