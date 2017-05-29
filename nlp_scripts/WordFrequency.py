@@ -408,7 +408,11 @@ def main():
     # set up global values
     global text_type, bigrams
 
-    text_type = args.type
+    if args.type is not None:
+        text_type = args.type
+    else:
+        text_type = 'Words'
+        
     periods = args.p
     bigrams = args.b
 
