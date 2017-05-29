@@ -1,5 +1,5 @@
 import gensim, os, argparse, json, collections, re, nltk, numpy, tqdm
-import common
+from nlp_scripts import common
 
 
 # build list of keywords

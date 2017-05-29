@@ -1,5 +1,5 @@
 import json, os, shutil, argparse, tqdm
-import common
+from nlp_scripts import common
 
 
 # build subdirectories within output directory, each containing

@@ -1,6 +1,6 @@
 import os, argparse, json, csv, tqdm
 from afinn import Afinn
-import common
+from nlp_scripts import common
 
 
 #                                       *** SentAnalysis.py ***
