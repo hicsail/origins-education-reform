@@ -13,13 +13,31 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup as bs
 from urllib.request import urlopen
 from urllib.error import HTTPError
+from urllib.error import URLError
 from multiprocessing import Pool
 import argparse
 import json
 import os
+import time
+import random
+import codecs
+
+reader = codecs.getreader("utf-8")
 
 num2month = {1: 'jan', 2: 'feb', 3: 'mar', 4: 'apr', 5: 'may', 6: 'jun', 7: 'jul', 8: 'aug', 9: 'sep', 10: 'oct',
              11: 'nov', 12: 'dec'}
+
+# main paths which containg sitting data
+sitemap = [{'sittings': {'sitting_path': 'commons', 'content_class': 'house-of-commons-sitting'}},
+           {'lords': {'sitting_path': 'lords', 'content_class': 'house-of-lords-sitting'}},
+           {'commons': {'sitting_path': 'commons', 'content_class': 'house-of-commons-sitting'}},
+           {'westminster_hall': {'sitting_path': 'westminster_hall', 'content_class': 'westminster-hall-sitting'}},
+           {'written_answers': {'sitting_path': 'written_answers', 'content_class': 'commons-written-answers-sitting'}},
+           {'written_statements': {'sitting_path': 'written_statements',
+                                   'content_class': 'commons-written-statements-sitting'}},
+           {'lords_reports': {'sitting_path': 'lords_reports', 'content_class': 'house-of-lords-report'}},
+           {'grand_committee_report': {'sitting_path': 'grand_committee_report',
+                                       'content_class': 'grand-committee-report-sitting'}}]
 
 
 def daterange(start_date, end_date):
@@ -36,8 +54,11 @@ def get_sittings(save_dir, base_url, start_date, end_date):
 
     url_list = []
     for date_args in daterange(start_date, end_date):
-        date_url, doc_date = format_url_date(base_url, date_args)
-        url_list.append((save_dir, base_url, date_url, doc_date))
+        for site_path in sitemap:
+            date_url, doc_date = format_url(base_url, site_path, date_str=date_args)
+            url_list.append((save_dir, base_url, date_url, doc_date))
+            break
+        break
 
     pool.starmap(scrape_thread, url_list)
     pool.close()
@@ -45,40 +66,86 @@ def get_sittings(save_dir, base_url, start_date, end_date):
 
 
 def scrape_thread(save_dir, base_url, date_url, doc_date):
-    soup = scrape(date_url)
+    # Need to correctly pair the URLs and titles from the titles in the API
+    bs_page = scrape(date_url[:-3])
+    # Get a-tag text and href
+    atags = [(tag.string.strip(), tag['href']) for tag in bs_page.findAll('a', href=True)]
 
-    if soup != None:
-        for x in soup.find_all('span', class_='major-section'):
-            if u'xoxo' in x.parent.parent.parent['class']:
-                sitting_atag = [d for d in x.children]
-                # get the href and text in the html a-tag and store in tuple
-                sitting_url = base_url + (sitting_atag[0].get('href'))
-                sitting_soup = scrape(sitting_url)
+    page_text = scrape_text(bs_page)
+    # Items listed on this page are either links to sittings or titles to pages with sittings
+    # Items directly to sittings are listed as e.g. "Preamble 8 words", so need to separate these 2 types of items
+    line_indices = [page_text.index(c) - 1 for c in page_text if 'words' in c]
+    titles = [page_text[t].strip() for t in line_indices]
 
-                # get actual text content of sitting
-                sitting_content = []
-                for s in sitting_soup.find_all('div', class_='house-of-commons-sitting'):
-                    sitting_content.append(s.get_text().strip())
-                sitting = {'date': doc_date, 'url': sitting_url, 'content': ''.join(sitting_content),
-                           'title': sitting_atag[0].text.split('.')[0].lower(), 'author': 'UK Parliament'}
-                save_doc(save_dir, sitting, sitting['date'] + '-' + sitting['title'])
+    sittings = [tag for tag in atags for t in titles if t in tag]
+
+    for sit in sittings:
+        sitting_url = ''.join([base_url, sit[1]])
+        sitting_soup = scrape(sitting_url)
+        visible_text = ''.join(sitting_soup.findAll(text=True))
+
+        # Find second occurrence of title and discard all text before it
+        # Assuming that the title occurs only twice on each sitting page, once at the top
+        #   and again before the actual sitting text - basing this on the few pages I've seen so far
+        discard_from = visible_text.find(sit[0]) + len(sit[0])
+        visible_text = visible_text[discard_from:]
+        start_pos = visible_text.find(sit[0])
+
+        # Find end of sitting text and ignore misc. text from page
+        end_pos_back = visible_text.find('Back to')
+        end_pos_forw = visible_text.find('Forward to')
+
+        if end_pos_back == -1 and end_pos_forw == -1:
+            end_pos = len(visible_text)
+        elif end_pos_back != -1:
+            end_pos = end_pos_back
+        else:
+            end_pos = end_pos_forw
+
+        sitting_text = visible_text[start_pos:end_pos]
+        text_split = [x.strip() for x in sitting_text.split('§')]
+        header = [x for x in text_split[0].split('\n') if len(x) > 0][:-1]
+
+        # header[0] - sitting title, header[1] - data and volume, text_split[i] - i-th paragraph/speech
+        content = {'header': header, 'text': text_split[1:]}
+
+        sitting = {'date': doc_date[:-3], 'url': sitting_url, 'content': content, 'author': 'UK Parliament'}
+        save_doc(save_dir, sitting, sitting['date'] + '-' + header[0][:-1].lower().replace(' ', '_'))
 
 
+# Handles scraping API calls and raw HTML
 def scrape(url):
     try:
-        return bs(urlopen(url), 'html.parser')
+        if url.endswith('.js'):
+            return json.load(reader(urlopen(url)))
+        else:
+            return bs(urlopen(url).read(), 'html.parser')
     except HTTPError:
         # If page does not exist, skip over it
         return None
+    except (TimeoutError, URLError) as e:
+        if e.reason == 'no host given':
+            return None
+        time.sleep(random.uniform(1.5, 5))
+        return scrape(url)
 
 
-def format_url_date(base_url, date_obj):
-    url_date = date_obj.split('-')
-    url_date[1] = num2month[int(url_date[1])]
-    doc_date = '-'.join(url_date)
-    url_date.insert(0, 'sittings')
-    url_date.insert(0, base_url)
-    return '/'.join(url_date), doc_date
+def scrape_text(bs_html):
+    return list(filter(lambda x: x != '\n', bs_html.findAll(text=True)))
+
+
+def format_url(base_url, site_path, date_str=''):
+    if len(date_str) > 0:
+        url_date = date_str.split('-')
+        url_date[1] = num2month[int(url_date[1])]
+        url_date[2] = url_date[2] + '.js'
+        doc_date = '-'.join(url_date)
+        key = [k for k in site_path][0]
+        url_date.insert(0, key)
+        url_date.insert(0, base_url)
+        return '/'.join(url_date), doc_date
+    else:
+        return ''.join([base_url, site_path])
 
 
 def save_doc(save_dir, data, filename):
@@ -87,6 +154,12 @@ def save_doc(save_dir, data, filename):
 
     with open(os.path.join(save_dir, filename + '.json'), 'w', encoding='utf-8') as doc:
         json.dump(data, doc)
+
+
+def resume_date(save_dir):
+    files = os.listdir(save_dir)
+    files.sort()
+    return files[len(files) - 1].split('-')[:3]
 
 
 def main():
@@ -100,15 +173,25 @@ def main():
     parser.add_argument('--end_year', type=int, default=2006, help='Year to stop searching.')
     parser.add_argument('--end_month', type=int, default=4, help='Month to stop searching inclusive.')
     parser.add_argument('--end_day', type=int, default=24, help='Day to stop searching.')
+    parser.add_argument('--resume', type=bool, default=False,
+                        help='Resume searching from last date and do not set the start and end date range.')
     args = parser.parse_args()
 
     if not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
 
-    start_date = {'year': args.start_year, 'month': args.start_month, 'day': args.start_day}
+    if args.resume:
+        last = resume_date(args.save_dir)
+        last[1] = (list(num2month.keys())[list(num2month.values()).index(last[1])])
+
+        start_date = {'year': int(last[0]), 'month': int(last[1]), 'day': int(last[2])}
+    else:
+        start_date = {'year': args.start_year, 'month': args.start_month, 'day': args.start_day}
+
     end_date = {'year': args.end_year, 'month': args.end_month, 'day': args.end_day}
 
     get_sittings(args.save_dir, base_url, start_date, end_date)
+
 
 if __name__ == "__main__":
     main()
