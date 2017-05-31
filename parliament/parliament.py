@@ -5,10 +5,12 @@
 
     Script for scraping the Commons and Lords Hansard, the Official Report of debates in Parliament website
 
+    Note: Must be run with Python3 to avoid character encoding issues.
+
 	Boston University
 	Hariri Institute for Computing and Computational Science & Engineering
 '''
-
+# -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup as bs
 from urllib.request import urlopen
@@ -49,27 +51,36 @@ def daterange(start_date, end_date):
         curr += timedelta(days=1)
 
 
-def get_sittings(save_dir, base_url, start_date, end_date):
-    pool = Pool()
-
+def get_sittings(save_dir, base_url, start_date, end_date, parallel):
     url_list = []
     for date_args in daterange(start_date, end_date):
         for site_path in sitemap:
             date_url, doc_date = format_url(base_url, site_path, date_str=date_args)
-            url_list.append((save_dir, base_url, date_url, doc_date))
-            break
-        break
+            if parallel:
+                url_list.append((save_dir, base_url, date_url, doc_date))
+            else:
+                scrape_thread(save_dir, base_url, date_url, doc_date)
 
-    pool.starmap(scrape_thread, url_list)
-    pool.close()
-    pool.join()
+    if parallel:
+        pool = Pool()
+        pool.starmap(scrape_thread, url_list)
+        pool.close()
+        pool.join()
 
 
 def scrape_thread(save_dir, base_url, date_url, doc_date):
+    # Random delay to space out requests to mitigate overwheeling the server
+    time.sleep(random.uniform(0, 10))
+
     # Need to correctly pair the URLs and titles from the titles in the API
     bs_page = scrape(date_url[:-3])
+
     # Get a-tag text and href
-    atags = [(tag.string.strip(), tag['href']) for tag in bs_page.findAll('a', href=True)]
+    try:
+        atags = [(tag.string.strip(), tag['href']) for tag in bs_page.findAll('a', href=True)]
+    except AttributeError:
+        # Occurs when the page does not exist. Page may not exist because URLs were generated brute force.
+        return
 
     page_text = scrape_text(bs_page)
     # Items listed on this page are either links to sittings or titles to pages with sittings
@@ -175,6 +186,7 @@ def main():
     parser.add_argument('--end_day', type=int, default=24, help='Day to stop searching.')
     parser.add_argument('--resume', type=bool, default=False,
                         help='Resume searching from last date and do not set the start and end date range.')
+    parser.add_argument('--parallel', type=bool, default=False, help='Parallelize scraping.')
     args = parser.parse_args()
 
     if not os.path.exists(args.save_dir):
@@ -190,7 +202,7 @@ def main():
 
     end_date = {'year': args.end_year, 'month': args.end_month, 'day': args.end_day}
 
-    get_sittings(args.save_dir, base_url, start_date, end_date)
+    get_sittings(args.save_dir, base_url, start_date, end_date, args.parallel)
 
 
 if __name__ == "__main__":
