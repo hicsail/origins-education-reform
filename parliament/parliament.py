@@ -56,9 +56,9 @@ def daterange(start_date, end_date):
 
 
 def get_sittings(save_dir, start_date, end_date, parallel):
-    timeline = []
+    timeline=[]
     chkpt_dir = os.path.join(save_dir, 'chkpt/timeline_urls.p')
-
+   
     if not os.path.exists(chkpt_dir):
         # brute force generate all possible URLs in the date range. Some may not exists.
         for date_args in daterange(start_date, end_date):
@@ -67,8 +67,9 @@ def get_sittings(save_dir, start_date, end_date, parallel):
                 timeline.append((save_dir, date_url, doc_date))
 
         save(chkpt_dir, timeline)
-    else:
+    else: 
         timeline = find_range(start_date, end_date, load_pickle(chkpt_dir))
+
 
     if parallel:
         pool = Pool()
@@ -81,16 +82,15 @@ def get_sittings(save_dir, start_date, end_date, parallel):
 
 
 def json2str_date(s):
-    return '-'.join([str(s['year']), '%02d' % s['month'], '%02d' % s['day']])
+    return '-'.join([str(s['year']), '%02d'%s['month'], '%02d'%s['day']])
 
 
 def find_range(start, end, timeline):
     if type(start) != type(end):
-        raise Exception(
-            'find_range(start, end, timeline): Both inputs start and end must be of the same type (dict, str).')
+        raise Exception('find_range(start, end, timeline): Both inputs start and end must be of the same type (dict, str).')
 
     if not isinstance(start, str) and not isinstance(start, dict):
-        raise Exception('find_range(): Unsupported type. ', str(type(start)), ' Must be type str or dict.')
+        raise Exception('find_range(): Unsupported type. ', str(type(start)),' Must be type str or dict.')
 
     if isinstance(start, dict):
         start = json2str_date(start)
@@ -118,6 +118,7 @@ def find_range(start, end, timeline):
 
 
 def scrape_thread(save_dir, date_url, doc_date):
+
     # Need to correctly pair the URLs and titles from the titles in the API
     bs_page = scrape(date_url[:-3])
 
@@ -194,12 +195,12 @@ def scrape_sitting(sit):
     end_pos = min([x for x in ends if x != -1])
     text_split = text_split[:end_pos]
 
-    cols = [tag.text.strip() for tag in sitting_soup.findAll('a', href=True) if
-            'name' in tag.attrs and 'column_' in tag.attrs['name']]
+    cols = [tag.text.strip() for tag in sitting_soup.findAll('a', href=True) if 'name' in tag.attrs and 'column_' in tag.attrs['name']]
 
-    delim_header = text_split.index(cols.pop(0))
-    header = text_split[:delim_header]
-    text_split = [x for x in text_split[delim_header + 1:] if x not in cols]
+    if len(cols) > 0:
+        delim_header = text_split.index(cols.pop(0))
+        header = text_split[:delim_header]
+        text_split = [x for x in text_split[delim_header+1:] if x not in cols]
 
     return sitting_url, {'header': header, 'text': text_split}
 
@@ -282,16 +283,16 @@ def filter_title(t):
 
 def recent(a, b):
     if type(a) != type(b):
-        raise Exception('recent(a, b): Both inputs a and b must be of the same type.')
+        raise Exception('recent(a, b): Both inputs a and b must be of the same type.')    
     a_ = a
     b_ = b
 
     if isinstance(a, dict):
         a = json2str_date(a)
         b = json2str_date(b)
-
+        
     return a_ if datetime.strptime(a, "%Y-%m-%d") > datetime.strptime(b, "%Y-%m-%d") else b_
-
+    
 
 def resume(save_dir, chk_sit_dir, sit_dir):
     # Check all sitting titles in the date range it should have gotten, which will be in chk_sit_dir
@@ -303,7 +304,7 @@ def resume(save_dir, chk_sit_dir, sit_dir):
 
     for i, doc_date in enumerate(os.listdir(chk_sit_dir)):
         with open(os.path.join(chk_sit_dir, doc_date)) as datefile:
-
+            
             # JSON key: sitting title, value: partial URL
             date_sitting = json.load(datefile)
             sittings.update(date_sitting)
@@ -333,7 +334,7 @@ def resume(save_dir, chk_sit_dir, sit_dir):
             # each sit file is named using the same convention 
             # e.g. 1803-11-23-commons-boston_election_fetitiom.js
             sit = sit[:-3].split('-')
-            doc_date = '-'.join([sit[0], sit[1], sit[2]]) + '.js'
+            doc_date = '-'.join([sit[0], sit[1], sit[2]])+'.js'
             original = remove_unicode(titles_dict[sit[-1]])
             title_url_pair = (original, sittings[original])
             sitting_url, content = scrape_sitting(title_url_pair)
@@ -341,7 +342,7 @@ def resume(save_dir, chk_sit_dir, sit_dir):
 
     last = most_recent.split('-')
     return {'year': int(last[0]), 'month': int(last[1]), 'day': int(last[2])}
-
+        
 
 def check_date(start_date, end_date):
     if recent(start_date, end_date) == start_date and end_date != start_date:
