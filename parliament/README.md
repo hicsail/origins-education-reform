@@ -23,13 +23,13 @@ If you just want to search for all sittings in a specific year without specifyin
 #### Resume search
 If you need to resume the search, use the `--resume` flag, which will load the available data from the `save` directory and determine which files are missing and where to resume the search. This flag can also be used in conjunction with the date flags to resume and stop at a specified date. This assumes all the files from the previous run exist in `save`.
 ```
-$ python parliament.py --resume
+$ python parliament.py --resume True
 ```
 
 #### Parallelize
 The Hansard website seems to get easily overwheelmed, so specify a narrow date range when using this flag to avoid having to resume.
 ```
-$ python parliament.py --parallel --start_year 1803 --start_month 11 --start_day 22 --end_year 1803 --end_month 12 --end_day 20
+$ python parliament.py --parallel True --start_year 1803 --start_month 11 --start_day 22 --end_year 1803 --end_month 12 --end_day 20
 ```
 
 #### Example sitting output
