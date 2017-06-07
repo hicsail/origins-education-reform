@@ -25,6 +25,7 @@ import random
 import codecs
 import pickle
 import re
+import logging
 
 reader = codecs.getreader("utf-8")
 
@@ -157,8 +158,10 @@ def scrape_thread(save_dir, date_url, doc_date):
         save(os.path.join(save_dir, 'chkpt', 'sittings', ''.join([title, '.js'])), sit_dict)
 
     for sit in sittings:
-        sitting_url, content = scrape_sitting(sit)
-        save_doc(save_dir, doc_date, sitting_url, content)
+        scraped = scrape_sitting(sit)
+        if scraped != None:
+            sitting_url, content = scraped
+            save_doc(save_dir, doc_date, sitting_url, content)
 
 
 # Input: (title, partial sitting URL)
@@ -180,6 +183,9 @@ def scrape_sitting(sit):
     text_split = ''.join([x for x in sitting_text.split(split_sym) if len(x.strip()) > 0]).split('\n')
     text_split = [x.strip() for x in text_split if len(x.strip()) > 0]
 
+    if len(text_split) == 0:
+        return None
+
     # Find end of sitting text and ignore misc. text from page
 
     end_pos_back = end_pos_forw = end_pos_note = -1
@@ -192,18 +198,26 @@ def scrape_sitting(sit):
             end_pos_note = i
 
     ends = [end_pos_back, end_pos_forw, end_pos_note]
-    end_pos = min([x for x in ends if x != -1])
-    text_split = text_split[:end_pos]
+
+    if sum(ends) > -3:
+        end_pos = min([x for x in ends if x != -1])
+        text_split = text_split[:end_pos]
 
     cols = [tag.text.strip() for tag in sitting_soup.findAll('a', href=True) if 'name' in tag.attrs and 'column_' in tag.attrs['name']]
 
     if len(cols) > 0:
-        delim_header = text_split.index(cols.pop(0))
-        header = text_split[:delim_header]
-        text_split = [x for x in text_split[delim_header+1:] if x not in cols]
-
-    return sitting_url, {'header': header, 'text': text_split}
-
+        try:
+            delim_header = text_split.index(cols.pop(0))
+            header = text_split[:delim_header]
+            text_split = [x for x in text_split[delim_header+1:] if x not in cols]
+        except ValueError:
+            logging.info(text_split)
+            header = text_split[:2]
+            text_split = text_split[2:]
+        
+        return sitting_url, {'header': header, 'text': text_split}
+    else:
+        return sitting_url, {'header': text_split[:2], 'text': text_split[2:]}
 
 # Handles scraping API calls and raw HTML
 def scrape(url):
@@ -337,8 +351,11 @@ def resume(save_dir, chk_sit_dir, sit_dir):
             doc_date = '-'.join([sit[0], sit[1], sit[2]])+'.js'
             original = remove_unicode(titles_dict[sit[-1]])
             title_url_pair = (original, sittings[original])
-            sitting_url, content = scrape_sitting(title_url_pair)
-            save_doc(save_dir, doc_date, sitting_url, content)
+
+            scraped = scrape_sitting(title_url_pair)
+            if scraped != None:
+                sitting_url, content = scraped
+                save_doc(save_dir, doc_date, sitting_url, content)
 
     last = most_recent.split('-')
     return {'year': int(last[0]), 'month': int(last[1]), 'day': int(last[2])}
@@ -383,6 +400,9 @@ def main():
     if not os.path.exists(chk_sit_dir):
         os.makedirs(chk_sit_dir)
 
+    # Set up logging
+    logging.basicConfig(filename=''.join([args.save_dir, 'parliament', '.log']),level=logging.DEBUG)
+
     start_date = {'year': args.start_year, 'month': args.start_month, 'day': args.start_day}
     end_date = {'year': args.end_year, 'month': args.end_month, 'day': args.end_day}
 
@@ -391,6 +411,9 @@ def main():
 
         # Takes the most recent start date in the odd case that the user would like to resume, but would like to start
         # at a more recent date, so this should skip over those dates in between and start with the new start date.
+        print(type(resume_start_date))
+        print(type(start_date))
+        return
         start_date = recent(resume_start_date, start_date)
 
     check_date(start_date, end_date)
