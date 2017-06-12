@@ -1,6 +1,6 @@
 import argparse, os, csv, tqdm
 import xml.etree.ElementTree as ET
-from temp_scripts import parsing_help, parsed, common
+from .. import parsing_help, parsed, common
 
 
 def get_text(root, file):

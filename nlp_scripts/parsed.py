@@ -1,7 +1,7 @@
 # Class for file object
 class Parsed:
     def __init__(self, title='', author='', pub_info='', years="2000 ",
-                 isbn='', doc_type='', chapters='', htid=''):
+                 isbn='', doc_type='', chapters='', htid='', url=''):
         self.t = title
         self.a = author
         self.p = pub_info
@@ -11,6 +11,7 @@ class Parsed:
         self.ch = chapters
         self.h = htid
         self.c = []
+        self.url = url
         self.cstem = []
         self.tx = []
         self.txstem = []

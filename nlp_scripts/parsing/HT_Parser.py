@@ -1,6 +1,6 @@
 import argparse, csv, os, shutil, zipfile
 import xml.etree.ElementTree as ET
-from temp_scripts import parsed, common, parsing_help
+from .. import parsed, common, parsing_help
 
 
 def scan_for_htid(root):

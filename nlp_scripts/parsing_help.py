@@ -29,7 +29,7 @@ def build_json(file):
                         'Full Text': file.c, 'Full Text Stemmed': file.cstem, 'Filtered Text': file.tx,
                         'Filtered Text Stemmed': file.txstem, 'Full Sentences': file.c_sent,
                         'Filtered Sentences': file.tx_sent, 'Stemmed Sentences': file.cstem_sent,
-                        'Filtered Stemmed Sentences': file.txstem_sent},
+                        'Filtered Stemmed Sentences': file.txstem_sent, 'URL': file.url},
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
