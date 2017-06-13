@@ -19,6 +19,22 @@ def build_out(out_dir):
         fail("Please specify output directory.")
 
 
+# build subdirectories within output directory, each containing
+# documents where a single keyword / bigram occurs
+def build_subdirs(out_dir, keywords, bigrams):
+    for keyword in keywords:
+        if not bigrams:
+            words = keyword.split("/")
+            dir_name = "_".join(words)
+            os.mkdir(out_dir + "/" + dir_name)
+        else:
+            words = []
+            for i in range(len(keyword)):
+                words.append("-".join(wd for wd in keyword[i]))
+            dir_name = "_".join(words)
+            os.mkdir(out_dir + "/" + dir_name)
+
+
 # build list of keywords, supports individual keywords or bigrams
 def build_key_list(keywords, bigrams):
     key_list = keywords.lower().split(",")

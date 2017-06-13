@@ -1,14 +1,37 @@
 import common, json, argparse, os
-from gensim import corpora
-from nltk.corpus import stopwords
-from six import iteritems
+from gensim import corpora, models
+from shutil import copyfile
 
 
-def filtered_ids(stopwords, dictionary):
-    stop_ids = [dictionary.token2id[stopword] for stopword in stopwords
-                if stopword in dictionary.token2id]
-    once_ids = [tokenid for tokenid, docfreq in iteritems(dictionary.dfs) if docfreq == 1]
-    return stop_ids + once_ids
+def filter_by_threshold(thresh, score):
+    if score >= thresh:
+        return True
+    return False
+
+
+def filter_tfidf(keywords, dictionary, in_dir, out_dir, tfidf_model, text_type, thresh):
+    for subdir, dirs, files in os.walk(in_dir):
+        for jf in files:
+            if jf[0] != ".":
+                text = extract_text(in_dir + jf, text_type)
+                docbow = dictionary.doc2bow(text)
+                for keyword in keywords:
+                    words = keyword.split("/")
+                    # abstract all this into another method, doing too much
+                    for w in words:
+                        if w in set(text):
+                            w_id = dictionary.token2id[w]
+                            # TODO: make sure ZeroDivisionError isn't a problem
+                            tfidf = tfidf_model[docbow]
+                            copied = False
+                            for score in tfidf:
+                                if not copied:
+                                    if score[0] == w_id:
+                                        # check against threshold, copy if above
+                                        if filter_by_threshold(thresh, score[1]):
+                                            copyfile(in_dir + jf, out_dir + keyword + '/' + jf)
+                                            # only want one copy, break to next keyword
+                                            copied = True
 
 
 def extract_text(jf, text_type):
@@ -18,13 +41,17 @@ def extract_text(jf, text_type):
     return text
 
 
-def construct_dictionary(in_dir, text_type):
+def construct_dictionary_and_corpus(in_dir, text_type):
     dictionary = corpora.Dictionary()
+    corpus = []
     for subdir, dirs, files in os.walk(in_dir):
         for jf in files:
             if jf[0] != ".":
-                dictionary.add_documents([extract_text(in_dir + jf, text_type)])
-    return dictionary
+                text = extract_text(in_dir + jf, text_type)
+                dictionary.add_documents([text])
+                # TODO: might not actually need corpus step
+                corpus.append(dictionary.doc2bow(text))
+    return [dictionary, corpus]
 
 
 def determine_text_type(text_type):
@@ -39,39 +66,55 @@ def determine_text_type(text_type):
     return text
 
 
+def args_setup(in_dir, keys, out_dir, text_type, thresh):
+    if in_dir is None:
+        common.fail("Please specify input (-i) directory.")
+    if keys is None:
+        common.fail("Please specify keywords (-k)")
+    else:
+        # TODO: make bigrams configurable in future if needed
+        key_list = common.build_key_list(keys, False)
+    if out_dir is None:
+        common.fail("Please specify output (-o) directory.")
+    else:
+        common.build_out(out_dir)
+        common.build_subdirs(out_dir, keys, False)
+    if text_type is None:
+        text_type = 'Filtered Text Stemmed'
+    else:
+        text_type = determine_text_type(text_type.lower())
+    if thresh is None:
+        common.fail("Please specify TF-IDF threshold argument (-thresh")
+    else:
+        thresh = float(thresh)
+    return [key_list, text_type, thresh]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", metavar="in-directory", action="store", help="input directory argument")
     parser.add_argument("-o", help="output directory", action="store")
     parser.add_argument("-thresh", help="tf-idf threshold", action="store")
     parser.add_argument("-type", help="text field from json doc", action="store")
-    parser.add_argument("-lang", help="language", action="store")
+    parser.add_argument("-k", help="keywords", action="store")
 
     try:
         args = parser.parse_args()
     except IOError:
         pass
 
-    if args.i is None:
-        common.fail("Please specify input (-i) directory.")
-    if args.type is None:
-        text_type = 'Filtered Text'
-    else:
-        text_type = determine_text_type(args.type.lower())
-    if args.lang is None:
-        language = 'english'
-    else:
-        language = args.lang.lower()
+    in_args = args_setup(args.i, args.k, args.o, args.type, args.thresh)
+    key_list, text_type, thresh = in_args[0], in_args[1], in_args[2]
 
-    common.build_out(args.o)
-    stoplist = set(stopwords.words(language))
+    model_params = construct_dictionary_and_corpus(args.i, text_type)
+    dictionary, corpus = model_params[0], model_params[1]
+    # TODO: make this configurable
+    dictionary.save('/tmp/dictionary.dict')
+    corpora.MmCorpus.serialize('/tmp/corpus.mm', corpus)
 
-    dictionary = construct_dictionary(args.i, text_type)
-    dictionary.filter_tokens(filtered_ids(stoplist, dictionary)).compactify()
+    tfidf = models.TfidfModel(corpus)
 
-    # TODO: save dictionary to disk for later use
-    # TODO: filter docs w/r/t keyword / threshold
-    # TODO: write filtered docs to disk or just save file IDs?
+    filter_tfidf(key_list, dictionary, args.i, args.o, tfidf, text_type, thresh)
 
 if __name__ == '__main__':
     main()

@@ -2,23 +2,6 @@ import json, os, shutil, argparse, tqdm
 import common
 
 
-# build subdirectories within output directory, each containing
-# documents where a single keyword / bigram occurs
-def build_subdirs(out_dir, keywords):
-    print("Building Subdirectories")
-    for keyword in tqdm.tqdm(keywords):
-        if not bigrams:
-            words = keyword.split("/")
-            dir_name = "_".join(words)
-            os.mkdir(out_dir + "/" + dir_name)
-        else:
-            words = []
-            for i in range(len(keyword)):
-                words.append("-".join(wd for wd in keyword[i]))
-            dir_name = "_".join(words)
-            os.mkdir(out_dir + "/" + dir_name)
-
-
 # iterate through corpus, extract text surrounding occurrences of each
 # keyword / bigram and write those to json files
 def parse_json(in_dir, out_dir, keywords, by_sentences):
@@ -185,7 +168,7 @@ def main():
     keywords = common.build_key_list(args.k, bigrams)
 
     # build subdirectories and populate them
-    build_subdirs(out_dir, keywords)
+    common.build_subdirs(out_dir, keywords, bigrams)
     parse_json(in_dir, out_dir, keywords, by_sentences)
 
 if __name__ == '__main__':
