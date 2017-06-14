@@ -21,17 +21,16 @@ def filter_tfidf(keywords, dictionary, in_dir, out_dir, tfidf_model, text_type, 
                     for w in words:
                         if w in set(text):
                             w_id = dictionary.token2id[w]
-                            # TODO: make sure ZeroDivisionError isn't a problem
                             tfidf = tfidf_model[docbow]
                             copied = False
-                            for score in tfidf:
-                                if not copied:
+                            if not copied:
+                                for score in tfidf:
                                     if score[0] == w_id:
                                         # check against threshold, copy if above
                                         if filter_by_threshold(thresh, score[1]):
+                                            copied = True
                                             copyfile(in_dir + jf, out_dir + keyword + '/' + jf)
                                             # only want one copy, break to next keyword
-                                            copied = True
 
 
 def extract_text(jf, text_type):
@@ -49,7 +48,6 @@ def construct_dictionary_and_corpus(in_dir, text_type):
             if jf[0] != ".":
                 text = extract_text(in_dir + jf, text_type)
                 dictionary.add_documents([text])
-                # TODO: might not actually need corpus step
                 corpus.append(dictionary.doc2bow(text))
     return [dictionary, corpus]
 
@@ -66,7 +64,7 @@ def determine_text_type(text_type):
     return text
 
 
-def args_setup(in_dir, keys, out_dir, text_type, thresh):
+def args_setup(in_dir, keys, out_dir, text_type, threshold):
     if in_dir is None:
         common.fail("Please specify input (-i) directory.")
     if keys is None:
@@ -78,15 +76,15 @@ def args_setup(in_dir, keys, out_dir, text_type, thresh):
         common.fail("Please specify output (-o) directory.")
     else:
         common.build_out(out_dir)
-        common.build_subdirs(out_dir, keys, False)
+        common.build_subdirs(out_dir, key_list, False)
     if text_type is None:
         text_type = 'Filtered Text Stemmed'
     else:
         text_type = determine_text_type(text_type.lower())
-    if thresh is None:
+    if threshold is None:
         common.fail("Please specify TF-IDF threshold argument (-thresh")
     else:
-        thresh = float(thresh)
+        thresh = float(threshold)
     return [key_list, text_type, thresh]
 
 
@@ -103,14 +101,18 @@ def main():
     except IOError:
         pass
 
-    in_args = args_setup(args.i, args.k, args.o, args.type, args.thresh)
+    thresh = args.thresh.strip('"').strip("'")
+
+    in_args = args_setup(args.i, args.k, args.o, args.type, thresh)
     key_list, text_type, thresh = in_args[0], in_args[1], in_args[2]
 
     model_params = construct_dictionary_and_corpus(args.i, text_type)
     dictionary, corpus = model_params[0], model_params[1]
     # TODO: make this configurable
+    '''
     dictionary.save('/tmp/dictionary.dict')
     corpora.MmCorpus.serialize('/tmp/corpus.mm', corpus)
+    '''
 
     tfidf = models.TfidfModel(corpus)
 
