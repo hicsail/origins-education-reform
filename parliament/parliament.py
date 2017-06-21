@@ -65,12 +65,12 @@ def get_sittings(save_dir, start_date, end_date, parallel):
         for date_args in daterange(start_date, end_date):
             for site_path in sitemap:
                 date_url, doc_date = format_url(site_path, date_str=date_args)
-                timeline.append((save_dir, date_url, doc_date))
-
+                if scrape(date_url) != None:
+                    timeline.append((save_dir, date_url, doc_date))
         save(chkpt_dir, timeline)
+        return
     else: 
         timeline = find_range(start_date, end_date, load_pickle(chkpt_dir))
-
 
     if parallel:
         pool = Pool()
@@ -107,11 +107,11 @@ def find_range(start, end, timeline):
 
     for i, t in enumerate(timeline):
         # find the start date
-        if t[3] == start:
+        if t[2] == start:
             s = i
 
         # find the end date
-        if t[3] == end:
+        if t[2] == end:
             e = i
             break
 
@@ -169,6 +169,10 @@ def scrape_sitting(sit):
     sitting_url = ''.join([base_url, sit[1]])
     # sitting_url = 'http://hansard.millbanksystems.com/lords/1803/dec/14/minutes'
     sitting_soup = scrape(sitting_url)
+    
+    if sitting_soup == None:
+        return
+    
     visible_text = ''.join(sitting_soup.findAll(text=True))
 
     # Find second occurrence of title and discard all text before it
@@ -230,10 +234,7 @@ def scrape(url):
         # If page does not exist, skip over it
         return None
     except (TimeoutError, URLError) as e:
-        if e.reason == 'no host given':
-            return None
-        time.sleep(random.uniform(1.5, 10))
-        return scrape(url)
+        return None
 
 
 # Get all visible text on the page
@@ -306,6 +307,11 @@ def recent(a, b):
         b = json2str_date(b)
         
     return a_ if datetime.strptime(a, "%Y-%m-%d") > datetime.strptime(b, "%Y-%m-%d") else b_
+
+
+# Check which sitting files were downloaded and which ones haven't been downloaded
+def check_finished():
+    pass
     
 
 def resume(save_dir, chk_sit_dir, sit_dir):
@@ -316,6 +322,7 @@ def resume(save_dir, chk_sit_dir, sit_dir):
     chk_sit_files = []
     most_recent = '0001-01-01'
 
+    # finds the most recent file by date in the title of the file not time of download
     for i, doc_date in enumerate(os.listdir(chk_sit_dir)):
         with open(os.path.join(chk_sit_dir, doc_date)) as datefile:
             
@@ -401,7 +408,14 @@ def main():
         os.makedirs(chk_sit_dir)
 
     # Set up logging
-    logging.basicConfig(filename=''.join([args.save_dir, 'parliament', '.log']),level=logging.DEBUG)
+    log_file = ''.join([args.save_dir, 'parliament.log'])
+    
+    try:
+        file = open(log_file, 'r')
+    except IOError:
+        file = open(log_file, 'w')
+
+    logging.basicConfig(filename=log_file,level=logging.DEBUG)
 
     start_date = {'year': args.start_year, 'month': args.start_month, 'day': args.start_day}
     end_date = {'year': args.end_year, 'month': args.end_month, 'day': args.end_day}
@@ -411,9 +425,6 @@ def main():
 
         # Takes the most recent start date in the odd case that the user would like to resume, but would like to start
         # at a more recent date, so this should skip over those dates in between and start with the new start date.
-        print(type(resume_start_date))
-        print(type(start_date))
-        return
         start_date = recent(resume_start_date, start_date)
 
     check_date(start_date, end_date)
