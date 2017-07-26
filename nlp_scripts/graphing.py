@@ -18,12 +18,13 @@ def string_to_floats(str_inpt):
 def find_max_and_min(in_dict):
     g_max = 0
     g_min = math.inf
-    for k in in_dict:
-        for i in range(len(in_dict[k])):
-            if in_dict[k][i] > g_max:
-                g_max = in_dict[k][i]
-            if in_dict[k][i] < g_min:
-                g_min = in_dict[k][i]
+    for f in in_dict:
+        for k in in_dict[f]:
+            for i in range(len(in_dict[f][k])):
+                if in_dict[f][k][i] > g_max:
+                    g_max = in_dict[f][k][i]
+                if in_dict[f][k][i] < g_min:
+                    g_min = in_dict[f][k][i]
     return [g_min, g_max]
 
 
@@ -42,10 +43,11 @@ def build_graph_dict(in_dir, data_type):
                     jsondata = json.load(in_file)
                     keywords = jsondata['keywords']
                     numdocs.append(jsondata['number of documents'])
+                    graphed[file] = {}
                     for keyword in keywords:
                         # this step assumes there are no keyword repeats across files
-                        graphed[keyword] = []
-                        graphed[keyword].extend(jsondata[keyword][data_type])
+                        graphed[file][keyword] = []
+                        graphed[file][keyword].extend(jsondata[keyword][data_type])
             elif file[0] != '.' and file[-4:] == '.csv':
                 # hacky bc csv files are awful
                 with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
@@ -212,10 +214,11 @@ def main():
 
     if bar:
         i = 0
-        for k in graph_dict:
-            ax1.bar(index + (width * i), graph_dict[k], width, alpha=.8,
-                    color=np.random.rand(3, 1), label=k)
-            i += 1
+        for f in graph_dict:
+            for k in graph_dict[f]:
+                ax1.bar(index + (width * i), graph_dict[f][k], width, alpha=.8,
+                        color=np.random.rand(3, 1), label="{0}: {1}".format(f,k))
+                i += 1
     else:
         for k in graph_dict:
             ax1.plot(index, graph_dict[k], label=k)

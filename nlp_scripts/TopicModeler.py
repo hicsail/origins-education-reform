@@ -104,7 +104,6 @@ def main():
                         action="store_true")
     parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
                         action="store")
-    parser.add_argument("-lda", help="Topic modeling via LDA", action="store_true")
     parser.add_argument("-lsi", help="Topic modeling vida LSI", action="store_true")
     parser.add_argument("-include_keys", help="don't filter keywords from topics", action="store_true")
     parser.add_argument("-passes", help="number of passes on corpus", action="store")
@@ -114,10 +113,6 @@ def main():
         args = parser.parse_args()
     except IOError as msg:
         print(parser.error(str(msg)))
-
-    # check user input
-    if 1 > int(args.lsi) + int(args.lda) > 1:
-        common.fail("Please use either LSI or LDA modeling (not neither or both)")
 
     if args.num_topics is None:
         num_topics = 10
@@ -145,13 +140,17 @@ def main():
         deterministic = True
         seed = int(args.seed)
 
+    if args.lsi:
+        lda = False
+        lsi = True
+    else:
+        lda = True
+        lsi = False
+
     weights = args.weights
     periods = args.p
-    lsi = args.lsi
-    lda = args.lda
     include_keys = args.include_keys
     language = args.lang
-
     range_years = args.y.split()
     year_params = common.year_params(range_years, periods)
     increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
@@ -198,7 +197,7 @@ def main():
                 try:
                     if not deterministic:
                         # stochastic
-                        lda_dict[year][key] = (gensim.models.ldamulticore.LdaMulticore(
+                        lda_dict[year][key] = (gensim.models.ldamodel.LdaModel(
                             corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
                             num_topics=num_topics, passes=passes), numdocs)
                     else:

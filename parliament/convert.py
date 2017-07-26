@@ -15,7 +15,16 @@ def parse_content(text_list, obj):
         parsing_help.add_content(sent, obj, language)
 
 
-def parse_threaded(in_doc, in_dir, out_dir):
+def parse_title(title, keywords):
+    # wow so parse
+    t = title.split()
+    for w in t:
+        if w.strip('.').lower() in keywords:
+            return True
+    return False
+
+
+def parse_threaded(in_doc, in_dir, out_dir, keywords):
     obj = parsed.Parsed()
     with open(in_dir + in_doc, 'r', encoding='utf-8') as jf:
         jsondata = json.load(jf)
@@ -23,9 +32,11 @@ def parse_threaded(in_doc, in_dir, out_dir):
         obj.url = jsondata['url']
         obj.a = jsondata['author']
         parse_content(jsondata['content']['text'], obj)
-        with open(out_dir + in_doc[:-2] + 'json', 'w', encoding='utf-8') as out:
-            out.write(parsing_help.build_json(obj))
-            out.close()
+        header = jsondata['content']['header'][0]
+        if parse_title(header, keywords):
+            with open(out_dir + in_doc[:-2] + 'json', 'w', encoding='utf-8') as out:
+                out.write(parsing_help.build_json(obj))
+                out.close()
 
 
 def main():
@@ -33,6 +44,7 @@ def main():
     parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
     parser.add_argument("-o", help="output directory", action="store")
     parser.add_argument("-lang", help="language", action="store")
+    parser.add_argument("-k", help="keywords in title", action="store")
 
     try:
         args = parser.parse_args()
@@ -48,6 +60,8 @@ def main():
     else:
         language = args.lang.lower()
 
+    keywords = set(args.k.split("/"))
+
     common.build_out(args.o)
 
     thread_files = []
@@ -55,7 +69,7 @@ def main():
     for subdir, dirs, files in os.walk(args.i):
         for jf in files:
             if jf[0] != ".":
-                thread_files.append((jf, args.i, args.o))
+                thread_files.append((jf, args.i, args.o, keywords))
 
     pool = Pool()
     pool.starmap(parse_threaded, thread_files)
