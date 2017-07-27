@@ -220,8 +220,9 @@ def main():
                         color=np.random.rand(3, 1), label="{0}: {1}".format(f,k))
                 i += 1
     else:
-        for k in graph_dict:
-            ax1.plot(index, graph_dict[k], label=k)
+        for f in graph_dict:
+            for k in graph_dict[f]:
+                ax1.plot(index, graph_dict[f][k], label="{0}: {1}".format(f,k))
 
     # labels etc.
     plt.xlabel("Period")
