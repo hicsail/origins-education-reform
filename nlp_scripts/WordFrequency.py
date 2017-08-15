@@ -222,11 +222,13 @@ def calculate_tfidf_min_and_max(year_list, keywords, tf_idf_results):
     return [tf_idf_min, tf_idf_max]
 
 
-# returns total word count for each decade
+# returns total word count for each keyword/year period
 def keyword_and_word_count(year_list, directory, yrange_min, yrange_max, keywords):
     word_totals = common.build_simple_dict_of_nums(year_list)
-    keyword_totals = common.build_dict_of_nums(year_list, keywords)
+    word_count_dict = common.build_nested_dict_of_nums(year_list, keywords)
+    # keyword_totals = common.build_dict_of_nums(year_list, keywords)
     frequency_list = common.build_dict_of_lists(year_list, keywords)
+    # word_count = {}
     for subdir, dirs, files in os.walk(directory):
         print("Taking word counts")
         for jsondoc in tqdm.tqdm(files):
@@ -243,54 +245,72 @@ def keyword_and_word_count(year_list, directory, yrange_min, yrange_max, keyword
                         target = common.determine_year(year, year_list)
                         fdist = nltk.FreqDist(text)
                         for keyword in keywords:
-                            # update keyword count for period/keyword pair
+                            # keeping this here for bigrams
                             word_count = 0
+                            # update keyword count for period/keyword pair
                             if not bigrams:
                                 keys = keyword.split("/")
                                 for k in keys:
                                     word_count += fdist[k]
+                                    word_count_dict[target][keyword][k] += fdist[k]
                             else:
+                                # TODO: implement same functionality above for bigrams
+                                # TODO: pretty much everything for bigrams is not functional
                                 for i in range(len(keyword)):
                                     word_count += fdist[keyword[i]]
                             try:
                                 # add word count to frequency totals (for frequency as percentage of total words)
-                                keyword_totals[target][keyword] += word_count
+                                # keyword_totals[target][keyword] += word_count
                                 # append word count to frequency list (for mean & variance of samples)
-                                frequency_list[target][keyword].append(word_count)
+                                # frequency_list[target][keyword].append(word_count)
                                 word_totals[target] += num_words
+                                word_count_dict[target][keyword]["TOTAL"] += word_count
+                                frequency_list[target][keyword].append(word_count)
                             except KeyError:
-                                # decade out of range (specified by user)
+                                # decade out of range
                                 pass
 
-    return [keyword_totals, frequency_list, word_totals]
+    return [word_count_dict, frequency_list, word_totals]
 
 
 # calculates term frequency for each keyword/decade pair as a
 # percentage of the total words in all books for each decade
 def take_keyword_percentage(year_list, keywords, total_words, keyword_totals):
-    keyword_percentages = common.build_dict_of_nums(year_list, keywords)
+    keyword_percentages = common.build_nested_dict_of_nums(year_list, keywords)
     print("Calculating keyword frequencies as percentages of total words")
     for i in tqdm.tqdm(range(len(year_list))):
         for keyword in keywords:
-            num = keyword_totals[year_list[i]][keyword]
+            num = keyword_totals[year_list[i]][keyword]["TOTAL"]
             den = total_words[year_list[i]]
             if den > 0:
                 percent = round((num / den) * 100, 4)
-                keyword_percentages[year_list[i]][keyword] = percent
+                keyword_percentages[year_list[i]][keyword]["TOTAL"] = percent
             else:
                 # no files for this decade, use previous decade's totals
                 prev_year = year_list[i - 1]
                 try:
-                    percent = keyword_percentages[prev_year][keyword]
+                    percent = keyword_percentages[prev_year][keyword]["TOTAL"]
                 except KeyError:
                     # case when the first period in the list of dates
                     # has no files associated with it.
                     percent = 0
-                keyword_percentages[year_list[i]][keyword] = percent
+                keyword_percentages[year_list[i]][keyword]["TOTAL"] = percent
+            for k in keyword.split("/"):
+                num = keyword_totals[year_list[i]][keyword][k]
+                if den > 0:
+                    percent = round((num / den) * 100, 4)
+                    keyword_percentages[year_list[i]][keyword][k] = percent
+                else:
+                    prev_year = year_list[i - 1]
+                    try:
+                        percent = keyword_percentages[prev_year][keyword][k]
+                    except KeyError:
+                        percent = 0
+                    keyword_percentages[year_list[i]][keyword][k] = percent
     return keyword_percentages
 
 
-# take average keyword occurence across all volumes, using dict that stores list of individual frequencies
+# take average keyword occurrence across all volumes, using dict that stores list of individual frequencies
 def avg_and_var(year_list, keywords, frequency_lists):
     averages = common.build_dict_of_nums(year_list, keywords)
     variances = common.build_dict_of_nums(year_list, keywords)
@@ -436,15 +456,19 @@ def main():
     # build/populate dicts
     idf_results = calculate_idf_results(keywords, year_list, years_tally, directory, yrange_min, yrange_max)
     tf_idf_results = calculate_tfidf_results(year_list, keywords, directory, idf_results, yrange_min, yrange_max)
-
     # take avg/max/min
     tf_idf_avg = calculate_tfidf_avg(year_list, keywords, tf_idf_results)
     min_and_max = calculate_tfidf_min_and_max(year_list, keywords, tf_idf_results)
     tf_idf_min = min_and_max[0]
     tf_idf_max = min_and_max[1]
 
+    # returns word_count_dict and word_totals
+    # counts[0] = keyword_totals
+    # counts[1] = frequency_list
+    # counts[2] = word_totals
     counts = keyword_and_word_count(year_list, directory, yrange_min, yrange_max, keywords)
     keyword_percentage = take_keyword_percentage(year_list, keywords, counts[2], counts[0])
+
     avg_var = avg_and_var(year_list, keywords, counts[1])
     keyword_averages = avg_var[0]
     keyword_variances = avg_var[1]
@@ -476,7 +500,7 @@ def main():
                 txt_out.write("Min TF-IDF score for this period: {0}"
                               .format(str(tf_idf_min[year_list[i]][keyword]) + "\n"))
                 txt_out.write("Word frequency for \"{0}\" (as percentage of total words) for this period: {1}"
-                              .format(keyword, str(keyword_percentage[year_list[i]][keyword]) + "\n"))
+                              .format(keyword, str(keyword_percentage[year_list[i]][keyword]["TOTAL"]) + "\n"))
                 try:
                     common.list_max_docs(txt_out, year_list[i], keyword, tf_idf_results, args.num, "TF-IDF")
                     common.list_min_docs(txt_out, year_list[i], keyword, tf_idf_results, args.num, "TF-IDF")
@@ -494,14 +518,18 @@ def main():
     jf['year list'] = year_list
     jf['number of documents'] = num_docs
     jf['keywords'] = keywords
+    jf['breakdown'] = {}
     for keyword in keywords:
         jf[keyword] = {}
         jf[keyword]['tf-idf avg'] = common.build_graph_list(keyword, year_list, tf_idf_avg)
         jf[keyword]['tf-idf max'] = common.build_graph_list(keyword, year_list, tf_idf_max)
         jf[keyword]['tf-idf min'] = common.build_graph_list(keyword, year_list, tf_idf_min)
-        jf[keyword]['word frequency'] = common.build_graph_list(keyword, year_list, keyword_percentage)
+        jf[keyword]['word frequency'] = common.build_graph_list_from_nested(
+            keyword, year_list, keyword_percentage, 'TOTAL')
         jf[keyword]['average frequency'] = common.build_graph_list(keyword, year_list, keyword_averages)
         jf[keyword]['variance'] = common.build_graph_list(keyword, year_list, keyword_variances)
+        for k in keyword.split('/'):
+            jf['breakdown'][k] = common.build_graph_list_from_nested(keyword, year_list, keyword_percentage, k)
 
     with open(args.json + '.json', 'w', encoding='utf-8') as jfile:
         jfile.write(build_json(jf))
