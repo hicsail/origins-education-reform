@@ -45,9 +45,15 @@ def build_graph_dict(in_dir, data_type):
                     numdocs.append(jsondata['number of documents'])
                     graphed[file] = {}
                     for keyword in keywords:
-                        # this step assumes there are no keyword repeats across files
-                        graphed[file][keyword] = []
-                        graphed[file][keyword].extend(jsondata[keyword][data_type])
+                        if not breakdown:
+                            # this step assumes there are no keyword repeats across files
+                            graphed[file][keyword] = []
+                            graphed[file][keyword].extend(jsondata[keyword][data_type])
+                        else:
+                            for k in keyword.split('/'):
+                                # only works for keyword percentages
+                                graphed[file][k] = []
+                                graphed[file][k].extend(jsondata['breakdown'][k])
             elif file[0] != '.' and file[-4:] == '.csv':
                 # hacky bc csv files are awful
                 with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
@@ -166,11 +172,19 @@ def main():
     parser.add_argument("-yaxis", help="argument for setting the y-axis min/max values", action="store")
     parser.add_argument("-b_width", help="manually set bar width, default is .8", action="store")
     parser.add_argument("-leg", help="manually set size of legend, default is 10", action="store")
+    parser.add_argument("-breakdown", help="breakdown individual keywords", action="store_true")
 
     try:
         args = parser.parse_args()
     except IOError:
         common.fail("IO Error While Parsing Arguments")
+
+    global breakdown
+
+    if args.breakdown:
+        breakdown = True
+    else:
+        breakdown = False
 
     fig = plt.figure()
     ax1 = plt.subplot2grid((1,1), (0,0))
