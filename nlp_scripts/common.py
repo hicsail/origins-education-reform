@@ -137,6 +137,17 @@ def build_dict_of_nums(year_list, keywords):
     return results
 
 
+def build_nested_dict_of_nums(year_list, keywords):
+    results = {}
+    for year in year_list:
+        results[year] = {}
+        for keyword in keywords:
+            results[year][keyword] = {}
+            results[year][keyword]["TOTAL"] = 0
+            for k in keyword.split("/"):
+                results[year][keyword][k] = 0
+    return results
+
 # build a nested dict with dicts as leaf entries
 def build_dict_of_dicts(year_list, key_list):
     results = {}
@@ -154,6 +165,13 @@ def build_graph_list(keyword, year_list, param):
     a = [0] * len(year_list)
     for i in range(len(year_list)):
         a[i] += param[year_list[i]][keyword]
+    return a
+
+
+def build_graph_list_from_nested(keyword, year_list, param, k):
+    a = [0] * len(year_list)
+    for i in range(len(year_list)):
+        a[i] += param[year_list[i]][keyword][k]
     return a
 
 
