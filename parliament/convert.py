@@ -25,19 +25,28 @@ def parse_title(title, keywords):
 
 
 def parse_threaded(in_doc, in_dir, out_dir, keywords):
-    obj = parsed.Parsed()
     with open(in_dir + in_doc, 'r', encoding='utf-8') as jf:
         jsondata = json.load(jf)
-        obj.y = parse_date(jsondata['date'])
-        obj.url = jsondata['url']
-        obj.a = jsondata['author']
-        parse_content(jsondata['content']['text'], obj)
-        header = jsondata['content']['header'][0]
-        if parse_title(header, keywords):
+        if not parse_all:
+            header = jsondata['content']['header'][0]
+            if parse_title(header, keywords):
+                obj = parsed.Parsed()
+                obj.y = parse_date(jsondata['date'])
+                obj.url = jsondata['url']
+                obj.a = jsondata['author']
+                parse_content(jsondata['content']['text'], obj)
+                with open(out_dir + in_doc[:-2] + 'json', 'w', encoding='utf-8') as out:
+                    out.write(parsing_help.build_json(obj))
+                    out.close()
+        else:
+            obj = parsed.Parsed()
+            obj.y = parse_date(jsondata['date'])
+            obj.url = jsondata['url']
+            obj.a = jsondata['author']
+            parse_content(jsondata['content']['text'], obj)
             with open(out_dir + in_doc[:-2] + 'json', 'w', encoding='utf-8') as out:
                 out.write(parsing_help.build_json(obj))
                 out.close()
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -51,7 +60,9 @@ def main():
     except IOError:
         pass
 
-    global language
+    global language, parse_all
+
+    parse_all = False
 
     if args.i is None:
         common.fail("Please specify input (-i) directory.")
@@ -60,7 +71,11 @@ def main():
     else:
         language = args.lang.lower()
 
-    keywords = set(args.k.split("/"))
+    if args.k is not None:
+        keywords = set(args.k.split("/"))
+    else:
+        keywords = None
+        parse_all = True
 
     common.build_out(args.o)
 

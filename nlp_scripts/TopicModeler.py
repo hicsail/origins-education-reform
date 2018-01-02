@@ -66,27 +66,33 @@ def build_ignore_list(path_to_file, language):
     with open(path_to_file, 'r', encoding='utf-8') as ignored_list:
         jsondata = json.load(ignored_list)
         # load different categories, add tokens to stopwords set
-        general = jsondata["General"]
-        names = jsondata["Names"]
-        nonsense = jsondata["Nonsense"]
-        verbs = jsondata["Verbs"]
-        adjectives = jsondata["Adjectives"]
-        pronouns = jsondata["Pronouns"]
-        nouns = jsondata["Nouns"]
-        for noun in nouns:
-            stopwords.add(noun)
-        for adjective in adjectives:
-            stopwords.add(adjective)
-        for pronoun in pronouns:
-            stopwords.add(pronoun)
-        for verb in verbs:
-            stopwords.add(verb)
-        for word in nonsense:
-            stopwords.add(word)
-        for word in general:
-            stopwords.add(word)
-        for name in names:
-            stopwords.add(name)
+        try:
+            general = jsondata["General"]
+            names = jsondata["Names"]
+            nonsense = jsondata["Nonsense"]
+            verbs = jsondata["Verbs"]
+            adjectives = jsondata["Adjectives"]
+            pronouns = jsondata["Pronouns"]
+            nouns = jsondata["Nouns"]
+            for noun in nouns:
+                stopwords.add(noun)
+            for adjective in adjectives:
+                stopwords.add(adjective)
+            for pronoun in pronouns:
+                stopwords.add(pronoun)
+            for verb in verbs:
+                stopwords.add(verb)
+            for word in nonsense:
+                stopwords.add(word)
+            for word in general:
+                stopwords.add(word)
+            for name in names:
+                stopwords.add(name)
+        # in case cathie is using old ignore list json format
+        except KeyError:
+            ig = jsondata['Ignored']
+            for wd in ig:
+                stopwords.add(wd)
     return stopwords
 
 
