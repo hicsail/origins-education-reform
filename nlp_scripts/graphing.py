@@ -238,7 +238,7 @@ def main():
             for k in graph_dict[f]:
                 if k != 'this corpus\' nation':
                     ax1.bar(index + (width * i), graph_dict[f][k], width, alpha=.8,
-                            color=np.random.rand(1, 3), label=graph_dict[f]['this corpus\' nation'], align='edge')
+                            color=np.random.rand(1, 3), label="{0}: {1}".format(f,k), align='edge')
                     i += 1
     else:
         for f in graph_dict:

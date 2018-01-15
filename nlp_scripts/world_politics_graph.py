@@ -21,11 +21,12 @@ def find_max_and_min(in_dict):
     g_min = math.inf
     for f in in_dict:
         for k in in_dict[f]:
-            for i in range(len(in_dict[f][k])):
-                if in_dict[f][k][i] > g_max:
-                    g_max = in_dict[f][k][i]
-                if in_dict[f][k][i] < g_min:
-                    g_min = in_dict[f][k][i]
+            if k != 'this corpus\' nation':
+                for i in range(len(in_dict[f][k])):
+                    if in_dict[f][k][i] > g_max:
+                        g_max = in_dict[f][k][i]
+                    if in_dict[f][k][i] < g_min:
+                        g_min = in_dict[f][k][i]
     return [g_min, g_max]
 
 
@@ -43,17 +44,19 @@ def build_graph_dict(in_dir, data_type):
                 with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
                     keywords = jsondata['keywords']
+                    nation = jsondata['nation']
                     numdocs.append(jsondata['number of documents'])
                     graphed[file] = {}
+                    graphed[file]['this corpus\' nation'] = nation
                     for keyword in keywords:
                         if not breakdown:
                             # this step assumes there are no keyword repeats across files
-                            graphed[file][keyword] = []
+                            graphed[file][keyword] = [0]
                             graphed[file][keyword].extend(jsondata[keyword][data_type])
                         else:
                             for k in keyword.split('/'):
                                 # only works for keyword percentages
-                                graphed[file][k] = []
+                                graphed[file][k] = [0]
                                 graphed[file][k].extend(jsondata['breakdown'][k])
             elif file[0] != '.' and file[-4:] == '.csv':
                 # hacky bc csv files are awful
@@ -171,7 +174,7 @@ def main():
     parser.add_argument("-var", help="display variance", action="store_true")
     parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
     parser.add_argument("-yaxis", help="argument for setting the y-axis min/max values", action="store")
-    parser.add_argument("-b_width", help="manually set bar width, default is .8", action="store")
+    parser.add_argument("-b_width", help="manually set bar width, default is 5", action="store")
     parser.add_argument("-leg", help="manually set size of legend, default is 10", action="store")
     parser.add_argument("-breakdown", help="breakdown individual keywords", action="store_true")
 
@@ -214,14 +217,16 @@ def main():
 
     # set x-axis
     index = np.array(sorted(year_list))
+    index = np.insert(index, 0, 0)
     labels = []
-    for i in range(len(year_list) - 1):
+    for i in range(len(year_list) -1):
         start = str(year_list[i])
         end = str(year_list[i + 1])
         current_numdocs = ''
         for j in range(len(numdocs)):
             current_numdocs += str(numdocs[j][i]) + " "
         labels.append("{0}-{1} \n Docs: {2}".format(start, end, current_numdocs))
+    labels = [' '] + labels
     plt.xticks(index, labels)
     for label in ax1.xaxis.get_ticklabels():
         label.set_rotation(-25)
@@ -231,9 +236,10 @@ def main():
         i = 0
         for f in graph_dict:
             for k in graph_dict[f]:
-                ax1.bar(index + (width * i), graph_dict[f][k], width, alpha=.8,
-                        color=np.random.rand(3, 1), label="{0}: {1}".format(f,k))
-                i += 1
+                if k != 'this corpus\' nation':
+                    ax1.bar(index + (width * i), graph_dict[f][k], width, alpha=.8,
+                            color=np.random.rand(1, 3), label=graph_dict[f]['this corpus\' nation'], align='edge')
+                    i += 1
     else:
         for f in graph_dict:
             for k in graph_dict[f]:
