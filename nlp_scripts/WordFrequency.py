@@ -419,6 +419,7 @@ def main():
                         action="store_true")
     parser.add_argument("-type", help="which text field from the json document you intend to analyze",
                         action="store")
+    parser.add_argument("-nat", action="store", help="nation associated with this corpus", default=None)
 
     try:
         args = parser.parse_args()
@@ -432,7 +433,12 @@ def main():
         text_type = args.type
     else:
         text_type = 'Words'
-        
+
+    if args.nat is not None:
+        nation = args.nat
+    else:
+        nation = "Unspecified"
+
     periods = args.p
     bigrams = args.b
 
@@ -515,6 +521,7 @@ def main():
             txt_out.write("\n")
 
     jf = {}
+    jf['nation'] = nation
     jf['year list'] = year_list
     jf['number of documents'] = num_docs
     jf['keywords'] = keywords
@@ -533,6 +540,7 @@ def main():
 
     with open(args.json + '.json', 'w', encoding='utf-8') as jfile:
         jfile.write(build_json(jf))
+
 
 if __name__ == '__main__':
     main()

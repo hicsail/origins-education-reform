@@ -148,6 +148,7 @@ def build_nested_dict_of_nums(year_list, keywords):
                 results[year][keyword][k] = 0
     return results
 
+
 # build a nested dict with dicts as leaf entries
 def build_dict_of_dicts(year_list, key_list):
     results = {}
