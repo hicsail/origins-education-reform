@@ -1,80 +1,90 @@
-import json, tqdm
+import json, tqdm, nltk
 from nlp.utils import *
 
 
-def word_frequency(in_dir, text_type, year_list, key_list):
-    """
-    Calculates word frequencies across a corpus, given an input
-    directory, list of years and keywords.
+class Frequency:
+    def __init__(self, name, in_dir, text_type, keys, year_list):
+        self.name = name
+        self.in_dir = in_dir
+        self.text_type = text_type
+        self.key_list = self.build_keys(keys)
+        self.year_list = year_list
+        self.n = self.detect_n()
 
-    :param in_dir: input path to corpus
-    :param text_type: name of text field in corpus json files
-    :param year_list: list of years, e.g. [year-1, year-2, ... , year-n]
-    :param key_list: keyword list, keywords that shoudl be grouped together
-    should be separated by a forward slash, e.g. ['key1', 'key2/key3', 'key4']
-    :return:
-    """
+    def debug_str(self):
+        return self.name \
+               + ":" \
+               + ", ".join("\'" + " ".join(k for k in keys) + "\'" for keys in self.key_list)
 
-    n = detect_n(key_list)
-    key_list = build_key_list(key_list)
+    def detect_n(self):
+        """
+        Detect value of n for word frequency.
 
-    word_totals = num_dict(year_list)
-    keyword_counts = num_dict(year_list, key_list, 1)
-    frequency_lists = list_dict(year_list, key_list, 1)
+        :return: integer
+        """
 
-    for subdir, dirs, files in os.walk(in_dir):
-        print("Taking word counts")
-        for jsondoc in tqdm.tqdm(files):
-            if jsondoc[0] != ".":
-                with open(in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
-                    jsondata = json.load(in_file)
+        lengths = set()
+        for k in self.key_list:
+            lengths.add(len(k))
 
+        assert(len(lengths) == 1)
 
-    return
+        return lengths.pop()
 
+    @staticmethod
+    def build_keys(keys):
+        """
+        Build list of keyword tuples
+        """
 
-def detect_n(keys: str):
-    """
-    Detect value of n for word frequency.
+        return [tuple(k.split()) for k in keys.split('/')]
 
-    :param keys: string of keywords or n-grams, separated
-    by a forward slash if there are more than one '/'
-    :return: integer
-    """
-    keys = keys.split('/')
+    def reduce_frequencies(self, freq_dict):
+        """
+        Reduce leaf values in frequency dicts to obtain average frequencies for each period / keyword pair
+        """
 
-    lengths = set()
-    for k in keys:
-        lengths.add(len(k.split()))
+        results = num_dict(self.year_list, self.key_list, 1)
+        for year in self.year_list:
+            if len(freq_dict[year]['TOTAL']) > 0:
+                results[year]['TOTAL'] = \
+                    sum(freq_dict[year]['TOTAL']) / len(freq_dict[year]['TOTAL'])
+            for k in self.key_list:
+                if len(freq_dict[year][k]) > 0:
+                    results[year][k] = \
+                        sum(freq_dict[year][k]) / len(freq_dict[year][k])
+        return results
 
-    assert(len(lengths) == 1)
+    def take_frequencies(self):
+        """
+        Construct dictionary that stores frequencies of each word across a corpus.
+        """
 
-    return lengths.pop()
+        frequency_lists = list_dict(self.year_list, self.key_list, 1)
+        print(self.in_dir)
+        for subdir, dirs, files in os.walk(self.in_dir):
+            print("Taking word counts for key list {}".format(self.key_list))
+            for jsondoc in tqdm.tqdm(files):
+                if jsondoc[0] != ".":
+                    with open(self.in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                        jsondata = json.load(in_file)
+                        year = int(jsondata["Year Published"])
+                        if self.year_list[0] <= year < self.year_list[-1]:
+                            text = list(nltk.ngrams(jsondata[self.text_type], self.n))
+                            target = determine_year(year, self.year_list)
 
+                            total_words = len(list(text))
+                            all_keys = 0
 
-if __name__ == '__main__':
+                            fdist = nltk.FreqDist(text)
 
-    a = 'a a/b '
-    print(detect_n(a))
+                            for k in self.key_list:
+                                all_keys += fdist[k]
+                                frequency_lists[target][k].append(fdist[k] / total_words)
 
-'''
-# build list of keywords, supports individual keywords or bigrams
-def build_key_list(keywords, bigrams):
-    key_list = keywords.lower().split(",")
-    key_list = [keyword.strip() for keyword in key_list]
-    if bigrams:
-        bigram_list = []
-        key_list = [tuple(keyword.split("/")) for keyword in key_list]
-        # if a bigram is by itself, i.e. - not associated with other bigrams via "/",
-        # then this loop will create a tuple with the second index empty. Keep an eye
-        # on it with the word frequency methods, I don't know if it will cause a
-        # problem yet.
-        for i in range(len(key_list)):
-            temp_list = list(key_list[i])
-            temp_list = [tuple(elem.split()) for elem in temp_list]
-            temp_list = tuple(temp_list)
-            bigram_list.append(temp_list)
-        return bigram_list
-    return key_list
+                            frequency_lists[target]['TOTAL'].append(all_keys / total_words)
 
-'''
+        results = self.reduce_frequencies(frequency_lists)
+
+        return results
+

@@ -226,9 +226,7 @@ def calculate_tfidf_min_and_max(year_list, keywords, tf_idf_results):
 def keyword_and_word_count(year_list, directory, yrange_min, yrange_max, keywords):
     word_totals = common.build_simple_dict_of_nums(year_list)
     word_count_dict = common.build_nested_dict_of_nums(year_list, keywords)
-    # keyword_totals = common.build_dict_of_nums(year_list, keywords)
     frequency_list = common.build_dict_of_lists(year_list, keywords)
-    # word_count = {}
     for subdir, dirs, files in os.walk(directory):
         print("Taking word counts")
         for jsondoc in tqdm.tqdm(files):

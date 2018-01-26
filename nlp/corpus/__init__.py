@@ -13,7 +13,7 @@ class Corpus:
         self.input_dir = i
         self.text_type = text_type
 
-    def word_frequency(self, key_list, year_list):
-        return frequency.word_frequency(self.input_dir, self.text_type, key_list, year_list)
+    def word_frequency(self, name, key_list, year_list):
+        return frequency.Frequency(name, self.input_dir, self.text_type, key_list, year_list)
 
 

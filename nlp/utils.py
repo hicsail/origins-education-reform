@@ -13,15 +13,10 @@ def num_dict(year_list, keywords=None, nested=0):
         if nested == 0:
             results[year] = 0
         elif nested == 1:
+            results[year] = {}
+            results[year]['TOTAL'] = 0
             for keyword in keywords:
                 results[year][keyword] = 0
-        elif nested == 2:
-            results[year] = {}
-            for keyword in keywords:
-                results[year][keyword] = {}
-                results[year][keyword]["TOTAL"] = 0
-                for k in keyword.split("/"):
-                    results[year][keyword][k] = 0
         else:
             fail('Shouldn\'t be able to get here.')
     return results
@@ -33,19 +28,25 @@ def list_dict(year_list, keywords=None, nested=0):
         if nested == 0:
             results[year] = []
         elif nested == 1:
+            results[year] = {}
             for keyword in keywords:
+                results[year]['TOTAL'] = []
                 results[year][keyword] = []
         else:
             fail('Shouldn\'t be able to get here.')
     return results
 
 
-def build_key_list(keys):
+def determine_year(year, year_list):
+    for i in (range(len(year_list[:-1]))):
+        if year_list[i] <= year < year_list[i + 1]:
+            return year_list[i]
 
-    return [tuple(k.split()) for k in keys.split('/')]
 
 
-if __name__ == '__main__':
-    a = build_key_list('the/the')
-    print(a)
+
+
+
+
+
 
