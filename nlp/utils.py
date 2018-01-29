@@ -41,6 +41,7 @@ def determine_year(year, year_list):
     for i in (range(len(year_list[:-1]))):
         if year_list[i] <= year < year_list[i + 1]:
             return year_list[i]
+    fail("{} is not in range".format(year))
 
 
 
