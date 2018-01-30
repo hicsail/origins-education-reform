@@ -1,5 +1,7 @@
 import json, tqdm, nltk
-from nlp.utils import *
+from src.utils import *
+import operator
+import itertools
 
 
 class KeywordFrequency:
@@ -52,6 +54,9 @@ class KeywordFrequency:
         frequencies of each word across a corpus.
         """
 
+        # TODO: change this to an exception
+        assert(self.key_list is not None)
+
         frequency_lists = list_dict(self.year_list, self.key_list, 1)
         n = self.detect_n()
 
@@ -73,9 +78,9 @@ class KeywordFrequency:
 
                             for k in self.key_list:
                                 all_keys += fdist[k]
-                                frequency_lists[target][k].append(fdist[k] / total_words)
+                                frequency_lists[target][k].append((fdist[k], total_words))
 
-                            frequency_lists[target]['TOTAL'].append(all_keys / total_words)
+                            frequency_lists[target]['TOTAL'].append((all_keys, total_words))
 
         self.frequency_record = frequency_lists
 
@@ -94,14 +99,18 @@ class KeywordFrequency:
         for year in self.year_list:
 
             if len(freq[year]['TOTAL']) > 0:
-                results[year]['TOTAL'] = sum(freq[year]['TOTAL']) / len(freq[year]['TOTAL'])
+                w_freq = sum(x for x, _ in freq[year]['TOTAL'])
+                total = sum(y for _, y in freq[year]['TOTAL'])
+                results[year]['TOTAL'] = w_freq / total
 
             for k in self.key_list:
 
                 if len(freq[year][k]) > 0:
-                    results[year][k] = sum(freq[year][k]) / len(freq[year][k])
+                    w_freq = sum(x for x, _ in freq[year][k])
+                    total = sum(y for _, y in freq[year][k])
+                    results[year][k] = w_freq / total
 
-        return results
+        return Results(results)
 
     @staticmethod
     def _top_n(fdist: nltk.FreqDist, num: int, total_words: dict):
@@ -120,8 +129,8 @@ class KeywordFrequency:
 
     def top_n(self, num: int, n: int=1):
         """
-        Construct a dictionary that stores the top <num>
-        words per period across a corpus.
+        Construct a dictionary that stores the top
+        < num > words per period across a corpus.
         """
 
         fdists = num_dict(self.year_list)
@@ -167,7 +176,9 @@ if __name__ == "__main__":
         ['the', 'a', 'two']
     )
 
-    res = f.top_n(5)
+    # res = f.top_n(5)
     res2 = f.take_frequencies()
+
+    res2.write('/Users/ben/Desktop/results')
 
     print("Done")
