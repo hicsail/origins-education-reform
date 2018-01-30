@@ -1,7 +1,5 @@
 import json, tqdm, nltk
 from src.utils import *
-import operator
-import itertools
 
 
 class KeywordFrequency:
@@ -43,7 +41,7 @@ class KeywordFrequency:
         return lengths.pop()
 
     @staticmethod
-    def build_keys(keys):
+    def build_keys(keys: list):
         """ Build list of keyword tuples. """
 
         return [tuple(k.split()) for k in keys]
@@ -110,7 +108,7 @@ class KeywordFrequency:
                     total = sum(y for _, y in freq[year][k])
                     results[year][k] = w_freq / total
 
-        return Results(results)
+        return FrequencyResults(results)
 
     @staticmethod
     def _top_n(fdist: nltk.FreqDist, num: int, total_words: dict):
@@ -163,7 +161,7 @@ class KeywordFrequency:
             else:
                 n_words[year].extend(self._top_n(fdists[year], len(fdists[year]), num_words[year]))
 
-        return n_words
+        return TopResults(n_words)
 
 
 if __name__ == "__main__":
@@ -173,12 +171,12 @@ if __name__ == "__main__":
         '/Users/ben/Desktop/work/nlp/british',
         'Filtered Text',
         [1700, 1720, 1740],
-        ['the', 'a', 'two']
+        ['two']
     )
 
-    # res = f.top_n(5)
-    res2 = f.take_frequencies()
-
-    res2.write('/Users/ben/Desktop/results')
+    res = f.top_n(5)
+    # res2 = f.take_frequencies()
+    res.display()
+    res.write('/Users/ben/Desktop/results')
 
     print("Done")
