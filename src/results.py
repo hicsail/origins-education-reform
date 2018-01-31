@@ -33,13 +33,13 @@ class FrequencyResults:
                 for k in self.d[self.years[i]].items():
                     if k[0] == 'TOTAL':
                         t.write(
-                            "{0} of all keywords taken together for this period: {1}%"
+                            "{0} of all keywords taken together for this period: {1}"
                             .format(self.f_type, str(k[1]))
                             + "\n"
                         )
                     else:
                         t.write(
-                            "{0} of \"{1}\" for this period: {2}%"
+                            "{0} of \"{1}\" for this period: {2}"
                             .format(self.f_type, " ".join(k[0]), str(k[1]))
                             + "\n"
                         )
@@ -61,13 +61,13 @@ class FrequencyResults:
             for k in keys:
                 if k == 'TOTAL':
                     print(
-                        "{0} of all keywords taken together for this period: {1}%"
+                        "{0} of all keywords taken together for this period: {1}"
                         .format(self.f_type, str(self.d[self.years[i]]['TOTAL']))
                         + "\n"
                     )
                 else:
                     print(
-                        "{0} of \"{1}\" for this period: {2}%"
+                        "{0} of \"{1}\" for this period: {2}"
                         .format(self.f_type, " ".join(k), str(self.d[self.years[i]][k]))
                         + "\n"
                     )
