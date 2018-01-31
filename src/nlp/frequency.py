@@ -1,5 +1,6 @@
 import json, tqdm, nltk
 from src.utils import *
+from src.results import *
 
 
 class KeywordFrequency:
@@ -21,6 +22,9 @@ class KeywordFrequency:
             self.key_list = self.build_keys(keys)
 
         self.frequency_record = None
+        self.global_freq = None
+        self.avg_freq = None
+        self.variance = None
 
     def debug_str(self):
         """ Debug / identify individual Frequency objects. """
@@ -52,6 +56,9 @@ class KeywordFrequency:
         frequencies of each word across a corpus.
         """
 
+        if self.frequency_record is not None:
+            return
+
         # TODO: change this to an exception
         assert(self.key_list is not None)
 
@@ -82,11 +89,14 @@ class KeywordFrequency:
 
         self.frequency_record = frequency_lists
 
-    def take_frequencies(self):
+    def take_freq(self):
         """
         Reduce leaf entries in frequency dicts to obtain
-        average frequencies for each period / keyword pair
+        global frequencies for each period / keyword pair
         """
+
+        if self.global_freq is not None:
+            return FrequencyResults(self.global_freq, 'Global')
 
         if self.frequency_record is None:
             self.set_frequency_record()
@@ -108,7 +118,63 @@ class KeywordFrequency:
                     total = sum(y for _, y in freq[year][k])
                     results[year][k] = w_freq / total
 
-        return FrequencyResults(results)
+        self.global_freq = results
+
+        return FrequencyResults(results, 'Global frequency')
+
+    def take_average_freq(self):
+        """
+        Reduce leaf entries in frequency dicts to obtain
+        average frequencies for each period / keyword pair.
+        """
+
+        if self.avg_freq is not None:
+            return FrequencyResults(self.avg_freq, 'Average')
+
+        if self.frequency_record is None:
+            self.set_frequency_record()
+
+        freq = self.frequency_record
+
+        results = num_dict(self.year_list, self.key_list, 1)
+        for year in self.year_list:
+
+            if len(freq[year]['TOTAL']) > 0:
+                results[year]['TOTAL'] = \
+                    sum((x / y) for x, y in freq[year]['TOTAL']) / len(freq[year]['TOTAL'])
+
+            for k in self.key_list:
+
+                if len(freq[year][k]) > 0:
+                    results[year][k] = \
+                        sum((x / y) for x, y in freq[year][k]) / len(freq[year][k])
+
+        self.avg_freq = results
+
+        return FrequencyResults(results, 'Average frequency')
+
+    def take_variance(self):
+        """
+        Reduce leaf entries in frequency and average frequency
+        dicts to obtain the variance of each period / keyword pair.
+        """
+
+        if self.variance is not None:
+            return FrequencyResults(self.variance, 'Variance')
+
+        if self.frequency_record is None:
+            self.set_frequency_record()
+
+        if self.avg_freq is None:
+            self.take_average_freq()
+
+    '''
+                    for freq in frequency_lists[year][keyword]:
+                    variance = math.pow((freq - averages[year][keyword]), 2)
+                    var.append(variance)
+                variances[year][keyword] = sum(var) / len(var)
+    '''
+
 
     @staticmethod
     def _top_n(fdist: nltk.FreqDist, num: int, total_words: dict):
@@ -174,9 +240,8 @@ if __name__ == "__main__":
         ['two']
     )
 
-    res = f.top_n(5)
-    # res2 = f.take_frequencies()
-    res.display()
-    res.write('/Users/ben/Desktop/results')
+    res2 = f.take_freq()
+    res2.display(['two'])
+    res2.write('/Users/ben/Desktop/results2')
 
     print("Done")
