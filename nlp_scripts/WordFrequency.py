@@ -392,7 +392,7 @@ def list_top_words(out, year, results, num):
         out.write("Top {0} words for this period: ".format(str(len(results[year]))) + "\n")
         i = 1
         for key_tup in results[year]:
-            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0], str(key_tup[1]))) + "\n")
+            out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
     out.write("\n")
 
 
