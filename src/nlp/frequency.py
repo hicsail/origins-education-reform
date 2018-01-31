@@ -1,4 +1,4 @@
-import json, tqdm, nltk
+import json, tqdm, nltk, math
 from src.utils import *
 from src.results import *
 
@@ -120,7 +120,7 @@ class KeywordFrequency:
 
         self.global_freq = results
 
-        return FrequencyResults(results, 'Global frequency')
+        return FrequencyResults(results, 'Global frequency (%)')
 
     def take_average_freq(self):
         """
@@ -129,7 +129,7 @@ class KeywordFrequency:
         """
 
         if self.avg_freq is not None:
-            return FrequencyResults(self.avg_freq, 'Average')
+            return FrequencyResults(self.avg_freq, 'Average frequency')
 
         if self.frequency_record is None:
             self.set_frequency_record()
@@ -140,14 +140,12 @@ class KeywordFrequency:
         for year in self.year_list:
 
             if len(freq[year]['TOTAL']) > 0:
-                results[year]['TOTAL'] = \
-                    sum((x / y) for x, y in freq[year]['TOTAL']) / len(freq[year]['TOTAL'])
+                results[year]['TOTAL'] = sum(x for x, _ in freq[year]['TOTAL']) / len(freq[year]['TOTAL'])
 
             for k in self.key_list:
 
                 if len(freq[year][k]) > 0:
-                    results[year][k] = \
-                        sum((x / y) for x, y in freq[year][k]) / len(freq[year][k])
+                    results[year][k] = sum(x for x, _ in freq[year][k]) / len(freq[year][k])
 
         self.avg_freq = results
 
@@ -155,8 +153,8 @@ class KeywordFrequency:
 
     def take_variance(self):
         """
-        Reduce leaf entries in frequency and average frequency
-        dicts to obtain the variance of each period / keyword pair.
+        Combine & reduce leaf entries in frequency and average frequency
+        dicts to obtain the variance for each period / keyword pair.
         """
 
         if self.variance is not None:
@@ -168,13 +166,32 @@ class KeywordFrequency:
         if self.avg_freq is None:
             self.take_average_freq()
 
-    '''
-                    for freq in frequency_lists[year][keyword]:
-                    variance = math.pow((freq - averages[year][keyword]), 2)
-                    var.append(variance)
-                variances[year][keyword] = sum(var) / len(var)
-    '''
+        freq = self.frequency_record
+        avg = self.avg_freq
 
+        results = num_dict(self.year_list, self.key_list, 1)
+
+        for year in self.year_list:
+
+            if len(freq[year]['TOTAL']) > 0:
+                var = []
+                for fr in freq[year]['TOTAL']:
+                    v = math.pow(fr[0] - avg[year]['TOTAL'], 2)
+                    var.append(v)
+                results[year]['TOTAL'] = sum(var) / len(var)
+
+            for k in self.key_list:
+
+                if len(freq[year][k]) > 0:
+                    var = []
+                    for fr in freq[year][k]:
+                        v = math.pow(fr[0] - avg[year][k], 2)
+                        var.append(v)
+                    results[year][k] = sum(var) / len(var)
+
+        self.variance = results
+
+        return FrequencyResults(results, 'Variance')
 
     @staticmethod
     def _top_n(fdist: nltk.FreqDist, num: int, total_words: dict):
@@ -236,12 +253,14 @@ if __name__ == "__main__":
         'test',
         '/Users/ben/Desktop/work/nlp/british',
         'Filtered Text',
-        [1700, 1720, 1740],
+        [1880, 1900, 1920],
         ['two']
     )
 
-    res2 = f.take_freq()
-    res2.display(['two'])
-    res2.write('/Users/ben/Desktop/results2')
+    res3 = f.take_average_freq()
+    res3.display(['two'])
+
+    res4 = f.take_variance()
+    res4.display(['two'])
 
     print("Done")
