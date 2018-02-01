@@ -1,4 +1,5 @@
 import os
+from nltk.stem.snowball import SnowballStemmer
 
 
 def _fail(msg):
@@ -54,7 +55,24 @@ def determine_year(year, year_list):
     _fail("{} is not in range".format(year))
 
 
+def stem(word: str, language: [str, None] = 'english'):
+    """
+    Returns input word and its stem.
+    """
 
+    try:
+        s = SnowballStemmer(language.lower())
+    except ValueError:
+        _fail("{} is not supported, please enter a valid language.".format(language))
+
+    stemmed = s.stem(word.lower())
+
+    return '{0}: {1}'.format(word, stemmed)
+
+
+if __name__ == '__main__':
+
+    print(stem('Runs', 'zorp'))
 
 
 
