@@ -7,15 +7,19 @@ class Corpus:
     over, and (optionally) a list of key words to be analyzed.
     """
 
-    def __init__(self, name: str, in_dir: str, text_type: str, year_list: list, keys: [list, None]=None):
+    def __init__(self, name: str, in_dir: str, text_type: str, year_list: list,
+                 keys: [list, None]=None, stop_words: [list, None] = []):
         """ Initialize Frequency object. """
 
         self.name = name
         self.in_dir = in_dir
         self.text_type = text_type
         self.year_list = year_list
+        self.stop_words = stop_words
         if keys is not None:
             self.key_list = self.build_keys(keys)
+        else:
+            self.key_list = None
 
     @staticmethod
     def build_keys(keys: list):
@@ -38,8 +42,8 @@ class Corpus:
     def detect_n(self):
         """ Detect value of n for n-grams. """
 
-        # TODO: convert to exception
-        assert(self.key_list is not None)
+        if self.key_list is None:
+            return 1
 
         lengths = set()
         for k in self.key_list:

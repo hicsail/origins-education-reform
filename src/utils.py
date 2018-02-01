@@ -1,5 +1,6 @@
 import os
 from nltk.stem.snowball import SnowballStemmer
+from gensim import corpora
 
 
 def _fail(msg):
@@ -43,6 +44,16 @@ def list_dict(year_list: list, keywords: [list, None]=None, nested: [None, int]=
     return results
 
 
+def gensim_dict(year_list: list):
+    """ Build empty dictionary with gensim Dictionary objects at leaf entries. """
+
+    results = {}
+    for year in year_list:
+        results[year] = corpora.Dictionary()
+
+    return results
+
+
 def determine_year(year, year_list):
     """
     Given a year and list of year periods,
@@ -70,9 +81,6 @@ def stem(word: str, language: [str, None] = 'english'):
     return '{0}: {1}'.format(word, stemmed)
 
 
-if __name__ == '__main__':
-
-    print(stem('Runs', 'zorp'))
 
 
 

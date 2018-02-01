@@ -12,10 +12,11 @@ class Frequency(Corpus):
     use a consistent value of n within a particular list.
     """
 
-    def __init__(self, name: str, in_dir: str, text_type: str, year_list: list, keys: [list, None]=None):
+    def __init__(self, name: str, in_dir: str, text_type: str, year_list: list,
+                 keys: [list, None]=None, stop_words: [list, None] = []):
         """ Initialize Frequency object. """
 
-        super(Frequency, self).__init__(name, in_dir, text_type, year_list, keys)
+        super(Frequency, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)
 
         self.frequency_record = None
         self.global_freq = None
@@ -51,6 +52,13 @@ class Frequency(Corpus):
                         if self.year_list[0] <= year < self.year_list[-1]:
 
                             text = list(nltk.ngrams(jsondata[self.text_type], n))
+
+                            for i in range(len(text) - 1, -1, -1):
+
+                                # Delete empty strings and single characters
+                                if text[i] in self.stop_words or len(text[i]) < 2:
+                                    del text[i]
+
                             target = determine_year(year, self.year_list)
 
                             total_words = len(list(text))
