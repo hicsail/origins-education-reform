@@ -1,10 +1,14 @@
-import json, tqdm, nltk
+import json, tqdm
 from src.utils import *
 from src.nlp import Corpus
 from gensim.models import TfidfModel
 
 
 class TFIDF(Corpus):
+    """
+    Data structure for identifying documents and their corresponding
+    TF-IDF scores, with respect to particular keywords.
+    """
 
     def __init__(
             self, name: str, in_dir: str, text_type: str, year_list: list,
@@ -13,19 +17,23 @@ class TFIDF(Corpus):
 
         super(TFIDF, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)
 
-        self.dictionaries = None
+        self.word_to_id = None
         self.corpora = None
         self.tf_idf_models = None
 
-    def build_dictionaries(self):
+    def build_dictionaries_and_corpora(self):
+        """
+        Construct word_to_id that store the word -> id mappings and
+        the bag of words representations of the documents in the corpus.
+        """
 
-        if self.dictionaries is not None:
+        if self.word_to_id is not None:
             return
 
-        dictionary_results = gensim_dict(self.year_list)
+        word_to_id_results = gensim_dict(self.year_list)
         corpora_results = list_dict(self.year_list)
 
-        print("Building dictionaries for TF-IDF scoring")
+        print("Building word_to_id for TF-IDF scoring")
 
         for subdir, dirs, files in os.walk(self.in_dir):
             for jsondoc in tqdm.tqdm(files):
@@ -49,26 +57,36 @@ class TFIDF(Corpus):
                             target = determine_year(year, self.year_list)
 
                             if len(text) > 0:
-                                dictionary_results[target].add_documents([text])
-                                d2b = dictionary_results[target].doc2bow(text)
+                                word_to_id_results[target].add_documents([text])
+                                d2b = word_to_id_results[target].doc2bow(text)
                                 corpora_results[target].append(d2b)
 
-        self.dictionaries = dictionary_results
+        self.word_to_id = word_to_id_results
         self.corpora = corpora_results
 
     def build_tf_idf_models(self):
+        """
+        Combines the word_to_id and corpora dictionaries
+        to construct TF-IDF models for each year period.
+        """
 
-        if self.dictionaries is None or self.corpora is None:
-            self.build_dictionaries()
+        if self.word_to_id is None or self.corpora is None:
+            self.build_dictionaries_and_corpora()
 
         results = gensim_dict(self.year_list)
 
         for year in self.year_list:
-            results[year] = TfidfModel(self.corpora[year], dictionary=self.dictionaries[year])
+            results[year] = TfidfModel(self.corpora[year], dictionary=self.word_to_id[year])
 
         self.tf_idf_models = results
 
     def top_n(self, keyword, n):
+        """
+        Iterates over the corpus and computes TF-IDF scores for each document,
+        with respect to the precomputed TF-IDF models. Extracts results for a
+        particular keyword and displays the < n > documents whose TF-IDF scores
+        for that keyword are the highest.
+        """
 
         if self.tf_idf_models is None:
             self.build_tf_idf_models()
@@ -99,14 +117,14 @@ class TFIDF(Corpus):
 
                                 target = determine_year(year, self.year_list)
 
-                                key_id = self.dictionaries[target].token2id[keyword]
+                                key_id = self.word_to_id[target].token2id[keyword]
                                 print(key_id)
-                                d2b = self.dictionaries[target].doc2bow(text)
+                                d2b = self.word_to_id[target].doc2bow(text)
 
                                 tfidf_doc = self.tf_idf_models[target][d2b]
 
                                 for t in tfidf_doc:
-                                    if self.dictionaries[target].get(t[0]) == keyword:
+                                    if self.word_to_id[target].get(t[0]) == keyword:
                                         print(keyword)
 
 
