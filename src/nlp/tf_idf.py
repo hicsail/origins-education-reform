@@ -1,13 +1,14 @@
 import json, tqdm
 from src.utils import *
+from src.results import *
 from src.nlp import Corpus
 from gensim.models import TfidfModel
 
 
-class TFIDF(Corpus):
+class Tfidf(Corpus):
     """
-    Data structure for identifying documents and their corresponding
-    TF-IDF scores, with respect to particular keywords.
+    Data structure for identifying documents and their corresponding TF-IDF
+    scores, with respect to particular keywords and a list of year periods.
     """
 
     def __init__(
@@ -15,54 +16,9 @@ class TFIDF(Corpus):
             keys: [list, None] = None, stop_words: [list, None] = []):
         """ Initialize TFIDF object. """
 
-        super(TFIDF, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)
+        super(Tfidf, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)
 
-        self.word_to_id = None
-        self.corpora = None
         self.tf_idf_models = None
-
-    def build_dictionaries_and_corpora(self):
-        """
-        Construct word_to_id that store the word -> id mappings and
-        the bag of words representations of the documents in the corpus.
-        """
-
-        if self.word_to_id is not None:
-            return
-
-        word_to_id_results = gensim_dict(self.year_list)
-        corpora_results = list_dict(self.year_list)
-
-        print("Building word_to_id for TF-IDF scoring")
-
-        for subdir, dirs, files in os.walk(self.in_dir):
-            for jsondoc in tqdm.tqdm(files):
-                if jsondoc[0] != ".":
-
-                    with open(self.in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
-
-                        jsondata = json.load(in_file)
-                        year = int(jsondata["Year Published"])
-
-                        # TODO: could extend this to n-grams, but would be slow
-                        if self.year_list[0] <= year < self.year_list[-1]:
-                            text = jsondata[self.text_type]
-
-                            for i in range(len(text) - 1, -1, -1):
-
-                                # Delete empty strings and single characters
-                                if text[i] in self.stop_words or len(text[i]) < 2:
-                                    del text[i]
-
-                            target = determine_year(year, self.year_list)
-
-                            if len(text) > 0:
-                                word_to_id_results[target].add_documents([text])
-                                d2b = word_to_id_results[target].doc2bow(text)
-                                corpora_results[target].append(d2b)
-
-        self.word_to_id = word_to_id_results
-        self.corpora = corpora_results
 
     def build_tf_idf_models(self):
         """
@@ -73,12 +29,22 @@ class TFIDF(Corpus):
         if self.word_to_id is None or self.corpora is None:
             self.build_dictionaries_and_corpora()
 
-        results = gensim_dict(self.year_list)
+        results = num_dict(self.year_list)
 
         for year in self.year_list:
             results[year] = TfidfModel(self.corpora[year], dictionary=self.word_to_id[year])
 
         self.tf_idf_models = results
+
+    def _top_n(self, results, n):
+
+        top_results = list_dict(self.year_list)
+
+        for year in self.year_list:
+            top = sorted(results[year], key=lambda x: x[1])
+            top_results[year] = top[:n]
+
+        return top_results
 
     def top_n(self, keyword, n):
         """
@@ -91,7 +57,9 @@ class TFIDF(Corpus):
         if self.tf_idf_models is None:
             self.build_tf_idf_models()
 
-        print("Calculating {0} files with top TF-IDF scores for {1}".format(n, keyword))
+        results = list_dict(self.year_list)
+
+        print("Calculating {0} files with top TF-IDF scores for \'{1}\'".format(n, keyword))
 
         for subdir, dirs, files in os.walk(self.in_dir):
             for jsondoc in tqdm.tqdm(files):
@@ -109,34 +77,29 @@ class TFIDF(Corpus):
                             # skip this document if it doesn't contain the keyword
                             if keyword in set(text):
 
-                                for i in range(len(text) - 1, -1, -1):
-
-                                    # Delete empty strings and single characters
-                                    if text[i] in self.stop_words or len(text[i]) < 2:
-                                        del text[i]
-
                                 target = determine_year(year, self.year_list)
-
-                                key_id = self.word_to_id[target].token2id[keyword]
-                                print(key_id)
                                 d2b = self.word_to_id[target].doc2bow(text)
-
                                 tfidf_doc = self.tf_idf_models[target][d2b]
 
                                 for t in tfidf_doc:
                                     if self.word_to_id[target].get(t[0]) == keyword:
-                                        print(keyword)
+                                        results[target].append((jsondoc, t[1]))
+
+        top_results = self._top_n(results, n)
+
+        return TfidfResults(top_results, keyword)
 
 
 if __name__ == '__main__':
 
-    c = TFIDF(
+    c = Tfidf(
         'test',
         '/Users/ben/Desktop/work/nlp/british/',
         'Filtered Text',
         [1700, 1720, 1740],
     )
 
-    c.top_n('rat', 5)
+    res = c.top_n('rat', 5)
+    res.display()
 
     print('Done')
