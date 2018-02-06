@@ -63,8 +63,9 @@ class Corpus:
 
     def build_dictionaries_and_corpora(self):
         """
-        Construct word_to_id that store the word -> id mappings and
-        the bag of words representations of the documents in the corpus.
+        Construct word_to_id that store the word -> id mappings and the bag of words
+        representations of the documents in the corpus. Used for building TF-IDF models
+        and LDA / LSI topic models.
         """
 
         if self.word_to_id is not None:
@@ -84,7 +85,6 @@ class Corpus:
                         jsondata = json.load(in_file)
                         year = int(jsondata["Year Published"])
 
-                        # TODO: could extend this to n-grams, but would be slow
                         if self.year_list[0] <= year < self.year_list[-1]:
                             text = jsondata[self.text_type]
 
