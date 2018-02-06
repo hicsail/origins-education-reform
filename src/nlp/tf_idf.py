@@ -70,7 +70,6 @@ class Tfidf(Corpus):
                         jsondata = json.load(in_file)
                         year = int(jsondata["Year Published"])
 
-                        # TODO: could extend this to n-grams, but would be slow
                         if self.year_list[0] <= year < self.year_list[-1]:
                             text = jsondata[self.text_type]
 
