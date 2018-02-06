@@ -99,6 +99,6 @@ if __name__ == '__main__':
     )
 
     res = c.top_n('rat', 5)
-    res.display()
+    res.debug_str()
 
     print('Done')
