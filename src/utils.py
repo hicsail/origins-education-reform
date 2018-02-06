@@ -3,15 +3,14 @@ from nltk.stem.snowball import SnowballStemmer
 from gensim import corpora
 
 
-
-def _fail(msg):
+def _fail(msg: str):
     """ Generic fail method for debugging. """
 
     print(msg)
     os._exit(1)
 
 
-def num_dict(year_list, keywords=None, nested=0):
+def num_dict(year_list: list, keywords: [list, None]=None, nested: [int, None]=0):
     """ Build empty dictionary with integers at leaf entries. """
 
     results = {}
@@ -55,7 +54,7 @@ def gensim_dict(year_list: list):
     return results
 
 
-def determine_year(year, year_list):
+def determine_year(year: int, year_list: list):
     """
     Given a year and list of year periods,
     return which period that year falls into.
