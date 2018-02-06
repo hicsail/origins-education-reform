@@ -16,7 +16,7 @@ class TopicModel(Corpus):
 
     def __init__(
             self, name: str, in_dir: str, text_type: str, year_list: list,
-            keys: [list, None] = None, stop_words: [list, None] = None):
+            keys: [list, None] = None, stop_words: [list, set, None] = None):
         """ Initialize TopicModel object. """
 
         super(TopicModel, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)
@@ -36,7 +36,7 @@ class TopicModel(Corpus):
 
         if seed is None:
 
-            for year in self.year_list:
+            for year in self.year_list[:-1]:
                 results[year] = \
                     LdaModel(corpus=self.corpora[year], id2word=self.word_to_id[year],
                              num_topics=num_topics, passes=passes)
@@ -44,13 +44,13 @@ class TopicModel(Corpus):
         else:
 
             rand = RandomState(seed)
-            for year in self.year_list:
+            for year in self.year_list[:-1]:
                 results[year] = \
                     LdaModel(corpus=self.corpora[year], id2word=self.word_to_id[year],
                              num_topics=num_topics, passes=passes, random_state=rand)
 
         # TODO: wrap in class
-        return results
+        return LdaResults(results)
 
     def build_tf_idf_models(self):
         """
@@ -84,17 +84,33 @@ class TopicModel(Corpus):
 
         if not stochastic:
 
-            for year in self.year_list:
+            for year in self.year_list[:-1]:
                 results[year] = \
                     LsiModel(corpus=self.tf_idf_models[year], id2word=self.word_to_id[year],
                              num_topics=num_topics)
 
         else:
 
-            for year in self.year_list:
+            for year in self.year_list[:-1]:
                 results[year] = \
                     LsiModel(corpus=self.tf_idf_models[year], id2word=self.word_to_id[year],
                              num_topics=num_topics, onepass=False)
 
         # TODO: wrap in class
         return results
+
+
+if __name__ == '__main__':
+
+    c = TopicModel(
+        'LDA',
+        '/Users/ben/Desktop/work/nlp/british/',
+        'Filtered Text',
+        [1700, 1720, 1740],
+    )
+
+    res = c.lda_model(passes=10)
+    # res.debug_str()
+    res.write('/Users/ben/Desktop/out.txt', weights=True)
+
+    print('Done')

@@ -18,9 +18,9 @@ class Corpus:
         self.text_type = text_type
         self.year_list = year_list
         if stop_words is None:
-            self.stop_words = []
+            self.stop_words = {}
         else:
-            self.stop_words = stop_words
+            self.stop_words = set(stop_words)
         if keys is not None:
             self.key_list = self.build_keys(keys)
         else:
@@ -34,6 +34,14 @@ class Corpus:
         """ Build list of keyword tuples. """
 
         return [tuple(k.split()) for k in keys]
+
+    def stop_words_from_json(self, file_path: str, field_name: [str, None]='Words'):
+        """ Set stop_words from Json file. """
+
+        with open(file_path, 'r', encoding='utf8') as in_file:
+
+            jsondata = json.load(in_file)
+            self.stop_words = set(jsondata[field_name])
 
     def debug_str(self):
         """ Debug / identify individual Frequency objects. """

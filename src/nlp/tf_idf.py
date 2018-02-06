@@ -13,7 +13,7 @@ class Tfidf(Corpus):
 
     def __init__(
             self, name: str, in_dir: str, text_type: str, year_list: list,
-            keys: [list, None] = None, stop_words: [list, None] = []):
+            keys: [list, None] = None, stop_words: [list, set, None]=None):
         """ Initialize TFIDF object. """
 
         super(Tfidf, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)

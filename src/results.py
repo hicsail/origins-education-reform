@@ -1,3 +1,5 @@
+import re
+
 
 class Results:
     """ Base class for all Results objects. """
@@ -135,7 +137,7 @@ class TopResults(Results):
 
 
 class TfidfResults(Results):
-    """ Data structure that stores documents with the highest TF-IDF score per period. """
+    """ Data structure that stores documents ranked by TF-IDF score for a keyword per period. """
 
     def __init__(self, d: dict, keyword: str, name: [None, str]='TF-IDF'):
         """ Initialize TfidfResults object. """
@@ -208,8 +210,35 @@ class LdaResults(Results):
               num_words: [int, None]=10, weights: [bool, None]=False):
         """ Write contents of LdaResults object to file. """
 
-        with open(out_path + '.txt', 'w') as t:
-            print("Writing results to text file.")
+        def _filter_topic(t):
+            filtered = re.split('\W[0-9]*', str(t))
+
+            for k in range(len(filtered) - 1, -1, -1):
+                if filtered[k] == "" or filtered[k] == "None":
+                    del filtered[k]
+                else:
+                    filtered[k] = filtered[k].lower()
+            return ", ".join(filtered)
+
+        def _filter_topic_weights(t):
+            filtered = str(t[1]).split('+')
+
+            for k in range(len(filtered) - 1, -1, -1):
+                if filtered[k] == "" or filtered[k] == "None":
+                    del filtered[k]
+                else:
+                    filtered[k] = filtered[k].split('*')
+
+            res = []
+            for k in filtered:
+                res.append(
+                    "{0} ({1})".format(k[1].strip(), k[0].strip())
+                )
+
+            return ", ".join(res)
+
+        with open(out_path, 'w') as t:
+            print("Writing results to file.")
 
             for i in range(len(self.years) - 1):
                 t.write(
@@ -219,5 +248,17 @@ class LdaResults(Results):
                 )
                 topics = self.d[self.years[i]]\
                     .show_topics(num_topics=num_topics, num_words=num_words)
+                idx = 0
                 for topic in topics:
-                    t.write(str(topic))
+                    if not weights:
+                        top = _filter_topic(topic)
+                        t.write("Topic {0}: {1}\n"
+                                .format(str(idx), top)
+                                )
+                        idx += 1
+                    else:
+                        top = _filter_topic_weights(topic)
+                        t.write("Topic {0}: {1}\n"
+                                .format(str(idx), top))
+                        idx += 1
+
