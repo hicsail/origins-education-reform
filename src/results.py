@@ -1,15 +1,29 @@
 
+class Results:
+    """ Base class for all Results objects. """
 
-class FrequencyResults:
-    """ Data structure that stores word frequency results over a list of keywords. """
-
-    def __init__(self, d: dict, f_type: str, name: [None, str]=None):
-        """ Initialize FrequencyResults object. """
+    def __init__(self, d: dict):
+        """ Initialize Results object. """
 
         self.d = d
         self.years = [y[0] for y in self.d.items()]
+
+
+class FrequencyResults(Results):
+    """ Data structure that stores word frequency results over a list of keywords. """
+
+    def __init__(self, d: dict, f_type: str, name: [None, str]='Frequency'):
+        """ Initialize FrequencyResults object. """
+
+        super(FrequencyResults, self).__init__(d)
+
         self.name = name
         self.f_type = f_type
+
+    def debug_str(self):
+        print("FrequencyResults object: \n\t - name: {0} \n\t - stores: {1}"
+              .format(self.name, self.f_type)
+              )
 
     @staticmethod
     def build_keys(keys: list):
@@ -69,12 +83,20 @@ class FrequencyResults:
                     )
 
 
-class TopResults:
+class TopResults(Results):
     """ Data structure that stores top word frequencies across a corpus. """
 
-    def __init__(self, d: dict):
-        self.d = d
-        self.years = [y[0] for y in self.d.items()]
+    def __init__(self, d: dict, name: [None, str]='Top Frequencies'):
+        """ Initialize TopResults object. """
+
+        super(TopResults, self).__init__(d)
+
+        self.name = name
+
+    def debug_str(self):
+        print("TopResults object: \n\t - name: {0}"
+              .format(self.name)
+              )
 
     def write(self, out_path: str):
         """ Write contents of Frequency object to file. """
@@ -112,15 +134,21 @@ class TopResults:
                 )
 
 
-class TfidfResults:
+class TfidfResults(Results):
     """ Data structure that stores documents with the highest TF-IDF score per period. """
 
-    def __init__(self, d: dict, keyword: str, name: [None, str]=None):
+    def __init__(self, d: dict, keyword: str, name: [None, str]='TF-IDF'):
+        """ Initialize TfidfResults object. """
 
-        self.d = d
-        self.years = [y[0] for y in self.d.items()]
+        super(TfidfResults, self).__init__(d)
+
         self.keyword = keyword
         self.name = name
+
+    def debug_str(self):
+        print("TfidfResults object: \n\t - name: {0} \n\t - keyword: {1}"
+              .format(self.name, self.keyword)
+              )
 
     def write(self, out_path: str):
         """ Write contents of Tfidf object to file. """
@@ -160,3 +188,36 @@ class TfidfResults:
                     "\"{0}\": {1}%"
                     .format(k[0], str(k[1]))
                 )
+
+
+class LdaResults(Results):
+
+    def __init__(self, d: dict, name: [None, str]='LDA Model'):
+
+        super(LdaResults, self).__init__(d)
+
+        self.name = name
+
+    def debug_str(self):
+        print("LdaResults object: \n\t - {0}"
+              .format(self.name)
+              )
+
+    # TODO: process topics
+    def write(self, out_path: str, num_topics: [int, None]=10,
+              num_words: [int, None]=10, weights: [bool, None]=False):
+        """ Write contents of LdaResults object to file. """
+
+        with open(out_path + '.txt', 'w') as t:
+            print("Writing results to text file.")
+
+            for i in range(len(self.years) - 1):
+                t.write(
+                    "________________\n"
+                    "Period: {0} - {1}\n"
+                    .format(str(self.years[i]), str(self.years[i+1]))
+                )
+                topics = self.d[self.years[i]]\
+                    .show_topics(num_topics=num_topics, num_words=num_words)
+                for topic in topics:
+                    t.write(str(topic))
