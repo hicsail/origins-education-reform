@@ -192,11 +192,11 @@ class TfidfResults(Results):
                 )
 
 
-class LdaResults(Results):
+class TopicResults(Results):
 
     def __init__(self, d: dict, name: [None, str]='LDA Model'):
 
-        super(LdaResults, self).__init__(d)
+        super(TopicResults, self).__init__(d)
 
         self.name = name
 
@@ -206,8 +206,8 @@ class LdaResults(Results):
               )
 
     # TODO: process topics
-    def write(self, out_path: str, num_topics: [int, None]=10,
-              num_words: [int, None]=10, weights: [bool, None]=False):
+    def write(self, out_path: str, num_topics: int=10,
+              num_words: int=10, weights: bool=False):
         """ Write contents of LdaResults object to file. """
 
         def _filter_topic(t):

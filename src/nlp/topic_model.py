@@ -50,7 +50,7 @@ class TopicModel(Corpus):
                              num_topics=num_topics, passes=passes, random_state=rand)
 
         # TODO: wrap in class
-        return LdaResults(results)
+        return TopicResults(results)
 
     def build_tf_idf_models(self):
         """
@@ -68,7 +68,7 @@ class TopicModel(Corpus):
 
         self.tf_idf_models = results
 
-    def lsi_model(self, num_topics: [int, None], stochastic: [bool, None] = False):
+    def lsi_model(self, num_topics: int=10, stochastic: bool = False):
         """
         Construct LSI topic models for each year in a
         corpus, given a set of parameters.
@@ -86,30 +86,34 @@ class TopicModel(Corpus):
 
             for year in self.year_list[:-1]:
                 results[year] = \
-                    LsiModel(corpus=self.tf_idf_models[year], id2word=self.word_to_id[year],
-                             num_topics=num_topics)
+                    LsiModel(corpus=self.tf_idf_models[year][self.corpora[year]],
+                             id2word=self.word_to_id[year],
+                             num_topics=num_topics
+                             )
 
         else:
 
             for year in self.year_list[:-1]:
                 results[year] = \
-                    LsiModel(corpus=self.tf_idf_models[year], id2word=self.word_to_id[year],
-                             num_topics=num_topics, onepass=False)
+                    LsiModel(corpus=self.tf_idf_models[year][self.corpora[year]],
+                             id2word=self.word_to_id[year],
+                             num_topics=num_topics,
+                             onepass=False
+                             )
 
-        # TODO: wrap in class
-        return results
+        return TopicResults(results)
 
 
 if __name__ == '__main__':
 
     c = TopicModel(
-        'LDA',
+        'LSI',
         '/Users/ben/Desktop/work/nlp/british/',
         'Filtered Text',
         [1700, 1720, 1740],
     )
 
-    res = c.lda_model(passes=10)
+    res = c.lsi_model(stochastic=True)
     # res.debug_str()
     res.write('/Users/ben/Desktop/out.txt', weights=True)
 
