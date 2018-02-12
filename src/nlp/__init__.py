@@ -1,5 +1,6 @@
 from src.utils import *
-import tqdm, json
+import tqdm, json, os, shutil, sys
+import nltk
 
 
 class Corpus:
@@ -9,9 +10,9 @@ class Corpus:
     over, and (optionally) a list of key words to be analyzed.
     """
 
-    def __init__(self, name: str, in_dir: str, text_type: str, year_list: list,
+    def __init__(self, name: str, in_dir: str, text_type: str, year_list: [list, None]=None,
                  keys: [list, None]=None, stop_words: [list, None] = None):
-        """ Initialize Frequency object. """
+        """ Initialize Corpus object. """
 
         self.name = name
         self.in_dir = in_dir
@@ -44,7 +45,7 @@ class Corpus:
             self.stop_words = set(jsondata[field_name])
 
     def debug_str(self):
-        """ Debug / identify individual Frequency objects. """
+        """ Debug / identify individual Corpus objects. """
 
         if self.key_list is not None:
 
@@ -69,45 +70,98 @@ class Corpus:
 
         return lengths.pop()
 
-    def build_dictionaries_and_corpora(self):
+    @staticmethod
+    def _build_json(title, author, keyword, year, text):
+        """ Build json object before writing to disk. """
+
+        jfile = json.dumps({'Title': title,
+                            'Author': author,
+                            'Keyword': keyword,
+                            'Year Published': year,
+                            'Text': text
+                            },
+                           sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
+        return jfile
+
+    def _write_extract(self, out_dir, words, year, index, sub_index, title, author, text):
+        """ Write file from sub-corpus to disk. """
+
+        text = [' '.join(w).strip() for w in text]
+        words = [' '.join(w).strip() for w in words]
+        with open(
+                "{0}/{1}_{2}-{3}.json"
+                .format(out_dir, str(year), str(index), str(sub_index)),
+                'w', encoding='utf-8'
+        ) as out:
+            out.write(
+                self._build_json(
+                    title, author, "_".join(words), year, text
+                )
+            )
+
+    def build_sub_corpus(self, output_dir: str, doc_size: int=20, y_range: [list, None]=None):
         """
-        Construct word_to_id that store the word -> id mappings and the bag of words
-        representations of the documents in the corpus. Used for building TF-IDF models
-        and LDA / LSI topic models.
+        From a larger corpus, construct a sub-corpus containing
+        only instances from a list of keywords, with a user-specified
+        amount of words around the occurrence.
+
+        * EXAMPLE *
+
+            c = Corpus(
+                'test',
+                '/path/to/input/corpus/',
+                'Filtered Text',
+                keys=['key1', 'key2', 'key3']
+            )
+
+            c.build_sub_corpus('/output/path/', doc_size=50, y_range=[1700, 1900])
+
         """
 
-        if self.word_to_id is not None:
+        if self.key_list is None:
+            print("No key list specified, exiting.")
             return
 
-        word_to_id_results = gensim_dict(self.year_list)
-        corpora_results = list_dict(self.year_list)
+        # create / overwrite directory where results will be stored
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+        else:
+            shutil.rmtree(output_dir)
+            os.mkdir(output_dir)
 
-        print("Building word to ID mappings.")
+        if y_range is None:
+            y_min = -1*sys.maxsize
+            y_max = sys.maxsize
+        else:
+            y_min = y_range[0]
+            y_max = y_range[1]
+
+        index = 0
+        subindex = 0
 
         for subdir, dirs, files in os.walk(self.in_dir):
+            print("Building sub-corpora.\n")
             for jsondoc in tqdm.tqdm(files):
                 if jsondoc[0] != ".":
-
                     with open(self.in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
-
+                        index += 1
                         jsondata = json.load(in_file)
                         year = int(jsondata["Year Published"])
+                        if y_min <= year <= y_max:
+                            title = jsondata["Title"]
+                            author = jsondata["Author"]
+                            text = list(nltk.ngrams(jsondata[self.text_type], self.detect_n()))
+                            for i in range(len(text)):
+                                if text[i] in set(self.key_list):
+                                    subindex += 1
+                                    out_text = text[(i - int(doc_size/2)):(i + int(doc_size/2))]
+                                    self._write_extract(
+                                        output_dir, self.key_list, year, index,
+                                        subindex, title, author, out_text
+                                    )
+            print("Done!")
 
-                        if self.year_list[0] <= year < self.year_list[-1]:
-                            text = jsondata[self.text_type]
 
-                            for i in range(len(text) - 1, -1, -1):
 
-                                # Delete empty strings and single characters
-                                if text[i] in self.stop_words or len(text[i]) < 2:
-                                    del text[i]
 
-                            target = determine_year(year, self.year_list)
 
-                            if len(text) > 0:
-                                word_to_id_results[target].add_documents([text])
-                                d2b = word_to_id_results[target].doc2bow(text)
-                                corpora_results[target].append(d2b)
-
-        self.word_to_id = word_to_id_results
-        self.corpora = corpora_results
