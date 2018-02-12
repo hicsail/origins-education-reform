@@ -20,6 +20,49 @@ class Tfidf(Corpus):
 
         self.tf_idf_models = None
 
+    def build_dictionaries_and_corpora(self):
+        """
+        Construct word_to_id that store the word -> id mappings and the bag of words
+        representations of the documents in the corpus. Used for building TF-IDF models
+        and LDA / LSI topic models.
+        """
+
+        if self.word_to_id is not None:
+            return
+
+        word_to_id_results = gensim_dict(self.year_list)
+        corpora_results = list_dict(self.year_list)
+
+        print("Building word to ID mappings.")
+
+        for subdir, dirs, files in os.walk(self.in_dir):
+            for jsondoc in tqdm.tqdm(files):
+                if jsondoc[0] != ".":
+
+                    with open(self.in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+
+                        jsondata = json.load(in_file)
+                        year = int(jsondata["Year Published"])
+
+                        if self.year_list[0] <= year < self.year_list[-1]:
+                            text = jsondata[self.text_type]
+
+                            for i in range(len(text) - 1, -1, -1):
+
+                                # Delete empty strings and single characters
+                                if text[i] in self.stop_words or len(text[i]) < 2:
+                                    del text[i]
+
+                            target = determine_year(year, self.year_list)
+
+                            if len(text) > 0:
+                                word_to_id_results[target].add_documents([text])
+                                d2b = word_to_id_results[target].doc2bow(text)
+                                corpora_results[target].append(d2b)
+
+        self.word_to_id = word_to_id_results
+        self.corpora = corpora_results
+
     def build_tf_idf_models(self):
         """
         Combines the word_to_id and corpora dictionaries
