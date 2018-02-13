@@ -10,6 +10,12 @@ def _fail(msg: str):
     os._exit(1)
 
 
+def build_keys(keys: list):
+    """ Build list of keyword tuples. """
+
+    return [tuple(k.split()) for k in keys]
+
+
 def num_dict(year_list: list, keywords: [list, None]=None, nested: [int, None]=0):
     """ Build empty dictionary with integers at leaf entries. """
 
