@@ -92,7 +92,6 @@ class TopicModel(Corpus):
                     LdaModel(corpus=self.corpora[year], id2word=self.word_to_id[year],
                              num_topics=num_topics, passes=passes, random_state=rand)
 
-        # TODO: wrap in class
         return TopicResults(results)
 
     def build_tf_idf_models(self):
@@ -146,18 +145,3 @@ class TopicModel(Corpus):
 
         return TopicResults(results)
 
-
-if __name__ == '__main__':
-
-    c = TopicModel(
-        'LSI',
-        '/Users/ben/Desktop/work/nlp/british/',
-        'Filtered Text',
-        [1700, 1720, 1740],
-    )
-
-    res = c.lsi_model(stochastic=True)
-    # res.debug_str()
-    res.write('/Users/ben/Desktop/out.txt', weights=True)
-
-    print('Done')

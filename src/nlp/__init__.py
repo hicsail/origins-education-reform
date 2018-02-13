@@ -159,7 +159,7 @@ class Corpus:
                                         output_dir, self.key_list, year, index,
                                         subindex, title, author, out_text
                                     )
-            print("Done!")
+            print("\nDone!\n")
 
 
 

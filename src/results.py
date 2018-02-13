@@ -205,7 +205,6 @@ class TopicResults(Results):
               .format(self.name)
               )
 
-    # TODO: process topics
     def write(self, out_path: str, num_topics: int=10,
               num_words: int=10, weights: bool=False):
         """ Write contents of LdaResults object to file. """
