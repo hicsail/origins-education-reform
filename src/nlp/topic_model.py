@@ -1,27 +1,36 @@
-import json, tqdm
+import json
+import tqdm
 from src.utils import *
 from src.results import *
-from src.nlp import Corpus
 from gensim.models.ldamodel import LdaModel
 from gensim.models.lsimodel import LsiModel
 from numpy.random import RandomState
 from gensim.models import TfidfModel
 
 
-class TopicModel(Corpus):
+class TopicModel:
     """
     Data structure for building topic models over a
     corpus, with respect to a list of year periods.
     """
 
     def __init__(
-            self, name: str, in_dir: str, text_type: str, year_list: list,
-            keys: [list, None] = None, stop_words: [list, set, None] = None):
+            self, name: str, in_dir: str, text_type: str,
+            year_list: list, stop_words: [list, set, None] = None):
         """ Initialize TopicModel object. """
 
-        super(TopicModel, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)
+        self.name = name
+        self.in_dir = in_dir
+        self.text_type = text_type
+        self.year_list = year_list
+        if stop_words is not None:
+            self.stop_words = stop_words
+        else:
+            self.stop_words = {}
 
         self.tf_idf_models = None
+        self.word_to_id = None
+        self.corpora = None
 
     def build_dictionaries_and_corpora(self):
         """

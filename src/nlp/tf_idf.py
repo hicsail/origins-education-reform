@@ -1,11 +1,10 @@
 import json, tqdm
 from src.utils import *
 from src.results import *
-from src.nlp import Corpus
 from gensim.models import TfidfModel
 
 
-class Tfidf(Corpus):
+class Tfidf:
     """
     Data structure for identifying documents and their corresponding TF-IDF
     scores, with respect to particular keywords and a list of year periods.
@@ -16,9 +15,22 @@ class Tfidf(Corpus):
             keys: [list, None] = None, stop_words: [list, set, None]=None):
         """ Initialize TFIDF object. """
 
-        super(Tfidf, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)
+        self.name = name
+        self.in_dir = in_dir
+        self.text_type = text_type
+        self.year_list = year_list
+        if keys is not None:
+            self.keys = build_keys(keys)
+        else:
+            self.keys = None
+        if stop_words is not None:
+            self.stop_words = stop_words
+        else:
+            self.stop_words = {}
 
         self.tf_idf_models = None
+        self.word_to_id = None
+        self.corpora = None
 
     def build_dictionaries_and_corpora(self):
         """
@@ -36,21 +48,21 @@ class Tfidf(Corpus):
         print("Building word to ID mappings.")
 
         for subdir, dirs, files in os.walk(self.in_dir):
-            for jsondoc in tqdm.tqdm(files):
-                if jsondoc[0] != ".":
+            for json_doc in tqdm.tqdm(files):
+                if json_doc[0] != ".":
 
-                    with open(self.in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                    with open(self.in_dir + "/" + json_doc, 'r', encoding='utf8') as in_file:
 
-                        jsondata = json.load(in_file)
-                        year = int(jsondata["Year Published"])
+                        json_data = json.load(in_file)
+                        year = int(json_data["Year Published"])
 
                         if self.year_list[0] <= year < self.year_list[-1]:
-                            text = jsondata[self.text_type]
+                            text = json_data[self.text_type]
 
                             for i in range(len(text) - 1, -1, -1):
 
                                 # Delete empty strings and single characters
-                                if text[i] in self.stop_words or len(text[i]) < 2:
+                                if text[i] in self.stop_words:
                                     del text[i]
 
                             target = determine_year(year, self.year_list)
@@ -89,7 +101,7 @@ class Tfidf(Corpus):
 
         return top_results
 
-    def top_n(self, keyword, n):
+    def top_n(self, keyword: str, n: int):
         """
         Iterates over the corpus and computes TF-IDF scores for each document,
         with respect to the precomputed TF-IDF models. Extracts results for a
@@ -105,16 +117,16 @@ class Tfidf(Corpus):
         print("Calculating {0} files with top TF-IDF scores for \'{1}\'".format(n, keyword))
 
         for subdir, dirs, files in os.walk(self.in_dir):
-            for jsondoc in tqdm.tqdm(files):
-                if jsondoc[0] != ".":
+            for json_doc in tqdm.tqdm(files):
+                if json_doc[0] != ".":
 
-                    with open(self.in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                    with open(self.in_dir + "/" + json_doc, 'r', encoding='utf8') as in_file:
 
-                        jsondata = json.load(in_file)
-                        year = int(jsondata["Year Published"])
+                        json_data = json.load(in_file)
+                        year = int(json_data["Year Published"])
 
                         if self.year_list[0] <= year < self.year_list[-1]:
-                            text = jsondata[self.text_type]
+                            text = json_data[self.text_type]
 
                             # skip this document if it doesn't contain the keyword
                             if keyword in set(text):
@@ -125,23 +137,10 @@ class Tfidf(Corpus):
 
                                 for t in tfidf_doc:
                                     if self.word_to_id[target].get(t[0]) == keyword:
-                                        results[target].append((jsondoc, t[1]))
+                                        results[target].append((json_doc, t[1]))
 
         top_results = self._top_n(results, n)
 
         return TfidfResults(top_results, keyword)
 
 
-if __name__ == '__main__':
-
-    c = Tfidf(
-        'test',
-        '/Users/ben/Desktop/work/nlp/british/',
-        'Filtered Text',
-        [1700, 1720, 1740],
-    )
-
-    res = c.top_n('rat', 5)
-    res.debug_str()
-
-    print('Done')

@@ -1,10 +1,9 @@
 import json, tqdm, nltk, math
 from src.utils import *
 from src.results import *
-from src.nlp import Corpus
 
 
-class Frequency(Corpus):
+class Frequency:
     """
     Data structure for calculating word frequencies with respect
     to a list of year periods and (optionally) key words. Keywords
@@ -12,17 +11,49 @@ class Frequency(Corpus):
     use a consistent value of n within a particular list.
     """
 
-    # TODO: if stop_words is None, currently will trigger exception
     def __init__(self, name: str, in_dir: str, text_type: str, year_list: list,
                  keys: [list, None]=None, stop_words: [list, set, None] = None):
         """ Initialize Frequency object. """
 
-        super(Frequency, self).__init__(name, in_dir, text_type, year_list, keys, stop_words)
+        self.name = name
+        self.in_dir = in_dir
+        self.text_type = text_type
+        self.year_list = year_list
+        if keys is not None:
+            self.keys = build_keys(keys)
+        else:
+            self.keys = None
+        if stop_words is not None:
+            self.stop_words = stop_words
+        else:
+            self.stop_words = {}
 
         self.frequency_record = None
         self.global_freq = None
         self.avg_freq = None
         self.variance = None
+
+    def stop_words_from_json(self, file_path: str, field_name: [str, None]='Words'):
+        """ Set stop_words from Json file. """
+
+        with open(file_path, 'r', encoding='utf8') as in_file:
+
+            json_data = json.load(in_file)
+            self.stop_words = set(json_data[field_name])
+
+    def detect_n(self):
+        """ Detect value of n for n-grams. """
+
+        if self.keys is None:
+            return 1
+
+        lengths = set()
+        for k in self.keys:
+            lengths.add(len(k))
+
+        assert(len(lengths) == 1)
+
+        return lengths.pop()
 
     def set_frequency_record(self):
         """
@@ -34,30 +65,30 @@ class Frequency(Corpus):
             return
 
         # TODO: convert to exception
-        assert(self.key_list is not None)
+        assert(self.keys is not None)
 
-        frequency_lists = list_dict(self.year_list, self.key_list, 1)
+        frequency_lists = list_dict(self.year_list, self.keys, 1)
         n = self.detect_n()
 
-        print("Taking word counts for key list {}".format(self.key_list))
+        print("Taking word counts for key list {}".format(self.keys))
 
         for subdir, dirs, files in os.walk(self.in_dir):
-            for jsondoc in tqdm.tqdm(files):
-                if jsondoc[0] != ".":
+            for json_doc in tqdm.tqdm(files):
+                if json_doc[0] != ".":
 
-                    with open(self.in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                    with open(self.in_dir + "/" + json_doc, 'r', encoding='utf8') as in_file:
 
-                        jsondata = json.load(in_file)
-                        year = int(jsondata["Year Published"])
+                        json_data = json.load(in_file)
+                        year = int(json_data["Year Published"])
 
                         if self.year_list[0] <= year < self.year_list[-1]:
 
-                            text = list(nltk.ngrams(jsondata[self.text_type], n))
+                            text = list(nltk.ngrams(json_data[self.text_type], n))
 
                             for i in range(len(text) - 1, -1, -1):
 
                                 # Delete empty strings and single characters
-                                if text[i] in self.stop_words or len(text[i]) < 2:
+                                if text[i] in self.stop_words:
                                     del text[i]
 
                             target = determine_year(year, self.year_list)
@@ -67,7 +98,7 @@ class Frequency(Corpus):
 
                             fdist = nltk.FreqDist(text)
 
-                            for k in self.key_list:
+                            for k in self.keys:
 
                                 all_keys += fdist[k]
                                 frequency_lists[target][k].append((fdist[k], total_words))
@@ -90,7 +121,7 @@ class Frequency(Corpus):
 
         freq = self.frequency_record
 
-        results = num_dict(self.year_list, self.key_list, 1)
+        results = num_dict(self.year_list, self.keys, 1)
 
         for year in self.year_list:
 
@@ -98,15 +129,21 @@ class Frequency(Corpus):
 
                 w_freq = sum(x for x, _ in freq[year]['TOTAL'])
                 total = sum(y for _, y in freq[year]['TOTAL'])
-                results[year]['TOTAL'] = w_freq / total
+                try:
+                    results[year]['TOTAL'] = w_freq / total
+                except ZeroDivisionError:
+                    results[year]['TOTAL'] = 0
 
-            for k in self.key_list:
+            for k in self.keys:
 
                 if len(freq[year][k]) > 0:
 
                     w_freq = sum(x for x, _ in freq[year][k])
                     total = sum(y for _, y in freq[year][k])
-                    results[year][k] = w_freq / total
+                    try:
+                        results[year][k] = w_freq / total
+                    except ZeroDivisionError:
+                        results[year][k] = 0
 
         self.global_freq = results
 
@@ -126,17 +163,19 @@ class Frequency(Corpus):
 
         freq = self.frequency_record
 
-        results = num_dict(self.year_list, self.key_list, 1)
+        results = num_dict(self.year_list, self.keys, 1)
 
         for year in self.year_list:
 
             if len(freq[year]['TOTAL']) > 0:
-                results[year]['TOTAL'] = sum(x for x, _ in freq[year]['TOTAL']) / len(freq[year]['TOTAL'])
+                results[year]['TOTAL'] = \
+                    sum(x for x, _ in freq[year]['TOTAL']) / len(freq[year]['TOTAL'])
 
-            for k in self.key_list:
+            for k in self.keys:
 
                 if len(freq[year][k]) > 0:
-                    results[year][k] = sum(x for x, _ in freq[year][k]) / len(freq[year][k])
+                    results[year][k] = \
+                        sum(x for x, _ in freq[year][k]) / len(freq[year][k])
 
         self.avg_freq = results
 
@@ -160,7 +199,7 @@ class Frequency(Corpus):
         freq = self.frequency_record
         avg = self.avg_freq
 
-        results = num_dict(self.year_list, self.key_list, 1)
+        results = num_dict(self.year_list, self.keys, 1)
 
         for year in self.year_list:
 
@@ -174,7 +213,7 @@ class Frequency(Corpus):
 
                 results[year]['TOTAL'] = sum(var) / len(var)
 
-            for k in self.key_list:
+            for k in self.keys:
 
                 if len(freq[year][k]) > 0:
 
@@ -218,17 +257,17 @@ class Frequency(Corpus):
         print("Calculating top {0} words per period".format(str(num)))
 
         for subdir, dirs, files in os.walk(self.in_dir):
-            for jsondoc in tqdm.tqdm(files):
-                if jsondoc[0] != ".":
+            for json_doc in tqdm.tqdm(files):
+                if json_doc[0] != ".":
 
-                    with open(self.in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                    with open(self.in_dir + "/" + json_doc, 'r', encoding='utf8') as in_file:
 
-                        jsondata = json.load(in_file)
-                        year = int(jsondata["Year Published"])
+                        json_data = json.load(in_file)
+                        year = int(json_data["Year Published"])
 
                         if self.year_list[0] <= year < self.year_list[-1]:
 
-                            text = list(nltk.ngrams(jsondata[self.text_type], n))
+                            text = list(nltk.ngrams(json_data[self.text_type], n))
                             target = determine_year(year, self.year_list)
 
                             total_words = len(list(text))
