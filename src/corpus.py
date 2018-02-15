@@ -1,6 +1,7 @@
-import tqdm, json, os, shutil, sys
+import tqdm, json, shutil, sys
 import nltk
 from src.nlp import frequency, tf_idf, topic_model
+from src.utils import *
 
 
 class Corpus:
@@ -52,12 +53,6 @@ class Corpus:
             year_list,
             stop_words
         )
-
-    @staticmethod
-    def build_keys(keys: list):
-        """ Build list of keyword tuples. """
-
-        return [tuple(k.split()) for k in keys]
 
     @staticmethod
     def detect_n(keys):
@@ -125,7 +120,7 @@ class Corpus:
         index = 0
         subindex = 0
 
-        key_list = self.build_keys(key_list)
+        key_list = build_keys(key_list)
 
         for subdir, dirs, files in os.walk(self.in_dir):
             print("Building sub-corpora.\n")
