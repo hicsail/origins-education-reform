@@ -1,4 +1,5 @@
 import re
+from src.utils import *
 
 
 class Results:
@@ -26,12 +27,6 @@ class FrequencyResults(Results):
         print("FrequencyResults object: \n\t - name: {0} \n\t - stores: {1}"
               .format(self.name, self.f_type)
               )
-
-    @staticmethod
-    def build_keys(keys: list):
-        """ Build list of keyword tuples. """
-
-        return [tuple(k.split()) for k in keys]
 
     def write(self, out_path: str):
         """ Write contents of FrequencyResults object to file. """
@@ -61,7 +56,7 @@ class FrequencyResults(Results):
         """ Display FrequencyResults in console. """
 
         if keys is not None:
-            keys = self.build_keys(keys)
+            keys = build_keys(keys)
         else:
             keys = ['TOTAL']
 
