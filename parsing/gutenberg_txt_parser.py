@@ -1,5 +1,5 @@
 import csv, os, argparse, tqdm
-from .. import parsing_help, parsed, common
+from nlp_scripts import parsing_help, parsed, common
 
 
 def parse_link(src):

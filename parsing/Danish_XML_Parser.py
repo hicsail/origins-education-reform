@@ -1,7 +1,7 @@
 import argparse, os, re, csv
 import xml.etree.ElementTree as ET
 from multiprocessing import Pool
-from .. import common, parsing_help, parsed
+from nlp_scripts import common, parsing_help, parsed
 
 
 # This script navigates through a directory of XML files (organized according to
@@ -296,8 +296,6 @@ def main():
         common.fail("Please specify output (-o) directory.")
     if args.csv is None:
         common.fail("Please specify csv (-csv) directory.")
-
-    common.build_out(args.o)
 
     thread_files = []
 
