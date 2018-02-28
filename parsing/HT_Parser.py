@@ -1,7 +1,8 @@
 import argparse, csv, os, shutil, zipfile
 import xml.etree.ElementTree as ET
-from .. import parsed, common, parsing_help
-
+import nlp_scripts.common
+import nlp_scripts.parsed
+import nlp_scripts.parsing_help
 
 def scan_for_htid(root):
     if "objectIdentifierValue" in root.tag:
