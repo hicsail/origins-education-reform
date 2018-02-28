@@ -1,7 +1,5 @@
 #!/bin/bash
 
-cd ../..
-
 INPUT_DIR=$1
 OUTPUT_DIR=$2
 WORKING_DIR=$(pwd)
