@@ -10,12 +10,10 @@ if __name__ == '__main__':
     f = c.tf_idf(
         'freq',
         [1700, 1720, 1740],
-        ['miss', 'upon'],
+        'jonathan',
+        10,
         'Filtered Text'
     )
 
-    f.top_n(
-        'jonathan',
-        10
-    ).display()
+    f.display()
 

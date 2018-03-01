@@ -14,5 +14,5 @@ if __name__ == '__main__':
         'Filtered Text'
     )
 
-    f.take_freq().display()
+    f.display()
 
