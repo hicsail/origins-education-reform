@@ -1,4 +1,4 @@
-from src import corpus
+from src import corpus, graph
 
 if __name__ == '__main__':
 
@@ -16,3 +16,4 @@ if __name__ == '__main__':
 
     f.display()
 
+    g = graph.GraphFrequency([f])
