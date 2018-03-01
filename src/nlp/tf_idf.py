@@ -12,17 +12,13 @@ class Tfidf:
 
     def __init__(
             self, name: str, in_dir: str, text_type: str, year_list: list,
-            keys: [list, None] = None, stop_words: [list, set, None]=None):
+            stop_words: [list, set, None]=None):
         """ Initialize TFIDF object. """
 
         self.name = name
         self.in_dir = in_dir
         self.text_type = text_type
         self.year_list = year_list
-        if keys is not None:
-            self.keys = build_keys(keys)
-        else:
-            self.keys = None
         if stop_words is not None:
             self.stop_words = stop_words
         else:

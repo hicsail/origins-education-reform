@@ -12,7 +12,7 @@ class Frequency:
     """
 
     def __init__(self, name: str, in_dir: str, text_type: str, year_list: list,
-                 keys: [list, None]=None, stop_words: [list, set, None] = None):
+                 keys: [list, None]=None, stop_words: [list, set, str, None] = None):
         """ Initialize Frequency object. """
 
         self.name = name
@@ -24,7 +24,12 @@ class Frequency:
         else:
             self.keys = None
         if stop_words is not None:
-            self.stop_words = stop_words
+            if isinstance(stop_words, str):
+                self.stop_words_from_json(stop_words)
+            elif isinstance(stop_words, list):
+                self.stop_words = set(stop_words)
+            else:
+                self.stop_words = stop_words
         else:
             self.stop_words = {}
 
@@ -33,13 +38,13 @@ class Frequency:
         self.avg_freq = None
         self.variance = None
 
-    def stop_words_from_json(self, file_path: str, field_name: [str, None]='Words'):
+    def stop_words_from_json(self, file_path: str):
         """ Set stop_words from Json file. """
 
         with open(file_path, 'r', encoding='utf8') as in_file:
 
             json_data = json.load(in_file)
-            self.stop_words = set(json_data[field_name])
+            self.stop_words = set(json_data['Words'])
 
     def detect_n(self):
         """ Detect value of n for n-grams. """

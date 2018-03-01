@@ -22,9 +22,9 @@ class Corpus:
 
         return '{0} at {1}'.format(self.name, self.in_dir)
 
-    def frequency(self, name, year_list, key_list, text_type, stop_words: [list, set, None]=None):
+    def frequency(self, name, year_list, key_list, text_type, stop_words: [list, set, str, None]=None):
 
-        return frequency.Frequency(
+        f = frequency.Frequency(
             name,
             self.in_dir,
             text_type,
@@ -33,9 +33,11 @@ class Corpus:
             stop_words
         )
 
-    def tf_idf(self, name, year_list, key_list, text_type, stop_words: [list, set, None]=None):
+        return f.take_freq()
 
-        return tf_idf.Tfidf(
+    def avg_frequency(self, name, year_list, key_list, text_type, stop_words: [list, set, str, None]=None):
+
+        f = frequency.Frequency(
             name,
             self.in_dir,
             text_type,
@@ -43,6 +45,33 @@ class Corpus:
             key_list,
             stop_words
         )
+
+        return f.take_average_freq()
+
+    def variance(self, name, year_list, key_list, text_type, stop_words: [list, set, str, None]=None ):
+
+        f = frequency.Frequency(
+            name,
+            self.in_dir,
+            text_type,
+            year_list,
+            key_list,
+            stop_words
+        )
+
+        return f.take_variance()
+
+    def tf_idf(self, name, year_list, keyword, n, text_type, stop_words: [list, set, None]=None):
+
+        t = tf_idf.Tfidf(
+            name,
+            self.in_dir,
+            text_type,
+            year_list,
+            stop_words
+        )
+
+        return t.top_n(keyword, n)
 
     def topic_model(self, name, year_list, text_type, stop_words: [list, set, None]=None):
 
@@ -53,6 +82,33 @@ class Corpus:
             year_list,
             stop_words
         )
+    #  num_topics: [int, None] = 10, passes: [int, None] = 1, seed: [int, None] = None
+
+    def lda_model(self, name, year_list, text_type,  num_topics: [int, None] = 10,
+                  passes: [int, None] = 1, seed: [int, None] = None, stop_words: [list, set, None]=None):
+
+        t = topic_model.TopicModel(
+            name,
+            self.in_dir,
+            text_type,
+            year_list,
+            stop_words
+        )
+
+        return t.lda_model(num_topics, passes, seed)
+
+    def lsi_model(self, name, year_list, text_type,  num_topics: [int, None] = 10,
+                  stochastic=False, stop_words: [list, set, None]=None):
+
+        t = topic_model.TopicModel(
+            name,
+            self.in_dir,
+            text_type,
+            year_list,
+            stop_words
+        )
+
+        return t.lsi_model(num_topics, stochastic)
 
     @staticmethod
     def detect_n(keys):
