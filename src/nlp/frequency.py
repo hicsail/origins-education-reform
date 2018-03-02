@@ -112,6 +112,8 @@ class Frequency:
 
         self.frequency_record = frequency_lists
 
+        return self
+
     def take_freq(self):
         """
         Reduce leaf entries in frequency dicts to obtain

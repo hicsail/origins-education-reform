@@ -79,6 +79,8 @@ class TopicModel:
         self.corpora = corpora_results
         self.num_docs = numdocs
 
+        return self
+
     def lda_model(self, num_topics: [int, None] = 10, passes: [int, None] = 1, seed: [int, None] = None):
         """
         Construct LDA topic models for each year in a
@@ -122,6 +124,8 @@ class TopicModel:
             results[year] = TfidfModel(self.corpora[year], dictionary=self.word_to_id[year])
 
         self.tf_idf_models = results
+
+        return self
 
     def lsi_model(self, num_topics: int=10, stochastic: bool = False):
         """

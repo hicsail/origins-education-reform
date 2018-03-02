@@ -71,6 +71,8 @@ class Tfidf:
         self.word_to_id = word_to_id_results
         self.corpora = corpora_results
 
+        return self
+
     def build_tf_idf_models(self):
         """
         Combines the word_to_id and corpora dictionaries
@@ -86,6 +88,8 @@ class Tfidf:
             results[year] = TfidfModel(self.corpora[year], dictionary=self.word_to_id[year])
 
         self.tf_idf_models = results
+
+        return self
 
     def _top_n(self, results, n):
 
