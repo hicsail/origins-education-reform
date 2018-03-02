@@ -48,7 +48,7 @@ class Corpus:
 
         return f.take_average_freq()
 
-    def variance(self, name, year_list, key_list, text_type, stop_words: [list, set, str, None]=None ):
+    def variance(self, name, year_list, key_list, text_type, stop_words: [list, set, str, None]=None):
 
         f = frequency.Frequency(
             name,
@@ -61,6 +61,17 @@ class Corpus:
 
         return f.take_variance()
 
+    def top_n(self, name, year_list, text_type, num_words: int=10, n_gram: int=1):
+
+        f = frequency.Frequency(
+            name,
+            self.in_dir,
+            text_type,
+            year_list,
+        )
+
+        return f.top_n(num_words, n_gram)
+
     def tf_idf(self, name, year_list, keyword, n, text_type, stop_words: [list, set, None]=None):
 
         t = tf_idf.Tfidf(
@@ -72,17 +83,6 @@ class Corpus:
         )
 
         return t.top_n(keyword, n)
-
-    def topic_model(self, name, year_list, text_type, stop_words: [list, set, None]=None):
-
-        return topic_model.TopicModel(
-            name,
-            self.in_dir,
-            text_type,
-            year_list,
-            stop_words
-        )
-    #  num_topics: [int, None] = 10, passes: [int, None] = 1, seed: [int, None] = None
 
     def lda_model(self, name, year_list, text_type,  num_topics: [int, None] = 10,
                   passes: [int, None] = 1, seed: [int, None] = None, stop_words: [list, set, None]=None):
