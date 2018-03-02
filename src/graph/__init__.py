@@ -14,9 +14,9 @@ class GraphFrequency:
         self.corpora = corpora
         self.title = title
         self.graph_dict = {}
+        self.num_docs = {}
         self.year_list = []
         self.g_max = 0
-        self.g_min = math.inf
         self.plt = None
 
     def results_type(self):
@@ -77,7 +77,19 @@ class GraphFrequency:
             for k in c_keys:
                 self.graph_dict[corpus.name][k] = self._build_graph_list(k, c_res)
 
-    def find_max_and_min(self):
+    def build_num_docs(self):
+
+        num_docs = {}
+
+        for corpus in self.corpora:
+            values = list(corpus.n.values())
+            num_docs[corpus.name] = values
+
+        self.num_docs = num_docs
+
+        return self
+
+    def find_max(self):
         """
         Traverse dict of frequency values and return min/max.
         """
@@ -86,9 +98,9 @@ class GraphFrequency:
             for k in self.graph_dict[c]:
                 for i in range(len(self.graph_dict[c][k])):
                     if self.graph_dict[c][k][i] > self.g_max:
-                        self.g_max = self.graph_dict[c][k][i]
-                    if self.graph_dict[c][k][i] < self.g_min:
-                        self.g_min = self.graph_dict[c][k][i]
+                        self.g_max = self.graph_dict[c][k][i] * 1.1
+
+        return self
 
     def _generate_labels(self):
         """
@@ -112,7 +124,8 @@ class GraphFrequency:
 
         self.check_year_lists()
         self.build_graph_dict()
-        self.find_max_and_min()
+        self.build_num_docs()
+        self.find_max()
 
         ax1 = plt.subplot2grid((1, 1), (0, 0))
 
@@ -141,15 +154,25 @@ class GraphFrequency:
             for f in self.graph_dict:
                 for k in self.graph_dict[f]:
 
-                    ax1.bar(
-                        index + (5 * i) + bar_width, self.graph_dict[f][k],
+                    x_coord = index + (5 * i) + bar_width
+
+                    rects = ax1.bar(
+                        x_coord, self.graph_dict[f][k],
                         bar_width, alpha=.8,  color=np.random.rand(1, 3),
                         label="{0}: {1}".format(f, ' '.join(k) if isinstance(k, tuple) else k)
                     )
+
+                    num_docs_record = self.num_docs[f]
+
+                    for j in range(len(rects)):
+                        h = rects[j].get_height()
+                        ax1.text(rects[j].get_x() + rects[j].get_width()/2., 1.05*h, num_docs_record[j],
+                                 ha='center', va='bottom')
+
                     i += 1
 
             ax1.axis(
-                [self.year_list[0], self.year_list[len(self.year_list) - 1], float(self.g_min), float(self.g_max)]
+                [self.year_list[0], self.year_list[len(self.year_list) - 1], float(0), float(self.g_max)]
             )
 
         else:
@@ -161,10 +184,8 @@ class GraphFrequency:
                              )
 
             ax1.axis(
-                [self.year_list[0], self.year_list[len(self.year_list) - 2], float(self.g_min), float(self.g_max)]
+                [self.year_list[0], self.year_list[len(self.year_list) - 2], float(0), float(self.g_max)]
             )
-
-
 
         leg = ax1.legend(prop={'size': leg_size})
         leg.get_frame().set_alpha(0.1)
