@@ -1,7 +1,23 @@
-import json, re
+import json, re, os, shutil
 from nltk.stem.snowball import SnowballStemmer
 from nltk.corpus import stopwords
 
+# generic fail method
+def fail(msg):
+    print(msg)
+    os._exit(1)
+
+
+def build_out(out_dir):
+    if out_dir is not None:
+        # create / overwrite directory where results will be stored
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
+        else:
+            shutil.rmtree(out_dir)
+            os.mkdir(out_dir)
+    else:
+        fail("Please specify output directory.")
 
 # gathers all info from parsing functions and builds
 # a JSON file. also cleans up the file a little bit,
