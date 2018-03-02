@@ -142,6 +142,17 @@ class GraphFrequency:
                 [self.year_list[0], self.year_list[len(self.year_list) - 1], float(self.g_min), float(self.g_max)]
             )
 
+        else:
+            for f in self.graph_dict:
+                for k in self.graph_dict[f]:
+
+                    ax1.plot(index, self.graph_dict[f][k],
+                             label="{0}: {1}".format(f, ' '.join(k) if isinstance(k, tuple) else k)
+                             )
+            ax1.axis(
+                [self.year_list[0], self.year_list[len(self.year_list) - 2], float(self.g_min), float(self.g_max)]
+            )
+
         leg = ax1.legend(prop={'size': leg_size})
         leg.get_frame().set_alpha(0.1)
 
