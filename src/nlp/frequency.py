@@ -69,8 +69,8 @@ class Frequency:
         if self.frequency_record is not None:
             return
 
-        # TODO: convert to exception
-        assert(self.keys is not None)
+        if self.keys is None:
+            raise ValueError("No keywords specified.\n")
 
         frequency_lists = list_dict(self.year_list, self.keys, 1)
         n = self.detect_n()

@@ -7,7 +7,7 @@ from src.results import *
 class RawFrequency:
 
     def __init__(self, name: str, in_dir: str, text_type: str,
-                 keys: [list, None]=None, binary: bool=False):
+                 keys: [list], binary: bool=False):
 
         self.name = name
         self.in_dir = in_dir
@@ -15,7 +15,6 @@ class RawFrequency:
         self.keys = build_keys(keys)
         self.binary = binary
 
-        self.out_path = None
         self.freq_dict = {}
 
     def detect_n(self):
@@ -61,11 +60,13 @@ class RawFrequency:
                 for keyword in self.keys:
                     self.freq_dict[jsondoc]['Frequencies'][' '.join(keyword)] = fdist[keyword]
 
-    def take_frequencies(self, out_path: [str, None]=None):
+    def take_frequencies(self):
 
         for jsondoc in os.walk(self.in_dir):
             if jsondoc[0] != '.':
                 self._take_frequencies(jsondoc)
+
+        return self
 
 
 
