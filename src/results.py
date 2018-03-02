@@ -5,20 +5,21 @@ from src.utils import *
 class Results:
     """ Base class for all Results objects. """
 
-    def __init__(self, d: dict):
+    def __init__(self, d: dict, n: dict):
         """ Initialize Results object. """
 
         self.d = d
+        self.n = n
         self.years = [y[0] for y in self.d.items()]
 
 
 class FrequencyResults(Results):
     """ Data structure that stores word frequency results over a list of keywords. """
 
-    def __init__(self, d: dict, f_type: str, name: [None, str]='Frequency'):
+    def __init__(self, d: dict, n: dict, f_type: str, name: [None, str]='Frequency'):
         """ Initialize FrequencyResults object. """
 
-        super(FrequencyResults, self).__init__(d)
+        super(FrequencyResults, self).__init__(d, n)
 
         self.name = name
         self.f_type = f_type
@@ -39,6 +40,10 @@ class FrequencyResults(Results):
                     "________________\n"
                     "Period: {0} - {1}\n"
                     .format(str(self.years[i]), str(self.years[i+1]))
+                )
+                t.write(
+                    "Number of documents for this period: {}\n"
+                    .format(str(self.n[self.years[i]]))
                 )
                 for k in self.d[self.years[i]].items():
                     if k[0] == 'TOTAL':
@@ -66,6 +71,10 @@ class FrequencyResults(Results):
                 "Period: {0} - {1}\n"
                 .format(str(self.years[i]), str(self.years[i+1]))
             )
+            print(
+                "Number of documents for this period: {}\n"
+                .format(str(self.n[self.years[i]]))
+            )
             for k in keys:
                 if k == 'TOTAL':
                     print(
@@ -83,10 +92,10 @@ class FrequencyResults(Results):
 class TopResults(Results):
     """ Data structure that stores top word frequencies across a corpus. """
 
-    def __init__(self, d: dict, name: [None, str]='Top Frequencies'):
+    def __init__(self, d: dict, n: dict, name: str='Top Frequencies'):
         """ Initialize TopResults object. """
 
-        super(TopResults, self).__init__(d)
+        super(TopResults, self).__init__(d, n)
 
         self.name = name
 
@@ -107,6 +116,10 @@ class TopResults(Results):
                     "Period: {0} - {1}\n"
                     .format(str(self.years[i]), str(self.years[i+1]))
                 )
+                t.write(
+                    "Number of documents for this period: {}\n"
+                    .format(str(self.n[self.years[i]]))
+                )
                 t.write("Top words for this period: \n")
                 for k in self.d[self.years[i]]:
                     t.write(
@@ -123,6 +136,10 @@ class TopResults(Results):
                 "Period: {0} - {1}\n"
                 .format(str(self.years[i]), str(self.years[i+1]))
             )
+            print(
+                "Number of documents for this period: {}\n"
+                .format(str(self.n[self.years[i]]))
+            )
             print("Top words for this period:")
             for k in self.d[self.years[i]]:
                 print(
@@ -134,10 +151,10 @@ class TopResults(Results):
 class TfidfResults(Results):
     """ Data structure that stores documents ranked by TF-IDF score for a keyword per period. """
 
-    def __init__(self, d: dict, keyword: str, name: [None, str]='TF-IDF'):
+    def __init__(self, d: dict, n: dict, keyword: str, name: [None, str]='TF-IDF'):
         """ Initialize TfidfResults object. """
 
-        super(TfidfResults, self).__init__(d)
+        super(TfidfResults, self).__init__(d, n)
 
         self.keyword = keyword
         self.name = name
@@ -160,6 +177,10 @@ class TfidfResults(Results):
                     .format(str(self.years[i]), str(self.years[i+1]))
                 )
                 t.write(
+                    "Number of documents for this period: {}\n"
+                    .format(str(self.n[self.years[i]]))
+                )
+                t.write(
                     "Documents with the highest TF-IDF score for \'{0}\' in this period: \n"
                     .format(self.keyword)
                 )
@@ -178,6 +199,10 @@ class TfidfResults(Results):
                 "Period: {0} - {1}\n"
                 .format(str(self.years[i]), str(self.years[i+1]))
             )
+            print(
+                "Number of documents for this period: {}\n"
+                .format(str(self.n[self.years[i]]))
+            )
             print("Documents with the highest TF-IDF score for \'{0}\' in this period: \n"
                   .format(self.keyword))
             for k in self.d[self.years[i]]:
@@ -189,9 +214,9 @@ class TfidfResults(Results):
 
 class TopicResults(Results):
 
-    def __init__(self, d: dict, name: [None, str]='LDA Model'):
+    def __init__(self, d: dict, n:dict, name: [None, str]='LDA Model'):
 
-        super(TopicResults, self).__init__(d)
+        super(TopicResults, self).__init__(d, n)
 
         self.name = name
 
@@ -239,6 +264,10 @@ class TopicResults(Results):
                     "________________\n"
                     "Period: {0} - {1}\n"
                     .format(str(self.years[i]), str(self.years[i+1]))
+                )
+                t.write(
+                    "Number of documents for this period: {}\n"
+                    .format(str(self.n[self.years[i]]))
                 )
                 topics = self.d[self.years[i]]\
                     .show_topics(num_topics=num_topics, num_words=num_words)
