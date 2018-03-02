@@ -20,6 +20,9 @@ class GraphFrequency:
         self.plt = None
 
     def results_type(self):
+        """
+        Determine the type of data being plotted.
+        """
 
         f_types = set()
 
@@ -29,7 +32,7 @@ class GraphFrequency:
         if len(f_types) != 1:
             print("Warning: mismatched frequency types across corpora.\n")
 
-        return self.corpora[0].f_type
+        return f_types.pop()
 
     def check_year_lists(self):
         """
@@ -44,7 +47,7 @@ class GraphFrequency:
         if len(year_lists) != 1:
             print("Warning: malformed year list inputs.\n")
 
-        self.year_list = self.corpora[0].years
+        self.year_list = year_lists.pop()
 
     def _build_graph_list(self, k, d):
         """
@@ -88,6 +91,9 @@ class GraphFrequency:
                         self.g_min = self.graph_dict[c][k][i]
 
     def _generate_labels(self):
+        """
+        Generate labels for x-axis.
+        """
 
         labels = []
         for i in range(len(self.year_list) - 1):
@@ -100,6 +106,9 @@ class GraphFrequency:
     def create_plot(self, x_label: str='Period', y_label: [str, None]=None,
                     title: [str, None]=None, bar: bool=True, bar_width: int=5,
                     leg_size: int=10):
+        """
+        Generate graph of input data.
+        """
 
         self.check_year_lists()
         self.build_graph_dict()
@@ -138,6 +147,7 @@ class GraphFrequency:
                         label="{0}: {1}".format(f, ' '.join(k) if isinstance(k, tuple) else k)
                     )
                     i += 1
+
             ax1.axis(
                 [self.year_list[0], self.year_list[len(self.year_list) - 1], float(self.g_min), float(self.g_max)]
             )
@@ -149,9 +159,12 @@ class GraphFrequency:
                     ax1.plot(index, self.graph_dict[f][k],
                              label="{0}: {1}".format(f, ' '.join(k) if isinstance(k, tuple) else k)
                              )
+
             ax1.axis(
                 [self.year_list[0], self.year_list[len(self.year_list) - 2], float(self.g_min), float(self.g_max)]
             )
+
+
 
         leg = ax1.legend(prop={'size': leg_size})
         leg.get_frame().set_alpha(0.1)
