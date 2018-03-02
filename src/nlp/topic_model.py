@@ -31,6 +31,7 @@ class TopicModel:
         self.tf_idf_models = None
         self.word_to_id = None
         self.corpora = None
+        self.num_docs = None
 
     def build_dictionaries_and_corpora(self):
         """
@@ -44,6 +45,7 @@ class TopicModel:
 
         word_to_id_results = gensim_dict(self.year_list)
         corpora_results = list_dict(self.year_list)
+        numdocs = num_dict(self.year_list, nested=0)
 
         print("Building word to ID mappings.")
 
@@ -66,6 +68,7 @@ class TopicModel:
                                     del text[i]
 
                             target = determine_year(year, self.year_list)
+                            numdocs[target] += 1
 
                             if len(text) > 0:
                                 word_to_id_results[target].add_documents([text])
@@ -74,6 +77,7 @@ class TopicModel:
 
         self.word_to_id = word_to_id_results
         self.corpora = corpora_results
+        self.num_docs = numdocs
 
     def lda_model(self, num_topics: [int, None] = 10, passes: [int, None] = 1, seed: [int, None] = None):
         """
@@ -101,7 +105,7 @@ class TopicModel:
                     LdaModel(corpus=self.corpora[year], id2word=self.word_to_id[year],
                              num_topics=num_topics, passes=passes, random_state=rand)
 
-        return TopicResults(results)
+        return TopicResults(results, self.num_docs)
 
     def build_tf_idf_models(self):
         """
@@ -152,5 +156,5 @@ class TopicModel:
                              onepass=False
                              )
 
-        return TopicResults(results)
+        return TopicResults(results, self.num_docs)
 

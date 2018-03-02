@@ -127,8 +127,11 @@ class Frequency:
         freq = self.frequency_record
 
         results = num_dict(self.year_list, self.keys, 1)
+        num_docs = num_dict(self.year_list, nested=0)
 
         for year in self.year_list:
+
+            num_docs[year] = len(freq[year]['TOTAL'])
 
             if len(freq[year]['TOTAL']) > 0:
 
@@ -152,7 +155,7 @@ class Frequency:
 
         self.global_freq = results
 
-        return FrequencyResults(results, 'Global frequency (%)')
+        return FrequencyResults(results, num_docs, 'Global frequency (%)')
 
     def take_average_freq(self):
         """
@@ -169,8 +172,11 @@ class Frequency:
         freq = self.frequency_record
 
         results = num_dict(self.year_list, self.keys, 1)
+        num_docs = num_dict(self.year_list, nested=0)
 
         for year in self.year_list:
+
+            num_docs[year] = len(freq[year]['TOTAL'])
 
             if len(freq[year]['TOTAL']) > 0:
                 results[year]['TOTAL'] = \
@@ -184,7 +190,7 @@ class Frequency:
 
         self.avg_freq = results
 
-        return FrequencyResults(results, 'Average frequency')
+        return FrequencyResults(results, num_docs, 'Average frequency')
 
     def take_variance(self):
         """
@@ -205,8 +211,11 @@ class Frequency:
         avg = self.avg_freq
 
         results = num_dict(self.year_list, self.keys, 1)
+        num_docs = num_dict(self.year_list, nested=0)
 
         for year in self.year_list:
+
+            num_docs[year] = len(freq[year]['TOTAL'])
 
             if len(freq[year]['TOTAL']) > 0:
 
@@ -232,7 +241,7 @@ class Frequency:
 
         self.variance = results
 
-        return FrequencyResults(results, 'Variance')
+        return FrequencyResults(results, num_docs, 'Variance')
 
     @staticmethod
     def _top_n(fdist: nltk.FreqDist, num: int, total_words: dict):
@@ -258,6 +267,7 @@ class Frequency:
         fdists = num_dict(self.year_list)
         num_words = num_dict(self.year_list)
         n_words = list_dict(self.year_list)
+        num_docs = num_dict(self.year_list, nested=0)
 
         print("Calculating top {0} words per period".format(str(num)))
 
@@ -274,6 +284,7 @@ class Frequency:
 
                             text = list(nltk.ngrams(json_data[self.text_type], n))
                             target = determine_year(year, self.year_list)
+                            num_docs[target] += 1
 
                             total_words = len(list(text))
                             num_words[target] += total_words
@@ -291,4 +302,4 @@ class Frequency:
             else:
                 n_words[year].extend(self._top_n(fdists[year], len(fdists[year]), num_words[year]))
 
-        return TopResults(n_words)
+        return TopResults(n_words, num_docs)

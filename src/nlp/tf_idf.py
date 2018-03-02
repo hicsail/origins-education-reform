@@ -109,6 +109,7 @@ class Tfidf:
             self.build_tf_idf_models()
 
         results = list_dict(self.year_list)
+        num_docs = num_dict(self.year_list, nested=0)
 
         print("Calculating {0} files with top TF-IDF scores for \'{1}\'".format(n, keyword))
 
@@ -128,6 +129,7 @@ class Tfidf:
                             if keyword in set(text):
 
                                 target = determine_year(year, self.year_list)
+                                num_docs[target] += 1
                                 d2b = self.word_to_id[target].doc2bow(text)
                                 tfidf_doc = self.tf_idf_models[target][d2b]
 
@@ -137,6 +139,6 @@ class Tfidf:
 
         top_results = self._top_n(results, n)
 
-        return TfidfResults(top_results, keyword)
+        return TfidfResults(top_results, num_docs, keyword)
 
 
