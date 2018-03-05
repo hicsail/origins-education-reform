@@ -1,6 +1,6 @@
 import tqdm, json, shutil, sys
 import nltk
-from src.nlp import frequency, tf_idf, topic_model
+from src.nlp import frequency, tf_idf, topic_model, raw_frequency
 from src.utils import *
 
 
@@ -23,6 +23,9 @@ class Corpus:
         return '{0} at {1}'.format(self.name, self.in_dir)
 
     def frequency(self, name, year_list, key_list, text_type, stop_words: [list, set, str, None]=None):
+        """
+        Measure keyword frequency as a percentage of total words across a corpus.
+        """
 
         f = frequency.Frequency(
             name,
@@ -36,6 +39,9 @@ class Corpus:
         return f.take_freq()
 
     def avg_frequency(self, name, year_list, key_list, text_type, stop_words: [list, set, str, None]=None):
+        """
+        Measure average frequency of a set of keywords per document across a corpus.
+        """
 
         f = frequency.Frequency(
             name,
@@ -49,6 +55,9 @@ class Corpus:
         return f.take_average_freq()
 
     def variance(self, name, year_list, key_list, text_type, stop_words: [list, set, str, None]=None):
+        """
+        Measure variance in keyword frequency across a corpus.
+        """
 
         f = frequency.Frequency(
             name,
@@ -62,6 +71,9 @@ class Corpus:
         return f.take_variance()
 
     def top_n(self, name, year_list, text_type, num_words: int=10, n_gram: int=1):
+        """
+        Identify most frequent < n > words per period across a corpus.
+        """
 
         f = frequency.Frequency(
             name,
@@ -73,6 +85,9 @@ class Corpus:
         return f.top_n(num_words, n_gram)
 
     def tf_idf(self, name, year_list, keyword, n, text_type, stop_words: [list, set, None]=None):
+        """
+        Find documents with highest TF-IDF scores w/r/t a keyword within a corpus.
+        """
 
         t = tf_idf.Tfidf(
             name,
@@ -84,8 +99,27 @@ class Corpus:
 
         return t.top_n(keyword, n)
 
+    def raw_frequency(self, name: str, text_type: str, key_list: list, binary: bool=False):
+        """
+        Build raw frequency tables for a corpus. Returned object is used for
+        difference in proportions testing.
+        """
+
+        rf = raw_frequency.RawFrequency(
+            name,
+            self.in_dir,
+            text_type,
+            key_list,
+            binary
+        )
+
+        return rf.take_frequencies()
+
     def lda_model(self, name, year_list, text_type,  num_topics: [int, None] = 10,
                   passes: [int, None] = 1, seed: [int, None] = None, stop_words: [list, set, None]=None):
+        """
+        Build LDA Topic Models for each period within a corpus.
+        """
 
         t = topic_model.TopicModel(
             name,
@@ -99,6 +133,9 @@ class Corpus:
 
     def lsi_model(self, name, year_list, text_type,  num_topics: [int, None] = 10,
                   stochastic=False, stop_words: [list, set, None]=None):
+        """
+        Build LSI Topic Models for each period within a corpus.
+        """
 
         t = topic_model.TopicModel(
             name,
@@ -112,7 +149,9 @@ class Corpus:
 
     @staticmethod
     def detect_n(keys):
-        """ Detect value of n for n-grams. """
+        """
+        Detect value of n for n-grams.
+        """
 
         lengths = set()
         for k in keys:
@@ -124,7 +163,9 @@ class Corpus:
 
     @staticmethod
     def _build_json(title, author, keyword, year, text):
-        """ Build json object before writing to disk. """
+        """
+        Build json object before writing to disk.
+        """
 
         jfile = json.dumps({'Title': title,
                             'Author': author,
@@ -136,7 +177,9 @@ class Corpus:
         return jfile
 
     def _write_extract(self, out_dir, words, year, index, sub_index, title, author, text):
-        """ Write file from sub-corpus to disk. """
+        """
+        Write file from sub-corpus to disk.
+        """
 
         text = [' '.join(w).strip() for w in text]
         words = [' '.join(w).strip() for w in words]
@@ -198,7 +241,5 @@ class Corpus:
                                         output_dir, key_list, year, index,
                                         subindex, title, author, out_text
                                     )
-
-        print("\nDone!\n")
 
         return Corpus(name, output_dir)
