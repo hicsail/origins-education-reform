@@ -3,10 +3,14 @@ from src.utils import *
 
 
 class Results:
-    """ Base class for all Results objects. """
+    """
+    Base class for all Results objects.
+    """
 
     def __init__(self, d: dict, n: dict):
-        """ Initialize Results object. """
+        """
+        Initialize Results object.
+        """
 
         self.d = d
         self.n = n
@@ -14,10 +18,11 @@ class Results:
 
 
 class FrequencyResults(Results):
-    """ Data structure that stores word frequency results over a list of keywords. """
+    """
+    Data structure that stores word frequency results over a list of keywords.
+    """
 
     def __init__(self, d: dict, n: dict, f_type: str, name: [None, str]='Frequency'):
-        """ Initialize FrequencyResults object. """
 
         super(FrequencyResults, self).__init__(d, n)
 
@@ -30,7 +35,9 @@ class FrequencyResults(Results):
               )
 
     def write(self, out_path: str):
-        """ Write contents of FrequencyResults object to file. """
+        """
+        Write contents of FrequencyResults object to file.
+        """
 
         with open(out_path + '.txt', 'w') as t:
             print("Writing results to text file.")
@@ -58,7 +65,9 @@ class FrequencyResults(Results):
                         )
 
     def display(self, keys: [None, list]=None):
-        """ Display FrequencyResults in console. """
+        """
+        Display FrequencyResults in console.
+        """
 
         if keys is not None:
             keys = build_keys(keys)
@@ -90,10 +99,11 @@ class FrequencyResults(Results):
 
 
 class TopResults(Results):
-    """ Data structure that stores top word frequencies across a corpus. """
+    """
+    Data structure that stores top word frequencies across a corpus.
+    """
 
     def __init__(self, d: dict, n: dict, name: str='Top Frequencies'):
-        """ Initialize TopResults object. """
 
         super(TopResults, self).__init__(d, n)
 
@@ -105,7 +115,9 @@ class TopResults(Results):
               )
 
     def write(self, out_path: str):
-        """ Write contents of Frequency object to file. """
+        """
+        Write contents of Frequency object to file.
+        """
 
         with open(out_path + '.txt', 'w') as t:
             print("Writing results to text file.")
@@ -128,7 +140,9 @@ class TopResults(Results):
                     )
 
     def display(self):
-        """ Display TopResults in console. """
+        """
+        Display TopResults in console.
+        """
 
         for i in range(len(self.years) - 1):
             print(
@@ -149,10 +163,11 @@ class TopResults(Results):
 
 
 class TfidfResults(Results):
-    """ Data structure that stores documents ranked by TF-IDF score for a keyword per period. """
+    """
+    Data structure that stores documents ranked by TF-IDF score for a keyword per period.
+    """
 
     def __init__(self, d: dict, n: dict, keyword: str, name: [None, str]='TF-IDF'):
-        """ Initialize TfidfResults object. """
 
         super(TfidfResults, self).__init__(d, n)
 
@@ -165,7 +180,9 @@ class TfidfResults(Results):
               )
 
     def write(self, out_path: str):
-        """ Write contents of Tfidf object to file. """
+        """
+        Write contents of Tfidf object to file.
+        """
 
         with open(out_path + '.txt', 'w') as t:
             print("Writing results to text file.")
@@ -191,7 +208,9 @@ class TfidfResults(Results):
                     )
 
     def display(self):
-        """ Display Tfidf results in console. """
+        """
+        Display Tfidf results in console.
+        """
 
         for i in range(len(self.years) - 1):
             print(
@@ -213,48 +232,63 @@ class TfidfResults(Results):
 
 
 class TopicResults(Results):
+    """
+    Stores topic modeling results.
+    """
 
-    def __init__(self, d: dict, n:dict, name: [None, str]='LDA Model'):
+    def __init__(self, d: dict, n: dict, name: [None, str]='Topic Model'):
 
         super(TopicResults, self).__init__(d, n)
 
         self.name = name
 
     def debug_str(self):
-        print("LdaResults object: \n\t - {0}"
+        print("Topic Model object: \n\t - {0}"
               .format(self.name)
               )
 
+    @staticmethod
+    def _filter_topic(t: str):
+        """
+        Filter confusing characters from returned topic string.
+        """
+
+        filtered = re.split('\W[0-9]*', str(t))
+
+        for k in range(len(filtered) - 1, -1, -1):
+            if filtered[k] == "" or filtered[k] == "None":
+                del filtered[k]
+            else:
+                filtered[k] = filtered[k].lower()
+        return ", ".join(filtered)
+
+    @staticmethod
+    def _filter_topic_weights(t: str):
+        """
+        Filter out weight values from returned topic string.
+        """
+
+        filtered = str(t[1]).split('+')
+
+        for k in range(len(filtered) - 1, -1, -1):
+            if filtered[k] == "" or filtered[k] == "None":
+                del filtered[k]
+            else:
+                filtered[k] = filtered[k].split('*')
+
+        res = []
+        for k in filtered:
+            res.append(
+                "{0} ({1})".format(k[1].strip(), k[0].strip())
+            )
+
+        return ", ".join(res)
+
     def write(self, out_path: str, num_topics: int=10,
               num_words: int=10, weights: bool=False):
-        """ Write contents of LdaResults object to file. """
-
-        def _filter_topic(t):
-            filtered = re.split('\W[0-9]*', str(t))
-
-            for k in range(len(filtered) - 1, -1, -1):
-                if filtered[k] == "" or filtered[k] == "None":
-                    del filtered[k]
-                else:
-                    filtered[k] = filtered[k].lower()
-            return ", ".join(filtered)
-
-        def _filter_topic_weights(t):
-            filtered = str(t[1]).split('+')
-
-            for k in range(len(filtered) - 1, -1, -1):
-                if filtered[k] == "" or filtered[k] == "None":
-                    del filtered[k]
-                else:
-                    filtered[k] = filtered[k].split('*')
-
-            res = []
-            for k in filtered:
-                res.append(
-                    "{0} ({1})".format(k[1].strip(), k[0].strip())
-                )
-
-            return ", ".join(res)
+        """
+        Write contents of LdaResults object to file.
+        """
 
         with open(out_path, 'w') as t:
             print("Writing results to file.")
@@ -274,14 +308,84 @@ class TopicResults(Results):
                 idx = 0
                 for topic in topics:
                     if not weights:
-                        top = _filter_topic(topic)
+                        top = self._filter_topic(topic)
                         t.write("Topic {0}: {1}\n"
                                 .format(str(idx), top)
                                 )
                         idx += 1
                     else:
-                        top = _filter_topic_weights(topic)
+                        top = self._filter_topic_weights(topic)
                         t.write("Topic {0}: {1}\n"
                                 .format(str(idx), top))
                         idx += 1
 
+
+class DiffPropResults:
+    """
+    Stores difference in proportions metrics between two corpora.
+    """
+
+    def __init__(self, d: dict, year_list: list, name: str='Difference in Proportions test'):
+
+        self.name = name
+        self.d = d
+        self.years = year_list
+
+    def display(self):
+        """
+        Display difference in proportions results in console.
+        """
+
+        for i in range(len(self.years) - 1):
+            print(
+                "________________\n"
+                "Period: {0} - {1}\n"
+                .format(str(self.years[i]), str(self.years[i+1]))
+            )
+            print(
+                "Z-score: {0}\n"
+                .format(str(self.d[self.years[i]][0]))
+            )
+            print(
+                "P values: {0}\n"
+                .format(str(self.d[self.years[i]][1]))
+            )
+            print(
+                "Significance: {0}\n"
+                .format(str(self.d[self.years[i]][2]))
+            )
+            print(
+                "Critical: {0}\n"
+                .format(str(self.d['Critical']))
+            )
+
+    def write(self, out_path: str):
+        """
+        Write difference in proportions results to file.
+        """
+
+        with open(out_path + '.txt', 'w') as t:
+            print("Writing results to text file.")
+
+            for i in range(len(self.years) - 1):
+                t.write(
+                    "________________\n"
+                    "Period: {0} - {1}\n"
+                    .format(str(self.years[i]), str(self.years[i+1]))
+                )
+                t.write(
+                    "Z-score: {0}\n"
+                    .format(str(self.d[self.years[i]][0]))
+                )
+                t.write(
+                    "P values: {0}\n"
+                    .format(str(self.d[self.years[i]][1]))
+                )
+                t.write(
+                    "Significance: {0}\n"
+                    .format(str(self.d[self.years[i]][2]))
+                )
+                t.write(
+                    "Critical: {0}\n"
+                    .format(str(self.d['Critical']))
+                )
