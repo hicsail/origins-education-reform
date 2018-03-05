@@ -1,4 +1,3 @@
-import math
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -195,10 +194,16 @@ class GraphFrequency:
         return self
 
     def show(self):
+        """
+        Display generated graph.
+        """
 
         self.plt.show()
 
     def save(self, out_path: str):
+        """
+        Save graph to file.
+        """
         try:
             self.plt.savefig(out_path)
         except ValueError:
