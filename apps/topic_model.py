@@ -7,8 +7,8 @@ if __name__ == '__main__':
         '/Users/ben/Desktop/work/nlp/british/',
     )
 
-    t = c.lda_model(
-        'lda',
+    t = c.lsi_model(
+        'lsi',
         [1700, 1720, 1740],
         'Filtered Text'
     ).write(
