@@ -1,10 +1,13 @@
-import json, tqdm, nltk, math
+import json, tqdm, nltk
 from src.results import *
-
-# TODO: not at all done
 
 
 class RawFrequency:
+    """
+    Iterates over a corpus and tracks either binary occurrence of a set of keywords
+    or their frequency. Binary occurrence is particularly useful for small volumes
+    (i.e. - snippet files outputted by build_sub_corpus() in corpus.py.
+    """
 
     def __init__(self, name: str, in_dir: str, text_type: str,
                  keys: [list], binary: bool=False):
@@ -18,7 +21,9 @@ class RawFrequency:
         self.freq_dict = {}
 
     def detect_n(self):
-        """ Detect value of n for n-grams. """
+        """
+        Detect value of n for n-grams.
+        """
 
         if self.keys is None:
             return 1
@@ -32,6 +37,9 @@ class RawFrequency:
         return lengths.pop()
 
     def _take_frequencies(self, jsondoc):
+        """
+        Helper method, measures frequencies in a single volume.
+        """
 
         n = self.detect_n()
 
@@ -39,7 +47,7 @@ class RawFrequency:
             jsondata = json.load(in_file)
 
             self.freq_dict[jsondoc] = {}
-            self.freq_dict[jsondoc]['Year Published'] = jsondata['Year Published']
+            self.freq_dict[jsondoc]['Year Published'] = int(jsondata['Year Published'])
             self.freq_dict[jsondoc]['Frequencies'] = {}
 
             if self.binary:
@@ -61,10 +69,14 @@ class RawFrequency:
                     self.freq_dict[jsondoc]['Frequencies'][' '.join(keyword)] = fdist[keyword]
 
     def take_frequencies(self):
+        """
+        Build raw frequency tables.
+        """
 
-        for jsondoc in os.walk(self.in_dir):
-            if jsondoc[0] != '.':
-                self._take_frequencies(jsondoc)
+        for subdir, dirs, files in os.walk(self.in_dir):
+            for jsondoc in tqdm.tqdm(files):
+                if jsondoc[0] != '.':
+                    self._take_frequencies(jsondoc)
 
         return self
 
