@@ -193,7 +193,7 @@ def filter_text(text: list, language: str):
     return text
 
 
-def stem_text(text: str, language: str):
+def stem_text(text: list, language: str):
     """
     Stem words in a list of text.
     """

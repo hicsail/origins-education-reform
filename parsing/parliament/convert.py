@@ -1,4 +1,5 @@
-from nlp_scripts import parsing_help, parsed, common
+from nlp_scripts import parsing_help, parsed
+from deprecated import common
 import argparse, os, json
 from multiprocessing import Pool
 
