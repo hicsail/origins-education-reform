@@ -17,7 +17,6 @@ class TopicModel:
     def __init__(
             self, name: str, in_dir: str, text_type: str,
             year_list: list, stop_words: [list, set, None] = None):
-        """ Initialize TopicModel object. """
 
         self.name = name
         self.in_dir = in_dir
