@@ -1,5 +1,4 @@
 import json, tqdm, nltk, math
-from src.utils import *
 from src.results import *
 
 
@@ -13,7 +12,6 @@ class Frequency:
 
     def __init__(self, name: str, in_dir: str, text_type: str, year_list: list,
                  keys: [list, None]=None, stop_words: [list, set, str, None] = None):
-        """ Initialize Frequency object. """
 
         self.name = name
         self.in_dir = in_dir
@@ -39,7 +37,9 @@ class Frequency:
         self.variance = None
 
     def stop_words_from_json(self, file_path: str):
-        """ Set stop_words from Json file. """
+        """
+        Set stop_words from Json file.
+        """
 
         with open(file_path, 'r', encoding='utf8') as in_file:
 
@@ -47,7 +47,9 @@ class Frequency:
             self.stop_words = set(json_data['Words'])
 
     def detect_n(self):
-        """ Detect value of n for n-grams. """
+        """
+        Detect value of n for n-grams.
+        """
 
         if self.keys is None:
             return 1
@@ -117,7 +119,8 @@ class Frequency:
     def take_freq(self):
         """
         Reduce leaf entries in frequency dicts to obtain
-        global frequencies for each period / keyword pair
+        average frequencies (as a percentage of total words)
+        for each period / keyword pair.
         """
 
         if self.global_freq is not None:
@@ -162,7 +165,7 @@ class Frequency:
     def take_average_freq(self):
         """
         Reduce leaf entries in frequency dicts to obtain
-        average frequencies for each period / keyword pair.
+        average occurrence per document for each period / keyword pair.
         """
 
         if self.avg_freq is not None:

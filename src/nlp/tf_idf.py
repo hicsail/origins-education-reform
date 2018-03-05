@@ -13,7 +13,6 @@ class Tfidf:
     def __init__(
             self, name: str, in_dir: str, text_type: str, year_list: list,
             stop_words: [list, set, None]=None):
-        """ Initialize TFIDF object. """
 
         self.name = name
         self.in_dir = in_dir
@@ -92,6 +91,9 @@ class Tfidf:
         return self
 
     def _top_n(self, results, n):
+        """
+        Helper method, takes top results given a threshold from input top results data.
+        """
 
         top_results = list_dict(self.year_list)
 
