@@ -4,20 +4,26 @@ from gensim import corpora
 
 
 def _fail(msg: str):
-    """ Generic fail method for debugging. """
+    """
+    Generic fail method for debugging.
+    """
 
     print(msg)
     os._exit(1)
 
 
 def build_keys(keys: list):
-    """ Build list of keyword tuples. """
+    """
+    Build list of keyword tuples.
+    """
 
     return [tuple(k.split()) for k in keys]
 
 
 def num_dict(year_list: list, keywords: [list, None]=None, nested: [int, None]=0):
-    """ Build empty dictionary with integers at leaf entries. """
+    """
+    Build empty dictionary with integers at leaf entries.
+    """
 
     results = {}
     for year in year_list:
@@ -34,7 +40,9 @@ def num_dict(year_list: list, keywords: [list, None]=None, nested: [int, None]=0
 
 
 def list_dict(year_list: list, keywords: [list, None]=None, nested: [None, int]=0):
-    """ Build empty dictionary with lists at leaf entries. """
+    """
+    Build empty dictionary with lists at leaf entries.
+    """
 
     results = {}
     for year in year_list:
@@ -51,7 +59,9 @@ def list_dict(year_list: list, keywords: [list, None]=None, nested: [None, int]=
 
 
 def gensim_dict(year_list: list):
-    """ Build empty dictionary with gensim Dictionary objects at leaf entries. """
+    """
+    Build empty dictionary with gensim Dictionary objects at leaf entries.
+    """
 
     results = {}
     for year in year_list:
