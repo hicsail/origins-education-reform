@@ -202,7 +202,7 @@ class GraphFrequency:
 
     def save(self, out_path: str):
         """
-        Save graph to file.
+        Save graph to file
         """
         try:
             self.plt.savefig(out_path)

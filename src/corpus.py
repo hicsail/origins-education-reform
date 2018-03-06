@@ -12,13 +12,14 @@ class Corpus:
     """
 
     def __init__(self, name: str, in_dir: str):
-        """ Initialize Corpus object. """
 
         self.name = name
         self.in_dir = in_dir
 
     def debug_str(self):
-        """ Debug / identify individual Corpora. """
+        """
+        Debug / identify individual Corpora.
+        """
 
         return '{0} at {1}'.format(self.name, self.in_dir)
 
