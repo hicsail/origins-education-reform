@@ -7,13 +7,18 @@ if __name__ == '__main__':
         '/Users/ben/Desktop/work/nlp/british/',
     )
 
-    e = c.variance(
-        'var',
-        [1700, 1720, 1740],
-        ['miss', 'upon'],
+    e1 = c.frequency(
+        'f1',
+        [1800, 1820, 1840],
+        ['lady'],
         'Filtered Text'
     )
 
-    e.display()
+    e2 = c.frequency(
+        'f2',
+        [1800, 1820, 1840],
+        ['miss'],
+        'Filtered Text'
+    )
 
-    g = graph.GraphFrequency([e]).create_plot().show()
+    g = graph.GraphFrequency([e1, e2], colors=['black', 'grey']).create_plot().show()
