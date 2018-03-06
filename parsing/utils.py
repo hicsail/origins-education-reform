@@ -8,6 +8,7 @@ def fail(msg: str):
     """
     Print error and exit program.
     """
+
     print(msg)
     os._exit(1)
 
@@ -16,6 +17,7 @@ def build_out(out_dir: str):
     """
     Build output directory, overwrite if exists.
     """
+
     if out_dir is not None:
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
@@ -43,11 +45,13 @@ def build_json(file: Parsed):
         file.d = "No document type"
     if file.h is None:
         file.h = "No HTID for this file"
+
     file.t = file.t.replace("\n", " ")
     file.a = file.a.replace("\n", " ")
     file.p = file.p.replace("\n", " ")
     file.d = file.d.replace("\n", " ")
     file.ch = filter_chapters(file.ch)
+
     jfile = json.dumps({'Title': file.t, 'Author': file.a, 'Publisher': file.p, 'Year Published': file.y,
                         'ISBN': file.i, 'Document Type': file.d, 'List of chapters': file.ch, 'HTID': file.h,
                         'Full Text': file.c, 'Full Text Stemmed': file.cstem, 'Filtered Text': file.tx,
