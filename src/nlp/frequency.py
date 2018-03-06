@@ -35,6 +35,7 @@ class Frequency:
         self.global_freq = None
         self.avg_freq = None
         self.variance = None
+        self.num_docs = None
 
     def stop_words_from_json(self, file_path: str):
         """
@@ -113,6 +114,23 @@ class Frequency:
                             frequency_lists[target]['TOTAL'].append((all_keys, total_words))
 
         self.frequency_record = frequency_lists
+        self.calculate_num_docs()
+
+        return self
+
+    def calculate_num_docs(self):
+        """
+        Calculate the number of documents per period.
+        """
+
+        num_docs = num_dict(self.year_list, nested=0)
+        freq = self.frequency_record
+
+        for year in self.year_list:
+
+            num_docs[year] = len(freq[year]['TOTAL'])
+
+        self.num_docs = num_docs
 
         return self
 
@@ -124,7 +142,7 @@ class Frequency:
         """
 
         if self.global_freq is not None:
-            return FrequencyResults(self.global_freq, 'Global')
+            return FrequencyResults(self.global_freq, self.num_docs, 'Global frequency (%)', self.name)
 
         if self.frequency_record is None:
             self.set_frequency_record()
@@ -132,11 +150,8 @@ class Frequency:
         freq = self.frequency_record
 
         results = num_dict(self.year_list, self.keys, 1)
-        num_docs = num_dict(self.year_list, nested=0)
 
         for year in self.year_list:
-
-            num_docs[year] = len(freq[year]['TOTAL'])
 
             if len(freq[year]['TOTAL']) > 0:
 
@@ -160,7 +175,7 @@ class Frequency:
 
         self.global_freq = results
 
-        return FrequencyResults(results, num_docs, 'Global frequency (%)')
+        return FrequencyResults(results, self.num_docs, 'Global frequency (%)', self.name)
 
     def take_average_freq(self):
         """
@@ -168,8 +183,10 @@ class Frequency:
         average occurrence per document for each period / keyword pair.
         """
 
+        num_docs = self.num_docs()
+
         if self.avg_freq is not None:
-            return FrequencyResults(self.avg_freq, 'Average frequency')
+            return FrequencyResults(self.avg_freq, num_docs, 'Average frequency', self.name)
 
         if self.frequency_record is None:
             self.set_frequency_record()
@@ -177,11 +194,8 @@ class Frequency:
         freq = self.frequency_record
 
         results = num_dict(self.year_list, self.keys, 1)
-        num_docs = num_dict(self.year_list, nested=0)
 
         for year in self.year_list:
-
-            num_docs[year] = len(freq[year]['TOTAL'])
 
             if len(freq[year]['TOTAL']) > 0:
                 results[year]['TOTAL'] = \
@@ -195,7 +209,7 @@ class Frequency:
 
         self.avg_freq = results
 
-        return FrequencyResults(results, num_docs, 'Average frequency')
+        return FrequencyResults(results, self.num_docs, 'Average frequency', self.name)
 
     def take_variance(self):
         """
@@ -204,7 +218,7 @@ class Frequency:
         """
 
         if self.variance is not None:
-            return FrequencyResults(self.variance, 'Variance')
+            return FrequencyResults(self.variance, self.num_docs, 'Variance', self.name)
 
         if self.frequency_record is None:
             self.set_frequency_record()
@@ -246,7 +260,7 @@ class Frequency:
 
         self.variance = results
 
-        return FrequencyResults(results, num_docs, 'Variance')
+        return FrequencyResults(results, num_docs, 'Variance', self.name)
 
     @staticmethod
     def _top_n(fdist: nltk.FreqDist, num: int, total_words: dict):
@@ -307,4 +321,4 @@ class Frequency:
             else:
                 n_words[year].extend(self._top_n(fdists[year], len(fdists[year]), num_words[year]))
 
-        return TopResults(n_words, num_docs)
+        return TopResults(n_words, num_docs, self.name)

@@ -22,7 +22,7 @@ class FrequencyResults(Results):
     Data structure that stores word frequency results over a list of keywords.
     """
 
-    def __init__(self, d: dict, n: dict, f_type: str, name: [None, str]='Frequency'):
+    def __init__(self, d: dict, n: dict, f_type: str, name: str):
 
         super(FrequencyResults, self).__init__(d, n)
 
@@ -103,7 +103,7 @@ class TopResults(Results):
     Data structure that stores top word frequencies across a corpus.
     """
 
-    def __init__(self, d: dict, n: dict, name: str='Top Frequencies'):
+    def __init__(self, d: dict, n: dict, name: str):
 
         super(TopResults, self).__init__(d, n)
 
@@ -167,7 +167,7 @@ class TfidfResults(Results):
     Data structure that stores documents ranked by TF-IDF score for a keyword per period.
     """
 
-    def __init__(self, d: dict, n: dict, keyword: str, name: [None, str]='TF-IDF'):
+    def __init__(self, d: dict, n: dict, keyword: str, name: str):
 
         super(TfidfResults, self).__init__(d, n)
 
@@ -236,7 +236,7 @@ class TopicResults(Results):
     Stores topic modeling results.
     """
 
-    def __init__(self, d: dict, n: dict, name: [None, str]='Topic Model'):
+    def __init__(self, d: dict, n: dict, name: str):
 
         super(TopicResults, self).__init__(d, n)
 
@@ -325,7 +325,7 @@ class DiffPropResults:
     Stores difference in proportions metrics between two corpora.
     """
 
-    def __init__(self, d: dict, year_list: list, name: str='Difference in Proportions test'):
+    def __init__(self, d: dict, year_list: list, name: str):
 
         self.name = name
         self.d = d
