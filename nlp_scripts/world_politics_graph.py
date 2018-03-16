@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 # import nlp_scripts.common as common
 import common
+from PIL import Image
+import os
 
 
 # csv has trouble handling lists explicitly, so need to store
@@ -165,6 +167,7 @@ def plot_type(bar, width):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", help="input directory path", action="store")
+    parser.add_argument("-o", help="output file", action="store")
     parser.add_argument("-avg", help="take tf_idf /sentiment avg for each decade", action="store_true")
     parser.add_argument("-max", help="take tf_idf /sentiment max for each decade", action="store_true")
     parser.add_argument("-min", help="take tf_idf / sentiment min for each decade", action="store_true")
@@ -232,14 +235,18 @@ def main():
         label.set_rotation(-25)
         label.set_size(7)
 
+    colors = ['black', 'grey']
+    c = 0
+
     if bar:
         i = 0
         for f in graph_dict:
             for k in graph_dict[f]:
                 if k != 'this corpus\' nation':
                     ax1.bar(index + (width * i), graph_dict[f][k], width, alpha=.8,
-                            color=np.random.rand(1, 3), label=graph_dict[f]['this corpus\' nation'], align='edge')
+                            color=colors[c], label=graph_dict[f]['this corpus\' nation'], align='edge')
                     i += 1
+            c += 1
     else:
         for f in graph_dict:
             for k in graph_dict[f]:
@@ -260,7 +267,12 @@ def main():
 
     leg = ax1.legend(prop={'size': leg_size})
     leg.get_frame().set_alpha(0.1)
-    plt.show()
+    plt.savefig(args.o + '.png')
+
+    im = Image.open(args.o + '.png')
+    im.save(args.o + '.tiff')
+
+    os.remove(args.o + '.png')
 
 
 if __name__ == '__main__':
