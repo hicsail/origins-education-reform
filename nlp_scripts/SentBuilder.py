@@ -15,9 +15,15 @@ def parse_json(in_dir, out_dir, keywords, by_sentences):
                 with open(in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     index += 1
                     jsondata = json.load(in_file)
-                    year = int(jsondata["Year Published"])
+                    try:
+                        year = int(jsondata["Year Published"])
+                    except KeyError:
+                        year = int(jsondata["Date"])
                     if y_min <= year <= y_max:
-                        title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type]
+                        try:
+                            title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type[0]]
+                        except KeyError:
+                            title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type[1]]
                         for keyword in keywords:
                             if not bigrams:
                                 # keep a set for more efficient word lookup,
@@ -152,13 +158,13 @@ def main():
             text_type = type
     else:
         if type.lower() == "full":
-            text_type = "Full Text"
+            text_type = ["Full Text", "Text"]
         elif type.lower() == "filtered":
-            text_type = "Filtered Text"
+            text_type = ["Filtered Text", "Filtered"]
         elif type.lower() == "stemmed":
-            text_type = "Full Text Stemmed"
+            text_type = ["Full Text Stemmed", "Stemmed"]
         elif type.lower() == "filtered stemmed":
-            text_type = "Filtered Text Stemmed"
+            text_type = ["Filtered Text Stemmed", "Filtered Stemmed"]
         else:
             text_type = type
 
