@@ -33,7 +33,10 @@ def build_years_tally(directory, year_list, yrange_min, yrange_max):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf-8') as in_file:
                     jsondata = json.load(in_file)
-                    year = int(jsondata["Year Published"])
+                    try:
+                        year = int(jsondata["Year Published"])
+                    except KeyError:
+                        year = int(jsondata["Date"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         target = common.determine_year(year, year_list)
@@ -56,7 +59,10 @@ def calculate_idf_results(keywords, year_list, years_tally, directory, yrange_mi
                     text = jsondata[text_type]
                     if bigrams:
                         text = nltk.bigrams(text)
-                    year = int(jsondata["Year Published"])
+                        try:
+                            year = int(jsondata["Year Published"])
+                        except KeyError:
+                            year = int(jsondata["Date"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         target = common.determine_year(year, year_list)
@@ -112,7 +118,10 @@ def calculate_tfidf_results(year_list, keywords, directory, idf_results, yrange_
                     text = jsondata[text_type]
                     if bigrams:
                         text = nltk.bigrams(text)
-                    year = int(jsondata["Year Published"])
+                    try:
+                        year = int(jsondata["Year Published"])
+                    except KeyError:
+                        year = int(jsondata["Date"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         target = common.determine_year(year, year_list)
@@ -239,7 +248,10 @@ def keyword_and_word_count(year_list, directory, yrange_min, yrange_max, keyword
                     if bigrams:
                         text = nltk.bigrams(text)
                     num_words = len(list(text))
-                    year = int(jsondata["Year Published"])
+                    try:
+                        year = int(jsondata["Year Published"])
+                    except KeyError:
+                        year = int(jsondata["Date"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         target = common.determine_year(year, year_list)
@@ -358,7 +370,10 @@ def calculate_n_words(year_list, directory, num, yrange_min, yrange_max):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    year = int(jsondata["Year Published"])
+                    try:
+                        year = int(jsondata["Year Published"])
+                    except KeyError:
+                        year = int(jsondata["Date"])
                     text = jsondata[text_type]
                     text_len = len(text)
                     if bigrams:
