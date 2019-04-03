@@ -59,10 +59,10 @@ def calculate_idf_results(keywords, year_list, years_tally, directory, yrange_mi
                     text = jsondata[text_type]
                     if bigrams:
                         text = nltk.bigrams(text)
-                        try:
-                            year = int(jsondata["Year Published"])
-                        except KeyError:
-                            year = int(jsondata["Date"])
+                    try:
+                        year = int(jsondata["Year Published"])
+                    except KeyError:
+                        year = int(jsondata["Date"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         target = common.determine_year(year, year_list)
