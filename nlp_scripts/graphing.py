@@ -242,7 +242,8 @@ def main():
     else:
         for f in graph_dict:
             for k in graph_dict[f]:
-                ax1.plot(index, graph_dict[f][k], label="{0}: {1}".format(f,k))
+                if k != 'this corpus\' nation':
+                    ax1.plot(index, graph_dict[f][k], label="{0}: {1}".format(f,k))
 
     # labels etc.
     plt.xlabel("Period")
