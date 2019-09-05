@@ -16,7 +16,12 @@ def take_frequencies(corpus, keywords, text_type, binary):
                 with open(corpus + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
                     name = jsondoc
-                    year = jsondata["Year Published"]
+
+                    try:
+                        year = jsondata["Year Published"]
+                    except KeyError:
+                        year = jsondata["Date"]
+                        
                     row = [name, year]
                     # take 0/1 occurrences on snippet files
                     if binary:
