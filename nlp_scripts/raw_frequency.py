@@ -21,7 +21,7 @@ def take_frequencies(corpus, keywords, text_type, binary):
                         year = jsondata["Year Published"]
                     except KeyError:
                         year = jsondata["Date"]
-                        
+
                     row = [name, year]
                     # take 0/1 occurrences on snippet files
                     if binary:
@@ -68,20 +68,11 @@ def main():
 
     binary = args.bin
     keywords = args.k.lower().split("/")
-
-    if args.type is not None:
-        if args.type.lower() == "full":
-            text_type = "Full Text"
-        elif args.type.lower() == "filtered":
-            text_type = "Filtered Text"
-        elif args.type.lower() == "stemmed":
-            text_type = "Full Text Stemmed"
-        elif args.type.lower() == "filtered stemmed":
-            text_type = "Filtered Text Stemmed"
-        else:
-            text_type = args.type
-    else:
+    
+    if args.type is None:
         text_type = "Words"
+    else:
+        text_type = args.type
 
     frequencies = take_frequencies(corpus, keywords, text_type, binary)
 
