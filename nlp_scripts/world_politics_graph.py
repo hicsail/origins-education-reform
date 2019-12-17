@@ -235,7 +235,7 @@ def main():
         label.set_rotation(-25)
         label.set_size(7)
 
-    colors = ['black', 'grey']
+    colors = ['black', 'grey', '#eeefff', '#4D4847']
     c = 0
 
     if bar:
