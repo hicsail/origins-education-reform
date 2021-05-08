@@ -174,8 +174,12 @@ def main():
     parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
     parser.add_argument("-yaxis", help="argument for setting the y-axis min/max values", action="store")
     parser.add_argument("-b_width", help="manually set bar width, default is 5", action="store")
-    parser.add_argument("-leg", help="manually set size of legend, default is 10", action="store")
     parser.add_argument("-breakdown", help="breakdown individual keywords", action="store_true")
+
+    parser.add_argument("-leg", help="manually set size of legend, default is 10", action="store")
+    parser.add_argument("-titlesize", help="Set the size of the title", action="store")
+    parser.add_argument("-labelsize", help="Set the size of a tick label", action="store")
+    parser.add_argument("-axislabelsize", help="Set the size of the axis labels", action="store")
 
     try:
         args = parser.parse_args()
@@ -213,10 +217,16 @@ def main():
         y_params = args.yaxis.split()
     else:
         y_params = find_max_and_min(graph_dict)
+        y_params[1] *= 1.2
 
     # set x-axis
-    index = np.array(sorted(year_list))
-    index = np.insert(index, 0, 0)
+    num_ranges = len(graph_dict)
+    if bar:
+        offset = num_ranges * width / 2
+    else:
+        offset = 0
+
+    index = np.array(sorted(year_list)[1:])
     labels = []
     for i in range(len(year_list) -1):
         start = str(year_list[i])
@@ -224,39 +234,45 @@ def main():
         current_numdocs = ''
         for j in range(len(numdocs)):
             current_numdocs += str(numdocs[j][i]) + " "
-        labels.append("{0}-{1} \n Docs: {2}".format(start, end, current_numdocs))
-    labels = [' '] + labels
+        labels.append("{0}-{1}".format(start, end))
     plt.xticks(index, labels)
-    for label in ax1.xaxis.get_ticklabels():
-        label.set_rotation(-25)
-        label.set_size(7)
+    if args.labelsize:
+        for label in ax1.xaxis.get_ticklabels():
+            label.set_size(args.labelsize)
 
     if bar:
         i = 0
         for f in graph_dict:
             for k in graph_dict[f]:
                 if k != 'this corpus\' nation':
-                    ax1.bar(index + (width * i), graph_dict[f][k], width, alpha=.8,
+                    ax1.bar(index + (width * i) - offset, graph_dict[f][k][2:], width, alpha=.8,
                             color=np.random.rand(1, 3), label="{0}: {1}".format(f,k), align='edge')
                     i += 1
     else:
         for f in graph_dict:
             for k in graph_dict[f]:
                 if k != 'this corpus\' nation':
-                    ax1.plot(index, graph_dict[f][k], label="{0}: {1}".format(f,k))
+                    ax1.plot(index, graph_dict[f][k][2:], label="{0}: {1}".format(f,k))
 
-    # labels etc.
-    plt.xlabel("Period")
-    plt.ylabel(y_label)
-    plt.title(title)
+    # Add title
+    if args.titlesize:
+        plt.title(title, fontsize=args.titlesize)
+    else:
+        plt.title(title)
+
+    # Set axis labels
+    if args.axislabelsize:
+        plt.xlabel("Period", fontsize=args.axislabelsize)
+        plt.ylabel(y_label, fontsize=args.axislabelsize)
+    else:
+        plt.xlabel("Period")
+        plt.ylabel(y_label)
 
     # with the bar graph, you want to include the space for the last year in year_list because you need space
     # for the bars. With the line graph, though, you don't want it because all you need is the point.
-    if args.bar:
-        ax1.axis([year_list[0], year_list[len(year_list) - 1], float(y_params[0]), float(y_params[1])])
-    else:
-        ax1.axis([year_list[0], year_list[len(year_list) - 2], float(y_params[0]), float(y_params[1])])
-
+    diff = year_list[1] - year_list[0]
+    ax1.axis([year_list[0], year_list[-1] + diff, float(y_params[0]), float(y_params[1])])
+    
     leg = ax1.legend(prop={'size': leg_size})
     leg.get_frame().set_alpha(0.1)
     plt.show()
