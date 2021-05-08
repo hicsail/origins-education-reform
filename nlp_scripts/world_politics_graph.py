@@ -1,7 +1,6 @@
 import argparse, json, os, math, csv
 import matplotlib.pyplot as plt
 import numpy as np
-# import nlp_scripts.common as common
 import common
 from PIL import Image
 import os
@@ -23,7 +22,7 @@ def find_max_and_min(in_dict):
     g_min = math.inf
     for f in in_dict:
         for k in in_dict[f]:
-            if k != 'this corpus\' nation':
+            if k != 'nation':
                 for i in range(len(in_dict[f][k])):
                     if in_dict[f][k][i] > g_max:
                         g_max = in_dict[f][k][i]
@@ -35,21 +34,18 @@ def find_max_and_min(in_dict):
 # builds dictionary of graphed values from directory of json files and metric to be graphed
 def build_graph_dict(in_dir, data_type):
     graphed = {}
-    numdocs = []
     # determine index of data for csv files
     indx = determine_index(data_type)
     # iterate over json / csv files in directory, append
     # data from each to keyword entry in graphed dict
-    for subdir, dirs, files in os.walk(in_dir):
+    for _, _, files in os.walk(in_dir):
         for file in files:
             if file[0] != '.' and file[-5:] == '.json':
                 with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
                     keywords = jsondata['keywords']
-                    nation = jsondata['nation']
-                    numdocs.append(jsondata['number of documents'])
                     graphed[file] = {}
-                    graphed[file]['this corpus\' nation'] = nation
+                    graphed[file]['nation'] = jsondata['nation']
                     for keyword in keywords:
                         if not breakdown:
                             # this step assumes there are no keyword repeats across files
@@ -65,12 +61,10 @@ def build_graph_dict(in_dir, data_type):
                 with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
                     read_csv = csv.reader(in_file, delimiter=',')
                     for row in read_csv:
-                        if row[0] == "word" and row[1] == "tf-idf avg":
-                            numdocs.append(row[8].split())
-                        else:
+                        if row[0] != "word" and row[1] != "tf-idf avg":
                             graphed[row[0]] = []
                             graphed[row[0]].extend(string_to_floats(row[indx]))
-    return [graphed, numdocs]
+    return graphed
 
 
 # determine column index for data in csv files
@@ -204,8 +198,7 @@ def main():
         args.avg, args.max, args.min, args.percent, args.mean, args.var)
     data_type, y_label, title = args_params[0], args_params[1], args_params[2]
 
-    graph_params = build_graph_dict(args.i, data_type)
-    graph_dict, numdocs = graph_params[0], graph_params[1]
+    graph_dict = build_graph_dict(args.i, data_type)
 
     year_list = build_year_list(args.i)
 
@@ -235,9 +228,6 @@ def main():
     for i in range(len(year_list) -1):
         start = str(year_list[i])
         end = str(year_list[i + 1])
-        current_numdocs = ''
-        for j in range(len(numdocs)):
-            current_numdocs += str(numdocs[j][i]) + " "
         labels.append("{0}-{1}".format(start, end))
     plt.xticks(index, labels)
     if args.labelsize:
@@ -249,17 +239,17 @@ def main():
         i = 0
         for f in graph_dict:
             for k in graph_dict[f]:
-                if k != 'this corpus\' nation':
+                if k != 'nation':
                     ax1.bar(index + (width * i) - offset, graph_dict[f][k][2:], width, alpha=.8,
-                        color=str(0.3 * c), label=graph_dict[f]['this corpus\' nation'], align='edge')
+                        color=str(0.3 * c), label=graph_dict[f]['nation'], align='edge')
                     i += 1
             c += 1
     else:
         for f in graph_dict:
             for k in graph_dict[f]:
-                if k != 'this corpus\' nation':
+                if k != 'nation':
                     c += 1
-                    ax1.plot(index, graph_dict[f][k][2:], label=graph_dict[f]['this corpus\' nation'],
+                    ax1.plot(index, graph_dict[f][k][2:], label=graph_dict[f]['nation'],
                         color="black", linestyle=(0, (2*c, 2*c)))
 
     # Add title
@@ -283,12 +273,14 @@ def main():
     
     leg = ax1.legend(prop={'size': leg_size})
     leg.get_frame().set_alpha(0.1)
-    plt.savefig(args.o + '.png')
 
-    im = Image.open(args.o + '.png')
-    im.save(args.o + '.tiff')
-
-    os.remove(args.o + '.png')
+    if args.o:
+        plt.savefig(args.o + '.png')
+        im = Image.open(args.o + '.png')
+        im.save(args.o + '.tiff')
+        os.remove(args.o + '.png')
+    else:
+        plt.show()
 
 
 if __name__ == '__main__':
