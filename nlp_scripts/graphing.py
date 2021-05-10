@@ -170,6 +170,7 @@ def main():
     parser.add_argument("-yaxis", help="argument for setting the y-axis min/max values", action="store")
     parser.add_argument("-b_width", help="manually set bar width, default is 5", action="store")
     parser.add_argument("-breakdown", help="breakdown individual keywords", action="store_true")
+    parser.add_argument("-padding", help="Set the whitespace on the sides of the graph", action="store")
 
     parser.add_argument("-leg", help="manually set size of legend, default is 10", action="store")
     parser.add_argument("-titlesize", help="Set the size of the title", action="store")
@@ -259,8 +260,11 @@ def main():
         plt.xlabel("Period")
         plt.ylabel(y_label)
 
-    # with the bar graph, you want to include the space for the last year in year_list because you need space
-    # for the bars. With the line graph, though, you don't want it because all you need is the point.
+    if args.padding:
+        padding = int(args.padding)
+    else:
+        padding = 5
+
     diff = year_list[1] - year_list[0]
     ax1.axis([year_list[0], year_list[-1] + diff, float(y_params[0]), float(y_params[1])])
     
