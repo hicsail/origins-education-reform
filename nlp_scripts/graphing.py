@@ -266,7 +266,7 @@ def main():
         padding = 5
 
     diff = year_list[1] - year_list[0]
-    ax1.axis([year_list[0], year_list[-1] + diff, float(y_params[0]), float(y_params[1])])
+    ax1.axis([year_list[1] - offset - padding, year_list[-1] + offset + padding, float(y_params[0]), float(y_params[1])])
     
     leg = ax1.legend(prop={'size': leg_size})
     leg.get_frame().set_alpha(0.1)
