@@ -221,13 +221,13 @@ def main():
     else:
         offset = 0
 
-    index = np.array(sorted(year_list)[1:])
+    index = np.array(sorted(year_list))
     labels = []
     for i in range(len(year_list) -1):
         start = str(year_list[i])
         end = str(year_list[i + 1])
         labels.append("{0}-{1}".format(start, end))
-    plt.xticks(index, labels)
+    plt.xticks(index[1:], labels)
     if args.labelsize:
         for label in ax1.xaxis.get_ticklabels():
             label.set_size(args.labelsize)
@@ -237,14 +237,14 @@ def main():
         for f in graph_dict:
             for k in graph_dict[f]:
                 if k != 'nation':
-                    ax1.bar(index + (width * i) - offset, graph_dict[f][k][2:], width, alpha=.8,
+                    ax1.bar(index + (width * i) - offset, graph_dict[f][k][:-1], width, alpha=.8,
                             color=np.random.rand(1, 3), label="{0}: {1}".format(f,k), align='edge')
                     i += 1
     else:
         for f in graph_dict:
             for k in graph_dict[f]:
                 if k != 'nation':
-                    ax1.plot(index, graph_dict[f][k][2:], label="{0}: {1}".format(f,k))
+                    ax1.plot(index, graph_dict[f][k][:-1], label="{0}: {1}".format(f,k))
 
     # Add title
     if args.titlesize:
