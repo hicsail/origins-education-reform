@@ -1,7 +1,6 @@
 import argparse, json, os, math, csv
 import matplotlib.pyplot as plt
 import numpy as np
-# import nlp_scripts.common as common
 import common
 from PIL import Image
 import os
@@ -23,7 +22,7 @@ def find_max_and_min(in_dict):
     g_min = math.inf
     for f in in_dict:
         for k in in_dict[f]:
-            if k != 'this corpus\' nation':
+            if k != 'nation':
                 for i in range(len(in_dict[f][k])):
                     if in_dict[f][k][i] > g_max:
                         g_max = in_dict[f][k][i]
@@ -35,21 +34,18 @@ def find_max_and_min(in_dict):
 # builds dictionary of graphed values from directory of json files and metric to be graphed
 def build_graph_dict(in_dir, data_type):
     graphed = {}
-    numdocs = []
     # determine index of data for csv files
     indx = determine_index(data_type)
     # iterate over json / csv files in directory, append
     # data from each to keyword entry in graphed dict
-    for subdir, dirs, files in os.walk(in_dir):
+    for _, _, files in os.walk(in_dir):
         for file in files:
             if file[0] != '.' and file[-5:] == '.json':
                 with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
                     keywords = jsondata['keywords']
-                    nation = jsondata['nation']
-                    numdocs.append(jsondata['number of documents'])
                     graphed[file] = {}
-                    graphed[file]['this corpus\' nation'] = nation
+                    graphed[file]['nation'] = jsondata['nation']
                     for keyword in keywords:
                         if not breakdown:
                             # this step assumes there are no keyword repeats across files
@@ -65,12 +61,10 @@ def build_graph_dict(in_dir, data_type):
                 with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
                     read_csv = csv.reader(in_file, delimiter=',')
                     for row in read_csv:
-                        if row[0] == "word" and row[1] == "tf-idf avg":
-                            numdocs.append(row[8].split())
-                        else:
+                        if row[0] != "word" and row[1] != "tf-idf avg":
                             graphed[row[0]] = []
                             graphed[row[0]].extend(string_to_floats(row[indx]))
-    return [graphed, numdocs]
+    return graphed
 
 
 # determine column index for data in csv files
@@ -178,8 +172,13 @@ def main():
     parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
     parser.add_argument("-yaxis", help="argument for setting the y-axis min/max values", action="store")
     parser.add_argument("-b_width", help="manually set bar width, default is 5", action="store")
-    parser.add_argument("-leg", help="manually set size of legend, default is 10", action="store")
     parser.add_argument("-breakdown", help="breakdown individual keywords", action="store_true")
+    parser.add_argument("-padding", help="Set the whitespace on the sides of the graph", action="store")
+
+    parser.add_argument("-leg", help="manually set size of legend, default is 10", action="store")
+    parser.add_argument("-titlesize", help="Set the size of the title", action="store")
+    parser.add_argument("-labelsize", help="Set the size of a tick label", action="store")
+    parser.add_argument("-axislabelsize", help="Set the size of the axis labels", action="store")
 
     try:
         args = parser.parse_args()
@@ -200,8 +199,7 @@ def main():
         args.avg, args.max, args.min, args.percent, args.mean, args.var)
     data_type, y_label, title = args_params[0], args_params[1], args_params[2]
 
-    graph_params = build_graph_dict(args.i, data_type)
-    graph_dict, numdocs = graph_params[0], graph_params[1]
+    graph_dict = build_graph_dict(args.i, data_type)
 
     year_list = build_year_list(args.i)
 
@@ -217,62 +215,78 @@ def main():
         y_params = args.yaxis.split()
     else:
         y_params = find_max_and_min(graph_dict)
+        y_params[1] *= 1.2
 
     # set x-axis
+    num_ranges = len(graph_dict)
+    if bar:
+        offset = num_ranges * width / 2
+    else:
+        offset = 0
+
     index = np.array(sorted(year_list))
-    index = np.insert(index, 0, 0)
     labels = []
     for i in range(len(year_list) -1):
         start = str(year_list[i])
         end = str(year_list[i + 1])
-        current_numdocs = ''
-        for j in range(len(numdocs)):
-            current_numdocs += str(numdocs[j][i]) + " "
-        labels.append("{0}-{1} \n Docs: {2}".format(start, end, current_numdocs))
-    labels = [' '] + labels
-    plt.xticks(index, labels)
-    for label in ax1.xaxis.get_ticklabels():
-        label.set_rotation(-25)
-        label.set_size(7)
+        labels.append("{0}-{1}".format(start, end))
+    plt.xticks(index[1:], labels)
+    if args.labelsize:
+        for label in ax1.xaxis.get_ticklabels():
+            label.set_size(args.labelsize)
 
-    colors = ['black', 'grey', '#eeefff', '#4D4847']
     c = 0
-
-    if bar:
+    if args.bar:
         i = 0
         for f in graph_dict:
             for k in graph_dict[f]:
-                if k != 'this corpus\' nation':
-                    ax1.bar(index + (width * i), graph_dict[f][k], width, alpha=.8,
-                            color=colors[c], label=graph_dict[f]['this corpus\' nation'], align='edge')
+                if k != 'nation':
+                    ax1.bar(index + (width * i) - offset, graph_dict[f][k][:-1], width, alpha=.8,
+                        color=str(0.3 * c), label=graph_dict[f]['nation'], align='edge')
                     i += 1
             c += 1
     else:
         for f in graph_dict:
             for k in graph_dict[f]:
-                if k != 'this corpus\' nation':
-                    ax1.plot(index, graph_dict[f][k], label=graph_dict[f]['this corpus\' nation'])
+                if k != 'nation':
+                    c += 1
+                    ax1.plot(index, graph_dict[f][k][:-1], label=graph_dict[f]['nation'],
+                        color="black", linestyle=(0, (2*c, 2*c)))
 
-    # labels etc.
-    plt.xlabel("Period")
-    plt.ylabel(y_label)
-    plt.title(title)
+    # Add title
+    if args.titlesize:
+        plt.title(title, fontsize=args.titlesize)
+    else:
+        plt.title(title)
+
+    # Set axis labels
+    if args.axislabelsize:
+        plt.xlabel("Period", fontsize=args.axislabelsize)
+        plt.ylabel(y_label, fontsize=args.axislabelsize)
+    else:
+        plt.xlabel("Period")
+        plt.ylabel(y_label)
+
+    if args.padding:
+        padding = int(args.padding)
+    else:
+        padding = 5
 
     # with the bar graph, you want to include the space for the last year in year_list because you need space
     # for the bars. With the line graph, though, you don't want it because all you need is the point.
-    if args.bar:
-        ax1.axis([year_list[0], year_list[len(year_list) - 1], float(y_params[0]), float(y_params[1])])
-    else:
-        ax1.axis([year_list[0], year_list[len(year_list) - 2], float(y_params[0]), float(y_params[1])])
-
+    diff = year_list[1] - year_list[0]
+    ax1.axis([year_list[1] - offset - padding, year_list[-1] + offset + padding, float(y_params[0]), float(y_params[1])])
+    
     leg = ax1.legend(prop={'size': leg_size})
     leg.get_frame().set_alpha(0.1)
-    plt.savefig(args.o + '.png')
 
-    im = Image.open(args.o + '.png')
-    im.save(args.o + '.tiff')
-
-    os.remove(args.o + '.png')
+    if args.o:
+        plt.savefig(args.o + '.png')
+        im = Image.open(args.o + '.png')
+        im.save(args.o + '.tiff')
+        os.remove(args.o + '.png')
+    else:
+        plt.show()
 
 
 if __name__ == '__main__':
