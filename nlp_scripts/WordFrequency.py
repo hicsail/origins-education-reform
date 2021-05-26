@@ -56,7 +56,7 @@ def calculate_idf_results(keywords, year_list, years_tally, directory, yrange_mi
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    text = jsondata[text_type]
+                    text = jsondata[field]
                     if bigrams:
                         text = nltk.bigrams(text)
                     try:
@@ -115,7 +115,7 @@ def calculate_tfidf_results(year_list, keywords, directory, idf_results, yrange_
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                     jsondata = json.load(inpt)
-                    text = jsondata[text_type]
+                    text = jsondata[field]
                     if bigrams:
                         text = nltk.bigrams(text)
                     try:
@@ -244,7 +244,7 @@ def keyword_and_word_count(year_list, directory, yrange_min, yrange_max, keyword
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    text = jsondata[text_type]
+                    text = jsondata[field]
                     if bigrams:
                         text = nltk.bigrams(text)
                     num_words = len(list(text))
@@ -374,7 +374,7 @@ def calculate_n_words(year_list, directory, num, yrange_min, yrange_max):
                         year = int(jsondata["Year Published"])
                     except KeyError:
                         year = int(jsondata["Date"])
-                    text = jsondata[text_type]
+                    text = jsondata[field]
                     text_len = len(text)
                     if bigrams:
                         text = nltk.bigrams(text)
@@ -417,57 +417,85 @@ def build_json(in_dict):
     jfile = json.dumps(in_dict, sort_keys=False, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "input",
+        action="store",
+        help="Input directory path"
+    )
+    parser.add_argument(
+        "years",
+        type=int,
+        nargs=3,
+        help="Start year, end year, and year increment for grouping texts",
+        action="store"
+    )
+    parser.add_argument(
+        "field",
+        help="Selects the text field to use in analysis",
+        default="Words",
+        action="store"
+    )
+    parser.add_argument(
+        "txt",
+        help="Text output filename",
+        action="store"
+    )
+    parser.add_argument(
+        "json",
+        help="JSON output filename",
+        action="store"
+    )
+    parser.add_argument(
+        "keywords",
+        help="List of words used for analysis",
+        action="store"
+    )
+    parser.add_argument(
+        "-bigram",
+        help="Set to analyze texts using bigrams rather than words",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-num",
+        help="Number of words to analyze from each decade",
+        action="store"
+    )
+    parser.add_argument(
+        "-label",
+        action="store",
+        help="Label associated with this corpus"
+    )
+
+    return parser.parse_args()
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
-    parser.add_argument("-txt", help="output text file argument", action="store")
-    parser.add_argument("-json", help="output csv file argument", action="store")
-    parser.add_argument("-b", help="boolean to control searching for bigrams rather than individual words",
-                        action="store_true")
-    parser.add_argument("-k", help="list of keywords argument, surround list with quotes", action="store")
-    parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
-                        action="store")
-    parser.add_argument("-num", help="number of words to grab from each decade, according to whichever metric "
-                                     "is chosen to be graphed", action="store")
-    parser.add_argument("-p", help="boolean to analyze by different periods rather than a fixed increment value",
-                        action="store_true")
-    parser.add_argument("-type", help="which text field from the json document you intend to analyze",
-                        action="store")
-    parser.add_argument("-nat", action="store", help="nation associated with this corpus", default=None)
-
-    try:
-        args = parser.parse_args()
-    except IOError:
-        pass
+    args = parse_args()
 
     # set up global values
-    global text_type, bigrams
+    global field, bigrams
+    field = args.field
 
-    if args.type is not None:
-        text_type = args.type
+    if args.label is not None:
+        label = args.label
     else:
-        text_type = 'Words'
+        label = args.input
 
-    if args.nat is not None:
-        nation = args.nat
-    else:
-        nation = "Unspecified"
-
-    periods = args.p
-    bigrams = args.b
+    bigrams = args.bigram
 
     # set up necessary values
-    directory = args.i
-    keywords = common.build_key_list(args.k, bigrams)
+    directory = args.input
+    keywords = common.build_key_list(args.keywords, bigrams)
+    print(keywords)
 
-    range_years = args.y.split()
-    year_params = common.year_params(range_years, periods)
+    range_years = args.years
+    year_params = common.year_params(range_years, None)
     increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
 
     # initialize list of years and dict to keep track
     # of how many books are within each year range
-    year_list = common.build_year_list(increment, range_years, periods, yrange_max, yrange_min)
+    year_list = common.build_year_list(increment, range_years, None, yrange_max, yrange_min)
     years_tally = build_years_tally(directory, year_list, yrange_min, yrange_max)
 
     num_docs = []
@@ -536,7 +564,7 @@ def main():
             txt_out.write("\n")
 
     jf = {}
-    jf['nation'] = nation
+    jf['label'] = label
     jf['year list'] = year_list
     jf['number of documents'] = num_docs
     jf['keywords'] = keywords
