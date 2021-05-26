@@ -235,11 +235,7 @@ def parse_args():
         action="store"
     )
 
-    try:
-        args = parser.parse_args()
-    except IOError:
-        common.fail("IO Error While Parsing Arguments")
-
+    args = parser.parse_args()
     if args.barwidth and (args.bar is None):
         parser.error("-barwidth requires --bar.")
 
@@ -275,7 +271,7 @@ def main():
 
     index = np.array(sorted(year_list))
     labels = []
-    for i in range(len(year_list) -1):
+    for i in range(len(year_list)):
         start = str(year_list[i])
         end = str(year_list[i + 1])
         labels.append("{0}-{1}".format(start, end))
@@ -291,7 +287,7 @@ def main():
                         color = str(0.3 * c)
                     else:
                         color = np.random.rand(1, 3)
-                    ax1.bar(index + (args.barwidth * i) - offset, graph_dict[f][k][:-1], args.barwidth, alpha=.8,
+                    ax1.bar(index + (args.barwidth * i) - offset, graph_dict[f][k], args.barwidth, alpha=.8,
                         color=color, label=graph_dict[f]['label'], align='edge')
                     i += 1
             c += 1
@@ -300,7 +296,7 @@ def main():
             for k in graph_dict[f]:
                 if k != 'label':
                     c += 1
-                    ax1.plot(index, graph_dict[f][k][:-1], label=graph_dict[f]['label'],
+                    ax1.plot(index, graph_dict[f][k], label=graph_dict[f]['label'],
                         color="black", linestyle=(0, (2*c, 2*c)))
 
     # Add title
@@ -313,7 +309,7 @@ def main():
     # with the bar graph, you want to include the space for the last year in year_list because you need space
     # for the bars. With the line graph, though, you don't want it because all you need is the point.
     diff = year_list[1] - year_list[0]
-    ax1.axis([year_list[1] - offset - args.padding, year_list[-1] + offset + args.padding, float(y_params[0]), float(y_params[1])])
+    ax1.axis([year_list[1] - offset - args.padding, year_list + offset + args.padding, float(y_params[0]), float(y_params[1])])
     
     leg = ax1.legend(prop={'size': args.legendsize})
     leg.get_frame().set_alpha(0.1)

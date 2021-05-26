@@ -17,140 +17,165 @@ import common
 # All other script functionality is the same.
 #
 
+def determine_year(year, year_list):
+    yrange_min = year_list[0]
+    increment = year_list[1] - year_list[0]
+    yrange_max = year_list[-1] + increment
+
+    if year < yrange_min:
+        return -1
+    if year >= yrange_max:
+        return -1
+
+    index = (year - yrange_min) // increment
+    year_bucket = index * increment + yrange_min
+    return year_bucket
 
 # build dict used to keep track of how many books user has
 # inputted for a given decade, used for calculating idf
 def build_years_tally(directory, year_list, yrange_min, yrange_max):
     years_tally = {}
     for y in year_list:
-        try:
-            years_tally[y] = 0
-        except KeyError:
-            pass
-    for subdir, dirs, files in os.walk(directory):
+        years_tally[y] = 0
+        
+    for _, _, files in os.walk(directory):
         print("Counting number of volumes per period.")
-        for jsondoc in tqdm.tqdm(files):
-            if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf-8') as in_file:
-                    jsondata = json.load(in_file)
-                    try:
-                        year = int(jsondata["Year Published"])
-                    except KeyError:
-                        year = int(jsondata["Date"])
-                    # check to make sure it's within range specified by user
-                    if yrange_min <= year < yrange_max:
-                        target = common.determine_year(year, year_list)
-                        try:
-                            years_tally[target] += 1
-                        except KeyError:
-                            pass
+        for filename in tqdm.tqdm(files):
+            if filename[0] == ".":
+                continue
+            with open(directory + "/" + filename, 'r', encoding='utf-8') as in_file:
+                jsondata = json.load(in_file)
+                compute_document_tally(jsondata, yrange_min, yrange_max, year_list, years_tally)
     return years_tally
 
+def compute_document_tally(jsondata, yrange_min, yrange_max, year_list, years_tally):
+    if "Year Published" in jsondata:
+        year = int(jsondata["Year Published"])
+    elif "Date" in jsondata:
+        year = int(jsondata["Date"])
+    else:
+        return
+
+    if year < yrange_min:
+        return
+    if year > yrange_max:
+        return
+
+    target = determine_year(year, year_list)
+    try:
+        years_tally[target] += 1
+    except KeyError:
+        pass
 
 # calculates idf score for each keyword/decade pair
 def calculate_idf_results(keywords, year_list, years_tally, directory, yrange_min, yrange_max):
     idf_results = common.build_dict_of_nums(year_list, keywords)
-    for subdir, dirs, files in os.walk(directory):
+    for _, _, files in os.walk(directory):
         print("Calculating IDF scores.")
         for jsondoc in tqdm.tqdm(files):
-            if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
-                    jsondata = json.load(in_file)
-                    text = jsondata[field]
-                    if bigrams:
-                        text = nltk.bigrams(text)
-                    try:
-                        year = int(jsondata["Year Published"])
-                    except KeyError:
-                        year = int(jsondata["Date"])
-                    # check to make sure it's within range specified by user
-                    if yrange_min <= year < yrange_max:
-                        target = common.determine_year(year, year_list)
-                        # create word frequency distribution
-                        fdist = nltk.FreqDist(text)
-                        for keyword in keywords:
-                            if not bigrams:
-                                words = keyword.split("/")
-                                for w in words:
-                                    # check if word occurs in document
-                                    if fdist[w] > 0:
-                                        try:
-                                            idf_results[target][keyword] += 1
-                                            break
-                                        except KeyError:
-                                            pass
-                                    else:
-                                        pass
-                            else:
-                                for i in range(len(keyword)):
-                                    if fdist[keyword[i]] > 0:
-                                        try:
-                                            idf_results[target][keyword] += 1
-                                            break
-                                        except KeyError:
-                                            pass
-                                    else:
-                                        pass
+            if jsondoc[0] == ".":
+                continue
+            with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                jsondata = json.load(in_file)
+                compute_document_idf(jsondata, yrange_min, yrange_max, year_list, keywords, idf_results)
     for y in year_list:
         for keyword in keywords:
             try:
                 # Add 1 before logarithm to ensure idf is nonzero, unless the word doesn't
                 # occur at all for the period, in which case it's idf score is 0.
                 if idf_results[y][keyword] > 0:
-                    idf_results[y][keyword] = 1 + round(math.log((years_tally[y]) / idf_results[y][keyword], 10), 4)
+                    idf_results[y][keyword] = math.log((years_tally[y]) / idf_results[y][keyword], 10)
                 else:
                     idf_results[y][keyword] = 0
             except KeyError:
                 pass
     return idf_results
 
+def compute_document_idf(jsondata, yrange_min, yrange_max, year_list, keywords, idf_results):
+    text = jsondata[field]
+    if bigrams:
+        text = nltk.bigrams(text)
+    try:
+        year = int(jsondata["Year Published"])
+    except KeyError:
+        year = int(jsondata["Date"])
+    # check to make sure it's within range specified by user
+    if yrange_min <= year < yrange_max:
+        target = determine_year(year, year_list)
+        # create word frequency distribution
+        fdist = nltk.FreqDist(text)
+        for keyword in keywords:
+            if not bigrams:
+                words = keyword.split("/")
+                for w in words:
+                    # check if word occurs in document
+                    if fdist[w] > 0:
+                        try:
+                            idf_results[target][keyword] += 1
+                            break
+                        except KeyError:
+                            pass
+                    else:
+                        pass
+            else:
+                for i in range(len(keyword)):
+                    if fdist[keyword[i]] > 0:
+                        try:
+                            idf_results[target][keyword] += 1
+                            break
+                        except KeyError:
+                            pass
+                    else:
+                        pass
 
 # calculates term frequency for each keyword/decade pair, then multiplies it with the idf score for that
 # decade, yielding a tf-idf score for each keyword/document pair. The results are stored in a dict of tuples.
 def calculate_tfidf_results(year_list, keywords, directory, idf_results, yrange_min, yrange_max):
     tf_idf_results = common.build_dict_of_lists(year_list, keywords)
-    for subdir, dirs, files in os.walk(directory):
+    for _, _, files in os.walk(directory):
         print("Calculating TF-IDF scores.")
         for jsondoc in tqdm.tqdm(files):
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
                     jsondata = json.load(inpt)
-                    text = jsondata[field]
-                    if bigrams:
-                        text = nltk.bigrams(text)
-                    try:
-                        year = int(jsondata["Year Published"])
-                    except KeyError:
-                        year = int(jsondata["Date"])
-                    # check to make sure it's within range specified by user
-                    if yrange_min <= year < yrange_max:
-                        target = common.determine_year(year, year_list)
-                        # create word frequency distribution
-                        fdist = nltk.FreqDist(text)
-                        # calculate tf and tf-idf for each keyword
-                        for keyword in keywords:
-                            # if single-word keywords are being searched for, then
-                            # they can be grouped together, separated by a "/" character.
-                            temp = 0
-                            if not bigrams:
-                                words = keyword.split("/")
-                                for w in words:
-                                    temp += calculate_tf(fdist, w)
-                            else:
-                                for i in range(len(keyword)):
-                                    temp += calculate_tf(fdist, keyword[i])
-                            try:
-                                idf = idf_results[target][keyword]
-                                tf_idf = calculate_tfidf(idf, temp)
-                                # append tuple of document/tf-idf score pair
-                                tf_idf_results[target][keyword].append((jsondoc, tf_idf))
-                            except KeyError:
-                                pass
+                    compute_document_tfidf(jsondata, jsondoc, yrange_min, yrange_max, year_list, keywords, idf_results, tf_idf_results)
     for year in year_list:
         for keyword in keywords:
             tf_idf_results[year][keyword] = sorted(tf_idf_results[year][keyword], key=lambda x: x[1])
     return tf_idf_results
 
+def compute_document_tfidf(jsondata, filename, yrange_min, yrange_max, year_list, keywords, idf_results, tf_idf_results):
+    text = jsondata[field]
+    if bigrams:
+        text = nltk.bigrams(text)
+    try:
+        year = int(jsondata["Year Published"])
+    except KeyError:
+        year = int(jsondata["Date"])
+    # check to make sure it's within range specified by user
+    if yrange_min <= year < yrange_max:
+        target = determine_year(year, year_list)
+        # create word frequency distribution
+        fdist = nltk.FreqDist(text)
+        # calculate tf and tf-idf for each keyword
+        for keyword in keywords:
+            # if single-word keywords are being searched for, then
+            # they can be grouped together, separated by a "/" character.
+            temp = 0
+            if not bigrams:
+                words = keyword.split("/")
+                for w in words:
+                    temp += calculate_tf(fdist, w)
+            else:
+                for i in range(len(keyword)):
+                    temp += calculate_tf(fdist, keyword[i])
+            try:
+                idf = idf_results[target][keyword]
+                tf_idf = calculate_tfidf(idf, temp)
+                # append tuple of document/tf-idf score pair
+                tf_idf_results[target][keyword].append((filename, tf_idf))
+            except KeyError:
+                pass
 
 # calculate term frequency for tf-idf results
 def calculate_tf(fdist, w):
@@ -169,7 +194,6 @@ def calculate_tfidf(idf_score, tf_score):
     tf_idf = tf_score * idf_score
     return tf_idf
 
-
 # returns avg tf-idf score for each decade
 def calculate_tfidf_avg(year_list, keywords, tf_idf_results):
     tf_idf_avg = common.build_dict_of_nums(year_list, keywords)
@@ -184,7 +208,7 @@ def calculate_tfidf_avg(year_list, keywords, tf_idf_results):
             # check if there exist files for the period
             if length > 0 or total > 0:
                 try:
-                    avg = round((total / length), 4)
+                    avg = total / length
                     tf_idf_avg[year_list[i]][keyword] = avg
                 except ZeroDivisionError:
                     tf_idf_avg[year_list[i]][keyword] = 0
@@ -244,46 +268,52 @@ def keyword_and_word_count(year_list, directory, yrange_min, yrange_max, keyword
             if jsondoc[0] != ".":
                 with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
-                    text = jsondata[field]
-                    if bigrams:
-                        text = nltk.bigrams(text)
-                    num_words = len(list(text))
-                    try:
-                        year = int(jsondata["Year Published"])
-                    except KeyError:
-                        year = int(jsondata["Date"])
-                    # check to make sure it's within range specified by user
-                    if yrange_min <= year < yrange_max:
-                        target = common.determine_year(year, year_list)
-                        fdist = nltk.FreqDist(text)
-                        for keyword in keywords:
-                            # keeping this here for bigrams
-                            word_count = 0
-                            # update keyword count for period/keyword pair
-                            if not bigrams:
-                                keys = keyword.split("/")
-                                for k in keys:
-                                    word_count += fdist[k]
-                                    word_count_dict[target][keyword][k] += fdist[k]
-                            else:
-                                # TODO: implement same functionality above for bigrams
-                                # TODO: pretty much everything for bigrams is not functional
-                                for i in range(len(keyword)):
-                                    word_count += fdist[keyword[i]]
-                            try:
-                                # add word count to frequency totals (for frequency as percentage of total words)
-                                # keyword_totals[target][keyword] += word_count
-                                # append word count to frequency list (for mean & variance of samples)
-                                # frequency_list[target][keyword].append(word_count)
-                                word_totals[target] += num_words
-                                word_count_dict[target][keyword]["TOTAL"] += word_count
-                                frequency_list[target][keyword].append(word_count)
-                            except KeyError:
-                                # decade out of range
-                                pass
+                    compute_document_keyword_and_word_count(jsondata, yrange_min, yrange_max, year_list, keywords, word_totals, word_count_dict, frequency_list)
 
     return [word_count_dict, frequency_list, word_totals]
 
+
+def compute_document_keyword_and_word_count(jsondata, yrange_min, yrange_max, year_list, keywords, word_totals, word_count_dict, frequency_list):
+    if "Year Published" in jsondata:
+        year = int(jsondata["Year Published"])
+    elif "Date" in jsondata:
+        year = int(jsondata["Date"])
+    else:
+        return
+
+    text = jsondata[field]
+    if bigrams:
+        text = nltk.bigrams(text)
+    num_words = len(list(text))
+    # check to make sure it's within range specified by user
+    if yrange_min <= year < yrange_max:
+        target = common.determine_year(year, year_list)
+        fdist = nltk.FreqDist(text)
+        for keyword in keywords:
+            # keeping this here for bigrams
+            word_count = 0
+            # update keyword count for period/keyword pair
+            if not bigrams:
+                keys = keyword.split("/")
+                for k in keys:
+                    word_count += fdist[k]
+                    word_count_dict[target][keyword][k] += fdist[k]
+            else:
+                # TODO: implement same functionality above for bigrams
+                # TODO: pretty much everything for bigrams is not functional
+                for i in range(len(keyword)):
+                    word_count += fdist[keyword[i]]
+            try:
+                # add word count to frequency totals (for frequency as percentage of total words)
+                # keyword_totals[target][keyword] += word_count
+                # append word count to frequency list (for mean & variance of samples)
+                # frequency_list[target][keyword].append(word_count)
+                word_totals[target] += num_words
+                word_count_dict[target][keyword]["TOTAL"] += word_count
+                frequency_list[target][keyword].append(word_count)
+            except KeyError:
+                # decade out of range
+                pass
 
 # calculates term frequency for each keyword/decade pair as a
 # percentage of the total words in all books for each decade
@@ -295,7 +325,7 @@ def take_keyword_percentage(year_list, keywords, total_words, keyword_totals):
             num = keyword_totals[year_list[i]][keyword]["TOTAL"]
             den = total_words[year_list[i]]
             if den > 0:
-                percent = round((num / den) * 100, 4)
+                percent = (num / den) * 100
                 keyword_percentages[year_list[i]][keyword]["TOTAL"] = percent
             else:
                 # no files for this decade, use previous decade's totals
@@ -310,7 +340,7 @@ def take_keyword_percentage(year_list, keywords, total_words, keyword_totals):
             for k in keyword.split("/"):
                 num = keyword_totals[year_list[i]][keyword][k]
                 if den > 0:
-                    percent = round((num / den) * 100, 4)
+                    percent = (num / den) * 100
                     keyword_percentages[year_list[i]][keyword][k] = percent
                 else:
                     prev_year = year_list[i - 1]
@@ -356,7 +386,7 @@ def obtain_n_words(fdist, num, total_words):
     # list of top words / frequency tuples in frequency distribution (fdist)
     n_list = fdist.most_common(num)
     for key_tup in n_list:
-        keywords.append((key_tup[0], round((key_tup[1] / total_words) * 100, 4)))
+        keywords.append((key_tup[0], (key_tup[1] / total_words) * 100, 4))
     return keywords
 
 
@@ -367,32 +397,39 @@ def calculate_n_words(year_list, directory, num, yrange_min, yrange_max):
     print("Calculating top {0} words per period".format(str(num)))
     for subdir, dirs, files in os.walk(directory):
         for jsondoc in files:
-            if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
-                    jsondata = json.load(in_file)
-                    try:
-                        year = int(jsondata["Year Published"])
-                    except KeyError:
-                        year = int(jsondata["Date"])
-                    text = jsondata[field]
-                    text_len = len(text)
-                    if bigrams:
-                        text = nltk.bigrams(text)
-                        text_len = len(text)
-                    fdist = nltk.FreqDist(text)
-                    if yrange_min <= year < yrange_max:
-                        target = common.determine_year(year, year_list)
-                        text_lengths[target] += text_len
-                        if fdist_dict[target] == 0:
-                            fdist_dict[target] = fdist
-                        else:
-                            fdist_dict[target] |= fdist
+            if jsondoc[0] == ".":
+                continue
+            with open(directory + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                jsondata = json.load(in_file)
+                compute_document_n_words(jsondata, yrange_min, yrange_max, year_list, fdist_dict, text_lengths, n_dict)
     for year in year_list:
         if num <= len(fdist_dict[year]):
             n_dict[year].extend(obtain_n_words(fdist_dict[year], num, text_lengths[year]))
         else:
             n_dict[year].extend(obtain_n_words(fdist_dict[year], len(fdist_dict[year]), text_lengths[year]))
     return n_dict
+
+def compute_document_n_words(jsondata, yrange_min, yrange_max, year_list, fdist_dict, text_lengths, n_dict):
+    if "Year Published" in jsondata:
+        year = int(jsondata["Year Published"])
+    elif "Date" in jsondata:
+        year = int(jsondata["Date"])
+    else:
+        return
+
+    text = jsondata[field]
+    text_len = len(text)
+    if bigrams:
+        text = nltk.bigrams(text)
+        text_len = len(text)
+    fdist = nltk.FreqDist(text)
+    if yrange_min <= year < yrange_max:
+        target = determine_year(year, year_list)
+        text_lengths[target] += text_len
+        if fdist_dict[target] == 0:
+            fdist_dict[target] = fdist
+        else:
+            fdist_dict[target] |= fdist
 
 
 # writes N highest occurring words for each period to a text file
@@ -411,7 +448,6 @@ def list_top_words(out, year, results, num):
         for key_tup in results[year]:
             out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0], str(key_tup[1]))) + "\n")
     out.write("\n")
-
 
 def build_json(in_dict):
     jfile = json.dumps(in_dict, sort_keys=False, indent=4, separators=(',', ': '), ensure_ascii=False)
@@ -489,13 +525,14 @@ def main():
     keywords = common.build_key_list(args.keywords, bigrams)
     print(keywords)
 
-    range_years = args.years
-    year_params = common.year_params(range_years, None)
-    increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
+    # Handle year argument
+    [yrange_min, yrange_max, increment] = args.years
+    if yrange_max < yrange_min:
+        raise Exception("Maximum year must be larger than minimum year.")
+    if (yrange_max - yrange_min) % increment != 0:
+        raise Exception("Increment does not evenly divide year range.")
+    year_list = list(range(yrange_min, yrange_max, increment))
 
-    # initialize list of years and dict to keep track
-    # of how many books are within each year range
-    year_list = common.build_year_list(increment, range_years, None, yrange_max, yrange_min)
     years_tally = build_years_tally(directory, year_list, yrange_min, yrange_max)
 
     num_docs = []
