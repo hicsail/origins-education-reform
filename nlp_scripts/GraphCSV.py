@@ -104,7 +104,7 @@ def main():
                                 # list of periods
                                 years = row[5].split()
                                 # number of documents for each period
-                                numdocs.append(row[8].split())
+                                numdocs.append(row[6].split())
                                 for year in years:
                                     year_list.append(int(year))
                             elif row[0] == "Average Sentiment Across Corpus":
