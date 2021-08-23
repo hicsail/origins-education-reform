@@ -78,13 +78,7 @@ def process_documents(keywords, periods, directory, num):
                     length = len(text)
                 freq_dist = nltk.FreqDist(text)
 
-                if "Year Published" in jsondata:
-                    year = int(jsondata["Year Published"])
-                elif "Date" in jsondata:
-                    year = int(jsondata["Date"])
-                else:
-                    continue
-
+                year = int(jsondata["Year"])
                 if year < yrange_min:
                     continue
                 if year >= yrange_max:

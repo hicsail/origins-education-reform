@@ -15,10 +15,7 @@ def parse_json(in_dir, out_dir, keywords, by_sentences):
                 with open(in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
                     index += 1
                     jsondata = json.load(in_file)
-                    try:
-                        year = int(jsondata["Year Published"])
-                    except KeyError:
-                        year = int(jsondata["Date"])
+                    year = int(jsondata["Year"])
                     if y_min <= year <= y_max:
                         try:
                             title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type[0]]
@@ -92,7 +89,7 @@ def write_to_file(out_dir, words, year, index, sub_index, title, author, sub_tex
 # date (for sentiment analysis by period), title & author (to reference the book it came from)
 # and the keyword itself, for reference.
 def build_json(title, author, keyword, year, text, words):
-    jfile = json.dumps({'Title': title, 'Author': author, 'Keyword': keyword, 'Year Published': year, 'Text': text,
+    jfile = json.dumps({'Title': title, 'Author': author, 'Keyword': keyword, 'Year': year, 'Text': text,
                         'Words': words},
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile

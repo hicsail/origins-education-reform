@@ -42,7 +42,7 @@ def populate_overall_sentiment(directory, overall_list, year_list, afinn):
                     sentiment = 0
                     jsondata = json.load(inpt)
                     text = jsondata["Filtered Text"]
-                    year = int(jsondata["Year Published"])
+                    year = int(jsondata["Year"])
                     # check to make sure it's within range specified by user
                     if yrange_min <= year < yrange_max:
                         # determine which period it falls within
@@ -88,7 +88,7 @@ def populate_sent_dict(directory, key_list, year_list, afinn):
                             sentiment = 0
                             jsondata = json.load(inpt)
                             text = jsondata["Text"]
-                            year = int(jsondata["Year Published"])
+                            year = int(jsondata["Year"])
                             # check to make sure it's within range specified by user
                             if yrange_min <= year < yrange_max:
                                 target = common.determine_year(year, year_list)

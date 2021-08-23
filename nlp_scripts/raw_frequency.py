@@ -17,10 +17,7 @@ def take_frequencies(corpus, keywords, text_type, binary):
                     jsondata = json.load(in_file)
                     name = jsondoc
 
-                    try:
-                        year = jsondata["Year Published"]
-                    except KeyError:
-                        year = jsondata["Date"]
+                    year = jsondata["Year"]
 
                     row = [name, year]
                     # take 0/1 occurrences on snippet files

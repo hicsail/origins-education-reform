@@ -31,7 +31,7 @@ def init_sent_doc_dict(input_dir, key_list, year_list, stopwords, yrange_min, yr
                                 # Delete empty strings
                                 if text[i] in stopwords or len(text[i]) < 2:
                                     del text[i]
-                            year = int(jsondata["Year Published"])
+                            year = int(jsondata["Year"])
                             # check to make sure it's within range specified by user
                             if yrange_min <= year < yrange_max:
                                 target = common.determine_year(year, year_list)
