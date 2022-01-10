@@ -2,8 +2,6 @@ import argparse, json, os, math, csv
 import matplotlib.pyplot as plt
 import numpy as np
 import common
-from PIL import Image
-import os
 
 
 # csv has trouble handling lists explicitly, so need to store
@@ -49,12 +47,12 @@ def build_graph_dict(in_dir, data_type):
                     for keyword in keywords:
                         if not breakdown:
                             # this step assumes there are no keyword repeats across files
-                            graphed[file][keyword] = [0]
+                            graphed[file][keyword] = []
                             graphed[file][keyword].extend(jsondata[keyword][data_type])
                         else:
                             for k in keyword.split('/'):
                                 # only works for keyword percentages
-                                graphed[file][k] = [0]
+                                graphed[file][k] = []
                                 graphed[file][k].extend(jsondata['breakdown'][k])
             elif file[0] != '.' and file[-4:] == '.csv':
                 # hacky bc csv files are awful
@@ -112,6 +110,7 @@ def build_year_list(in_dir):
     return year_lists[0]
 
 
+
 def determine_data_type(statistic):
     mapping = {
         "avg": {
@@ -146,23 +145,33 @@ def determine_data_type(statistic):
         }
     }
     result = mapping[statistic]
-    return (result["data_type"], result["y_label"], result["title"])
+    return result["data_type"], result["y_label"], result["title"]
+
+# if bar, determine bar width
+def plot_type(bar, width):
+    if bar:
+        if width is not None:
+            width = float(width)
+        else:
+            width = 5
+    return [bar, width]
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "input",
+        "-i",
         help="Input directory path",
         action="store"
     )
     parser.add_argument(
-        "statistic",
+        "-stat",
         help="Statistic to graph",
         choices=["avg", "max", "mean", "min", "percent", "var"],
         action="store"
     )
     parser.add_argument(
-        "-output",
+        "-o",
         help="Filename for image output",
         action="store"
     )
@@ -186,7 +195,7 @@ def parse_args():
         action="store_true"
     )
     parser.add_argument(
-        "-barwidth",
+        "-b_width",
         help="Set bar width in bar graph. Requires --bar",
         type=int,
         default=5,
@@ -207,7 +216,7 @@ def parse_args():
         action="store"
     )
     parser.add_argument(
-        "-legendsize",
+        "-leg",
         help="Set the legend size",
         type=int,
         default=10,
@@ -236,8 +245,8 @@ def parse_args():
     )
 
     args = parser.parse_args()
-    if args.barwidth and (args.bar is None):
-        parser.error("-barwidth requires --bar.")
+    if args.b_width and (args.bar is None):
+        parser.error("-b_width requires --bar.")
 
     return args
 
@@ -245,82 +254,95 @@ def main():
     args = parse_args()
 
     global breakdown
-    breakdown = args.breakdown
+
+    if args.breakdown:
+        breakdown = True
+    else:
+        breakdown = False
 
     fig = plt.figure()
     ax1 = plt.subplot2grid((1,1), (0,0))
 
-    (data_type, y_label, title) = determine_data_type(args.statistic)
-    
-    graph_dict = build_graph_dict(args.input, data_type)
+    data_type, y_label, title = determine_data_type(args.stat)
 
-    year_list = build_year_list(args.input)
+    graph_dict = build_graph_dict(args.i, data_type)
+
+    year_list = build_year_list(args.i)
+
+    plot_params = plot_type(args.bar, args.b_width)
+    bar, width = plot_params[0], plot_params[1]
+
+    if args.leg is not None:
+        leg_size = int(args.leg)
+    else:
+        leg_size = 10
 
     if args.yaxis is not None:
-        y_params = args.yaxis
+        y_params = args.yaxis.split()
     else:
         y_params = find_max_and_min(graph_dict)
+        y_params[0] = 0
         y_params[1] *= 1.2
 
     # set x-axis
     num_ranges = len(graph_dict)
-    if args.bar:
-        offset = num_ranges * args.barwidth / 2
+    if bar:
+        offset = num_ranges * width / 2
     else:
         offset = 0
 
     index = np.array(sorted(year_list))
-    labels = []
-    for i in range(len(year_list)):
-        start = str(year_list[i])
-        end = str(year_list[i + 1])
-        labels.append("{0}-{1}".format(start, end))
-    plt.xticks(index[1:], labels, fontsize=args.labelsize)
+    diff = year_list[1] - year_list[0]
+    ticks = index - diff
+    labels = np.append(index, index[-1] + diff)
+    labels = ["{0}-{1}".format(labels[i], labels[i+1]) for i in range(len(labels) - 1)]
+    plt.xticks(index, labels)
+    if args.labelsize:
+        for label in ax1.xaxis.get_ticklabels():
+            label.set_size(args.labelsize)
 
-    c = 0
-    if args.bar:
+    if bar:
         i = 0
         for f in graph_dict:
             for k in graph_dict[f]:
                 if k != 'label':
-                    if args.bw:
-                        color = str(0.3 * c)
-                    else:
-                        color = np.random.rand(1, 3)
-                    ax1.bar(index + (args.barwidth * i) - offset, graph_dict[f][k], args.barwidth, alpha=.8,
-                        color=color, label=graph_dict[f]['label'], align='edge')
+                    print(index)
+                    print(graph_dict[f][k])
+                    ax1.bar(index + (width * i) - offset, graph_dict[f][k], width, alpha=.8,
+                            color=np.random.rand(1, 3), label="{0}: {1}".format(f,k), align='edge')
                     i += 1
-            c += 1
     else:
         for f in graph_dict:
             for k in graph_dict[f]:
                 if k != 'label':
-                    c += 1
-                    ax1.plot(index, graph_dict[f][k], label=graph_dict[f]['label'],
-                        color="black", linestyle=(0, (2*c, 2*c)))
+                    print(index)
+                    print(graph_dict[f][k])
+                    ax1.plot(index, graph_dict[f][k], label="{0}: {1}".format(f,k))
 
     # Add title
-    plt.title(title, fontsize=args.titlesize)
+    if args.titlesize:
+        plt.title(title, fontsize=args.titlesize)
+    else:
+        plt.title(title)
 
     # Set axis labels
-    plt.xlabel("Period", fontsize=args.axislabelsize)
-    plt.ylabel(y_label, fontsize=args.axislabelsize)
-    
-    # with the bar graph, you want to include the space for the last year in year_list because you need space
-    # for the bars. With the line graph, though, you don't want it because all you need is the point.
-    diff = year_list[1] - year_list[0]
-    ax1.axis([year_list[1] - offset - args.padding, year_list + offset + args.padding, float(y_params[0]), float(y_params[1])])
-    
-    leg = ax1.legend(prop={'size': args.legendsize})
-    leg.get_frame().set_alpha(0.1)
-
-    if args.output:
-        plt.savefig(args.o + '.png')
-        im = Image.open(args.o + '.png')
-        im.save(args.o + '.tiff')
-        os.remove(args.o + '.png')
+    if args.axislabelsize:
+        plt.xlabel("Period", fontsize=args.axislabelsize)
+        plt.ylabel(y_label, fontsize=args.axislabelsize)
     else:
-        plt.show()
+        plt.xlabel("Period")
+        plt.ylabel(y_label)
+
+    if args.padding:
+        padding = int(args.padding)
+    else:
+        padding = 5
+
+    ax1.axis([year_list[0] - offset - padding, year_list[-1] + offset + padding, float(y_params[0]), float(y_params[1])])
+    
+    leg = ax1.legend(prop={'size': leg_size})
+    leg.get_frame().set_alpha(0.1)
+    plt.show()
 
 
 if __name__ == '__main__':

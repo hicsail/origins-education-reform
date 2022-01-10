@@ -10,9 +10,7 @@ import common
 # well as basic term frequency as a percentage of total words. All four of these metrics are provided
 # in a text file at the end of each run. The text file can also include an arbitrary number (specified
 # by the user) of max/min tf-idf scores along with their respective documents, as well as a list of
-# words with top frequencies per period. This script also outputs a csv file with tf-idf average, maximum,
-# minimum and term frequency for each keyword specified. The statistics in this csv file can be read and
-# graphed by another script called GraphCSV.py.
+# words with top frequencies per period.
 #
 # Update 9/28: Input argument -b will allow the user to analyze bigrams rather than individual keywords.
 # All other script functionality is the same.
@@ -266,37 +264,41 @@ def build_json(in_dict):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "input",
+        "-i",
         action="store",
-        help="Input directory path"
+        help="Input directory path",
+        required=True
     )
     parser.add_argument(
-        "years",
-        type=int,
-        nargs=3,
+        "-y",
         help="Start year, end year, and year increment for grouping texts",
-        action="store"
+        action="store",
+        required=True
     )
     parser.add_argument(
-        "field",
+        "-type",
         help="Selects the text field to use in analysis",
         default="Words",
-        action="store"
+        action="store",
+        required=True
     )
     parser.add_argument(
-        "txt",
+        "-txt",
         help="Text output filename",
-        action="store"
+        action="store",
+        required=True
     )
     parser.add_argument(
-        "json",
+        "-json",
         help="JSON output filename",
-        action="store"
+        action="store",
+        required=True
     )
     parser.add_argument(
-        "keywords",
+        "-k",
         help="List of words used for analysis",
-        action="store"
+        action="store",
+        required=True
     )
     parser.add_argument(
         "-bigram",
@@ -322,22 +324,16 @@ if __name__ == "__main__":
 
     # set up global values
     global field, bigrams
-    field = args.field
-
-    if args.label is not None:
-        label = args.label
-    else:
-        label = args.input
-
+    field = args.type
     bigrams = args.bigram
 
     # set up necessary values
-    directory = args.input
-    keywords = common.build_key_list(args.keywords, bigrams)
+    directory = args.i
+    keywords = common.build_key_list(args.k, bigrams)
 
     # Handle year argument
     global yrange_min, yrange_max, increment
-    [yrange_min, yrange_max, increment] = args.years
+    [yrange_min, yrange_max, increment] = map(int, args.y.split())
     if yrange_max < yrange_min:
         raise Exception("Maximum year must be larger than minimum year.")
     if (yrange_max - yrange_min) % increment != 0:
@@ -351,13 +347,16 @@ if __name__ == "__main__":
     keyword_percentage = take_keyword_percentage(periods, keywords, word_totals, word_count_dict)
     keyword_averages, keyword_variances = calculate_frequency_stats(periods, keywords, frequency_list)
 
+    out_periods = periods + [yrange_max]
+    out_periods = [[out_periods[i], out_periods[i+1]] for i in range(len(out_periods) - 1)]
+
     # create txt file and write all the collected data to it
     with open(args.txt + '.txt', 'w') as txt_out:
         txt_out.write("Corresponding Json file for this text document is located on your machine at the "
                       "following filepath: {0}".format(args.json) + "\n")
         print("Writing results to text file")
-        for i in tqdm.tqdm(range(len(periods) - 1)):
-            txt_out.write("Period: {0} - {1}".format(str(periods[i]), str(periods[i+1])) + "\n")
+        for i in tqdm.tqdm(range(len(out_periods) - 1)):
+            txt_out.write("Period: {0}-{1}".format(out_periods[i][0], out_periods[i][1]) + "\n")
             txt_out.write("Number of volumes for this period: {0}".format(str(num_docs[periods[i]])) + "\n")
             for keyword in keywords:
                 txt_out.write("{0}:".format(str(keyword)) + "\n")
@@ -381,7 +380,7 @@ if __name__ == "__main__":
             txt_out.write("\n")
 
     jf = {}
-    jf['label'] = label
+    jf['label'] = args.label
     jf['year list'] = periods
     jf['number of documents'] = [num_docs[x] for x in num_docs]
     jf['keywords'] = keywords

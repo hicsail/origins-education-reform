@@ -1,15 +1,29 @@
-import sys
+import argparse, sys
 from nltk.stem.snowball import SnowballStemmer
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-words",
+        help="Words to stem",
+        nargs="+",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-language",
+        help="Language of words",
+        action="store",
+        required=True
+    )
+
+    args = parser.parse_args()
+    return args
+
 if __name__ == '__main__':
-    language = input("Input language: ").strip().lower()
-    stemmer = SnowballStemmer(language)
-    try:
-        while True:
-            word = input("Enter a word or press Ctrl+C to exit: ")
-            if " " in word:
-                print("Not a word!")
-                continue
+    args = parse_args()
+
+    stemmer = SnowballStemmer(args.language)
+    for word_list in args.words:
+        for word in word_list.split():
             print(stemmer.stem(word))
-    except KeyboardInterrupt:
-        sys.exit()
