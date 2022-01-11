@@ -240,24 +240,3 @@ def list_max_docs(out, year, keyword, results, num, analysis):
         for key_tup in results[year][keyword]:
             out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
             i += 1
-
-
-# keeping the following two methods just in case we come back to them
-def build_z_list(year_list, x1, x2, n1, n2):
-    z = []
-    for year in tqdm.tqdm(year_list):
-        z.append(z_test(x1[year], n1[year], x2[year], n2[year]))
-    return z
-
-
-def z_test(x1, n1, x2, n2):
-    p1 = x1/n1
-    p2 = x2/n2
-
-    p = float((p1*n1 + p2*n2)/(n1 + n2))
-    se = (p*(1-p))*((n1 + n2)/(n1*n2))
-    se = math.sqrt(se)
-
-    z = (p1 - p2)/se
-
-    return z
