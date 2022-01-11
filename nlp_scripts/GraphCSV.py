@@ -5,13 +5,8 @@ import numpy as np
 
 #                       *** GraphCSV.py ***
 #
-# This script takes csv files as input (which are themselves output
-# of WordFrequency.py or SentAnalysis.py) and graphs whichever information the user
-# would like to from them. As of 10/9/16 this script supports graphing for
-# the following metrics: tf-idf average, maximum, minimum, term frequency
-# as a percentage of total words, and avg/max/min sentiment score.
-#
-
+# This script takes csv files outputted by SentAnalysis.py or TopicModeler.py
+# and graphs whichever information the user would like to from them
 
 # csv has trouble handling lists explicitly, so need to store
 # them as strings and construct lists out of them instead

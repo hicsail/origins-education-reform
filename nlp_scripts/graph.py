@@ -1,17 +1,7 @@
-import argparse, json, os, math, csv
+import argparse, json, os, math
 import matplotlib.pyplot as plt
 import numpy as np
 import common
-
-
-# csv has trouble handling lists explicitly, so need to store
-# them as strings and construct lists out of them instead
-def string_to_floats(str_inpt):
-    str_list = str_inpt.split()
-    return_list = []
-    for num in str_list:
-        return_list.append(float(num))
-    return return_list
 
 # find max and min values from graphed dict
 def find_max_and_min(in_dict):
@@ -31,9 +21,7 @@ def find_max_and_min(in_dict):
 # builds dictionary of graphed values from directory of json files and metric to be graphed
 def build_graph_dict(in_dir, data_type):
     graphed = {}
-    # determine index of data for csv files
-    indx = determine_index(data_type)
-    # iterate over json / csv files in directory, append
+    # iterate over json files in directory, append
     # data from each to keyword entry in graphed dict
     for _, _, files in os.walk(in_dir):
         for file in files:
@@ -53,38 +41,9 @@ def build_graph_dict(in_dir, data_type):
                                 # only works for keyword percentages
                                 graphed[file][k] = []
                                 graphed[file][k].extend(jsondata['breakdown'][k])
-            elif file[0] != '.' and file[-4:] == '.csv':
-                # hacky bc csv files are awful
-                with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
-                    read_csv = csv.reader(in_file, delimiter=',')
-                    for row in read_csv:
-                        if row[0] != "word" and row[1] != "tf-idf avg":
-                            graphed[row[0]] = []
-                            graphed[row[0]].extend(string_to_floats(row[indx]))
     return graphed
 
-
-# determine column index for data in csv files
-def determine_index(data_type):
-    index = 0
-    if data_type == 'tf-idf avg':
-        index = 1
-    elif data_type == 'tf-idf max':
-        index = 2
-    elif data_type == 'tf-idf min':
-        index = 3
-    elif data_type == 'word frequency':
-        index = 4
-    elif data_type == 'average frequency':
-        index = 5
-    elif data_type == 'variance':
-        index = 6
-    else:
-        common.fail('You shouldn\'t be able to get here, congratulations!!')
-    return index
-
-
-# checks to make sure the year lists in each json / csv file are equal
+# checks to make sure the year lists in each json file are equal
 def build_year_list(in_dir):
     year_lists = []
     for subdir, dirs, files in os.walk(in_dir):
@@ -93,14 +52,6 @@ def build_year_list(in_dir):
                 with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
                     jsondata = json.load(in_file)
                     year_lists.append(sorted(jsondata['year list']))
-            elif file[0] != '.' and file[-4] == '.csv':
-                with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
-                    read_csv = csv.reader(in_file, delimiter=',')
-                    for row in read_csv:
-                        if row[0] == "word" and row[1] == "tf-idf avg":
-                            years = row[7].split()
-                            year_list = sorted([int(year) for year in years])
-                            year_lists.append(year_list)
     for year_list in year_lists:
         if year_list != year_lists[0]:
             common.fail("One of your files has a different year list from the others." +
