@@ -143,12 +143,10 @@ def sent_calcs(year_list, key_list, sent_results, calc_type):
                     totals.append(sent_results[year_list[i]][keyword][j][1])
                 total = sum(totals)
                 # make sure there are files associated with this period
-                if length > 0 or total > 0:
-                    try:
-                        average = round((total / length), 4)
-                        sent_result[year_list[i]][keyword] = average
-                    except ZeroDivisionError:
-                        sent_result[year_list[i]][keyword] = 0
+                if length > 0:
+                    sent_result[year_list[i]][keyword] = round((total / length), 4)
+                elif total > 0:
+                    sent_result[year_list[i]][keyword] = 0
                 else:
                     # no files for this period / keyword pair, use previous period's score
                     sent_result[year_list[i]][keyword] = handle_empty_entry(year_list, i, keyword, sent_result)
