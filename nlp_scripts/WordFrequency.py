@@ -348,7 +348,6 @@ if __name__ == "__main__":
     keyword_averages, keyword_variances = calculate_frequency_stats(periods, keywords, frequency_list)
 
     out_periods = periods + [yrange_max]
-    out_periods = [[out_periods[i], out_periods[i+1]] for i in range(len(out_periods) - 1)]
 
     # create txt file and write all the collected data to it
     with open(args.txt + '.txt', 'w') as txt_out:
@@ -356,7 +355,7 @@ if __name__ == "__main__":
                       "following filepath: {0}".format(args.json) + "\n")
         print("Writing results to text file")
         for i in tqdm.tqdm(range(len(out_periods) - 1)):
-            txt_out.write("Period: {0}-{1}".format(out_periods[i][0], out_periods[i][1]) + "\n")
+            txt_out.write("Period: {0}-{1}".format(out_periods[i], out_periods[i+1]) + "\n")
             txt_out.write("Number of volumes for this period: {0}".format(str(num_docs[periods[i]])) + "\n")
             for keyword in keywords:
                 txt_out.write("{0}:".format(str(keyword)) + "\n")
@@ -381,7 +380,7 @@ if __name__ == "__main__":
 
     jf = {}
     jf['label'] = args.label
-    jf['year list'] = periods
+    jf['year list'] = out_periods
     jf['number of documents'] = [num_docs[x] for x in num_docs]
     jf['keywords'] = keywords
     jf['breakdown'] = {}

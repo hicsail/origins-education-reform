@@ -13,7 +13,6 @@ def string_to_floats(str_inpt):
         return_list.append(float(num))
     return return_list
 
-
 # find max and min values from graphed dict
 def find_max_and_min(in_dict):
     g_max = 0
@@ -291,11 +290,11 @@ def main():
     else:
         offset = 0
 
-    index = np.array(sorted(year_list))
-    diff = year_list[1] - year_list[0]
+    year_list = sorted(year_list)
+    index = np.array(sorted(year_list)[:-1])
+    diff = index[1] - index[0]
     ticks = index - diff
-    labels = np.append(index, index[-1] + diff)
-    labels = ["{0}-{1}".format(labels[i], labels[i+1]) for i in range(len(labels) - 1)]
+    labels = ["{0}-{1}".format(year_list[i], year_list[i+1]) for i in range(len(year_list) - 1)]
     plt.xticks(index, labels)
     if args.labelsize:
         for label in ax1.xaxis.get_ticklabels():
@@ -338,7 +337,7 @@ def main():
     else:
         padding = 5
 
-    ax1.axis([year_list[0] - offset - padding, year_list[-1] + offset + padding, float(y_params[0]), float(y_params[1])])
+    ax1.axis([index[0] - offset - padding, index[-1] + offset + padding, float(y_params[0]), float(y_params[1])])
     
     leg = ax1.legend(prop={'size': leg_size})
     leg.get_frame().set_alpha(0.1)
