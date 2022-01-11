@@ -12,25 +12,26 @@ def filter_by_threshold(thresh, score):
 def filter_tfidf(keywords, dictionary, in_dir, out_dir, tfidf_model, text_type, thresh):
     for subdir, dirs, files in os.walk(in_dir):
         for jf in files:
-            if jf[0] != ".":
-                text = extract_text(in_dir + jf, text_type)
-                docbow = dictionary.doc2bow(text)
-                for keyword in keywords:
-                    words = keyword.split("/")
-                    # abstract all this into another method, doing too much
-                    for w in words:
-                        if w in set(text):
-                            w_id = dictionary.token2id[w]
-                            tfidf = tfidf_model[docbow]
-                            copied = False
-                            if not copied:
-                                for score in tfidf:
-                                    if score[0] == w_id:
-                                        # check against threshold, copy if above
-                                        if filter_by_threshold(thresh, score[1]):
-                                            copied = True
-                                            copyfile(in_dir + jf, out_dir + keyword + '/' + jf)
-                                            # only want one copy, break to next keyword
+            if jf[0] == ".":
+                continue
+            text = extract_text(in_dir + jf, text_type)
+            docbow = dictionary.doc2bow(text)
+            for keyword in keywords:
+                words = keyword.split("/")
+                # abstract all this into another method, doing too much
+                for w in words:
+                    if w not in set(text):
+                        continue
+                    w_id = dictionary.token2id[w]
+                    tfidf = tfidf_model[docbow]
+                    for score in tfidf:
+                        if score[0] != w_id:
+                            continue
+                        # check against threshold, copy if above
+                        if filter_by_threshold(thresh, score[1]):
+                            copied = True
+                            copyfile(in_dir + jf, out_dir + keyword + '/' + jf)
+                            # only want one copy, break to next keyword
 
 
 def extract_text(jf, text_type):
@@ -45,10 +46,11 @@ def construct_dictionary_and_corpus(in_dir, text_type):
     corpus = []
     for subdir, dirs, files in os.walk(in_dir):
         for jf in files:
-            if jf[0] != ".":
-                text = extract_text(in_dir + jf, text_type)
-                dictionary.add_documents([text])
-                corpus.append(dictionary.doc2bow(text))
+            if jf[0] == ".":
+                continue
+            text = extract_text(in_dir + jf, text_type)
+            dictionary.add_documents([text])
+            corpus.append(dictionary.doc2bow(text))
     return [dictionary, corpus]
 
 

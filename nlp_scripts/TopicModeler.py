@@ -22,23 +22,25 @@ def init_sent_doc_dict(input_dir, key_list, year_list, stopwords, yrange_min, yr
         for subdir in tqdm.tqdm(subdirs):
             for folders, subfolders, file in os.walk(dirs + "/" + subdir):
                 for jsondoc in file:
-                    if jsondoc[0] != ".":
-                        with open(dirs + "/" + subdir + "/" + jsondoc, 'r', encoding='utf8') as inpt:
-                            jsondata = json.load(inpt)
-                            text = jsondata[text_type]
-                            # remove stopwords
-                            for i in range(len(text) - 1, -1, -1):
-                                # Delete empty strings
-                                if text[i] in stopwords or len(text[i]) < 2:
-                                    del text[i]
-                            year = int(jsondata["Year"])
-                            # check to make sure it's within range specified by user
-                            if yrange_min <= year < yrange_max:
-                                target = common.determine_year(year, year_list)
-                                try:
-                                    doc_dict[target][subdir].append(text)
-                                except KeyError:
-                                    pass
+                    if jsondoc[0] == ".":
+                        continue
+                    with open(dirs + "/" + subdir + "/" + jsondoc, 'r', encoding='utf8') as inpt:
+                        jsondata = json.load(inpt)
+                        text = jsondata[text_type]
+                        # remove stopwords
+                        for i in range(len(text) - 1, -1, -1):
+                            # Delete empty strings
+                            if text[i] in stopwords or len(text[i]) < 2:
+                                del text[i]
+                        year = int(jsondata["Year"])
+                        # check to make sure it's within range specified by user
+                        if year < yrange_min or year >= yrange_max:
+                            continue
+                        target = common.determine_year(year, year_list)
+                        try:
+                            doc_dict[target][subdir].append(text)
+                        except KeyError:
+                            pass
     return doc_dict
 
 

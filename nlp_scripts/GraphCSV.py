@@ -64,53 +64,57 @@ def main():
     # iterate over directory of csv files
     for subdir, dirs, files in os.walk(args.i):
         for csv_file in files:
-            if csv_file[0] != "." and csv_file[-4:] == ".csv":
-                # construct list of tuples to be graphed (word, list)
-                with open(args.i + "/" + csv_file, 'r', encoding='UTF-8') as csvfile:
-                    read_csv = csv.reader(csvfile, delimiter=',')
-                    year_list = []
-                    # graph results from WordFrequency.py
-                    if args.wf:
-                        for row in read_csv:
-                            if row[0] == "word" and row[1] == "tf-idf avg":
-                                years = row[7].split()
-                                numdocs.append(row[8].split())
-                                for year in years:
-                                    year_list.append(int(year))
-                            else:
-                                if args.avg:
-                                    graphed.append((row[0], string_to_floats(row[1])))
-                                if args.max:
-                                    graphed.append((row[0], string_to_floats(row[2])))
-                                if args.min:
-                                    graphed.append((row[0], string_to_floats(row[3])))
-                                if args.percent:
-                                    graphed.append((row[0], string_to_floats(row[4])))
-                                if args.mean:
-                                    graphed.append(("Mean for {0}".format(row[0]), string_to_floats(row[5])))
-                                if args.var:
-                                    graphed.append(("Variance for {0}".format(row[0]), string_to_floats(row[6])))
-                                    # mean and variance
+            if csv_file[0] == ".":
+                continue
+            if csv_file[-4:] != ".csv":
+                continue
 
-                    # graph results from SentAnalysis.py
-                    if args.sa:
-                        for row in read_csv:
-                            if row[0] == "word" and row[1] == "sent avg":
-                                # list of periods
-                                years = row[5].split()
-                                # number of documents for each period
-                                numdocs.append(row[8].split())
-                                for year in years:
-                                    year_list.append(int(year))
-                            elif row[0] == "Average Sentiment Across Corpus":
+            # construct list of tuples to be graphed (word, list)
+            with open(args.i + "/" + csv_file, 'r', encoding='UTF-8') as csvfile:
+                read_csv = csv.reader(csvfile, delimiter=',')
+                year_list = []
+                # graph results from WordFrequency.py
+                if args.wf:
+                    for row in read_csv:
+                        if row[0] == "word" and row[1] == "tf-idf avg":
+                            years = row[7].split()
+                            numdocs.append(row[8].split())
+                            for year in years:
+                                year_list.append(int(year))
+                        else:
+                            if args.avg:
                                 graphed.append((row[0], string_to_floats(row[1])))
-                            else:
-                                if args.avg:
-                                    graphed.append((row[0], string_to_floats(row[1])))
-                                if args.max:
-                                    graphed.append((row[0], string_to_floats(row[2])))
-                                if args.min:
-                                    graphed.append((row[0], string_to_floats(row[3])))
+                            if args.max:
+                                graphed.append((row[0], string_to_floats(row[2])))
+                            if args.min:
+                                graphed.append((row[0], string_to_floats(row[3])))
+                            if args.percent:
+                                graphed.append((row[0], string_to_floats(row[4])))
+                            if args.mean:
+                                graphed.append(("Mean for {0}".format(row[0]), string_to_floats(row[5])))
+                            if args.var:
+                                graphed.append(("Variance for {0}".format(row[0]), string_to_floats(row[6])))
+                                # mean and variance
+
+                # graph results from SentAnalysis.py
+                if args.sa:
+                    for row in read_csv:
+                        if row[0] == "word" and row[1] == "sent avg":
+                            # list of periods
+                            years = row[5].split()
+                            # number of documents for each period
+                            numdocs.append(row[8].split())
+                            for year in years:
+                                year_list.append(int(year))
+                        elif row[0] == "Average Sentiment Across Corpus":
+                            graphed.append((row[0], string_to_floats(row[1])))
+                        else:
+                            if args.avg:
+                                graphed.append((row[0], string_to_floats(row[1])))
+                            if args.max:
+                                graphed.append((row[0], string_to_floats(row[2])))
+                            if args.min:
+                                graphed.append((row[0], string_to_floats(row[3])))
 
     try:
         y_vals = args.yaxis.split()

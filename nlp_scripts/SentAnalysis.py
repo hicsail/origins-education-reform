@@ -37,25 +37,27 @@ def populate_overall_sentiment(directory, overall_list, year_list, afinn):
     for subdir, dirs, files in os.walk(directory):
         print("Calculating sentiment across entire corpus.")
         for jsondoc in tqdm.tqdm(files):
-            if jsondoc[0] != ".":
-                with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
-                    sentiment = 0
-                    jsondata = json.load(inpt)
-                    text = jsondata["Filtered Text"]
-                    year = int(jsondata["Year"])
-                    # check to make sure it's within range specified by user
-                    if yrange_min <= year < yrange_max:
-                        # determine which period it falls within
-                        target = common.determine_year(year, year_list)
-                        for i in range(len(text)):
-                            sentiment += afinn.score(text[i])
-                            # even though overall_list only has one keyword, this looks
-                            # better than just hard-coding "all" within the method
-                        truncated_sentiment = float(sentiment/len(text))
-                        for keyword in overall_list:
-                            # append entry as tuple rather than just sentiment score
-                            # so I can use sent_calcs to get average
-                            overall_sent[target][keyword].append((jsondoc, truncated_sentiment))
+            if jsondoc[0] == ".":
+                continue
+            with open(directory + "/" + jsondoc, 'r', encoding='utf8') as inpt:
+                sentiment = 0
+                jsondata = json.load(inpt)
+                text = jsondata["Filtered Text"]
+                year = int(jsondata["Year"])
+                # check to make sure it's within range specified by user
+                if year < yrange_min or year >= yrange_max:
+                    continue
+                # determine which period it falls within
+                target = common.determine_year(year, year_list)
+                for i in range(len(text)):
+                    sentiment += afinn.score(text[i])
+                    # even though overall_list only has one keyword, this looks
+                    # better than just hard-coding "all" within the method
+                truncated_sentiment = float(sentiment/len(text))
+                for keyword in overall_list:
+                    # append entry as tuple rather than just sentiment score
+                    # so I can use sent_calcs to get average
+                    overall_sent[target][keyword].append((jsondoc, truncated_sentiment))
     return overall_sent
 
 
@@ -67,13 +69,13 @@ def determine_text_length(directory):
         for subdir in subdirs:
             for folders, subfolders, files in os.walk(dirs + "/" + subdir):
                 for jsondoc in files:
-                    if jsondoc[0] != ".":
-                        with open(dirs + "/" + subdir + "/" + jsondoc, 'r', encoding='utf8') as inpt:
-                            jsondata = json.load(inpt)
-                            text = jsondata["Words"]
-                            length = len(text)
-                            return length
-
+                    if jsondoc[0] == ".":
+                        continue
+                    with open(dirs + "/" + subdir + "/" + jsondoc, 'r', encoding='utf8') as inpt:
+                        jsondata = json.load(inpt)
+                        text = jsondata["Words"]
+                        length = len(text)
+                        return length
 
 # fill sent dict with sent results for each json doc w/r/t AFINN dict
 def populate_sent_dict(directory, key_list, year_list, afinn):

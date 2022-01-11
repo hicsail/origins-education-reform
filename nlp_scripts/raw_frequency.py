@@ -12,36 +12,37 @@ def take_frequencies(corpus, keywords, text_type, binary):
         else:
             print("Building Frequency Tables\n")
         for jsondoc in tqdm.tqdm(files):
-            if jsondoc[0] != ".":
-                with open(corpus + "/" + jsondoc, 'r', encoding='utf8') as in_file:
-                    jsondata = json.load(in_file)
-                    name = jsondoc
+            if jsondoc[0] == ".":
+                continue
+            with open(corpus + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                jsondata = json.load(in_file)
+                name = jsondoc
 
-                    year = jsondata["Year"]
+                year = jsondata["Year"]
 
-                    row = [name, year]
-                    # take 0/1 occurrences on snippet files
-                    if binary:
-                        text = set(jsondata[text_type])
-                        for keyword in keywords:
-                            if keyword in text:
-                                row.append("1")
-                            else:
-                                row.append("0")
-                        frequencies.append(row)
-                    # take keyword frequencies on fulltext files
-                    else:
-                        text = set(jsondata[text_type])
-                        length = len(jsondata[text_type])
-                        fulltext = jsondata[text_type]
-                        fdist = nltk.FreqDist(fulltext)
-                        for keyword in keywords:
-                            if keyword in text:
-                                row.append(str(fdist[keyword]))
-                            else:
-                                row.append("0")
-                        row.append(length)
-                        frequencies.append(row)
+                row = [name, year]
+                # take 0/1 occurrences on snippet files
+                if binary:
+                    text = set(jsondata[text_type])
+                    for keyword in keywords:
+                        if keyword in text:
+                            row.append("1")
+                        else:
+                            row.append("0")
+                    frequencies.append(row)
+                # take keyword frequencies on fulltext files
+                else:
+                    text = set(jsondata[text_type])
+                    length = len(jsondata[text_type])
+                    fulltext = jsondata[text_type]
+                    fdist = nltk.FreqDist(fulltext)
+                    for keyword in keywords:
+                        if keyword in text:
+                            row.append(str(fdist[keyword]))
+                        else:
+                            row.append("0")
+                    row.append(length)
+                    frequencies.append(row)
         return frequencies
 
 

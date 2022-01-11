@@ -25,22 +25,25 @@ def build_graph_dict(in_dir, data_type):
     # data from each to keyword entry in graphed dict
     for _, _, files in os.walk(in_dir):
         for file in files:
-            if file[0] != '.' and file[-5:] == '.json':
-                with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
-                    jsondata = json.load(in_file)
-                    keywords = jsondata['keywords']
-                    graphed[file] = {}
-                    graphed[file]['label'] = jsondata['label']
-                    for keyword in keywords:
-                        if not breakdown:
-                            # this step assumes there are no keyword repeats across files
-                            graphed[file][keyword] = []
-                            graphed[file][keyword].extend(jsondata[keyword][data_type])
-                        else:
-                            for k in keyword.split('/'):
-                                # only works for keyword percentages
-                                graphed[file][k] = []
-                                graphed[file][k].extend(jsondata['breakdown'][k])
+            if file[0] == '.':
+                continue
+            if file[-5:] != '.json':
+                continue
+            with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
+                jsondata = json.load(in_file)
+                keywords = jsondata['keywords']
+                graphed[file] = {}
+                graphed[file]['label'] = jsondata['label']
+                for keyword in keywords:
+                    if not breakdown:
+                        # this step assumes there are no keyword repeats across files
+                        graphed[file][keyword] = []
+                        graphed[file][keyword].extend(jsondata[keyword][data_type])
+                    else:
+                        for k in keyword.split('/'):
+                            # only works for keyword percentages
+                            graphed[file][k] = []
+                            graphed[file][k].extend(jsondata['breakdown'][k])
     return graphed
 
 # checks to make sure the year lists in each json file are equal
@@ -48,18 +51,19 @@ def build_year_list(in_dir):
     year_lists = []
     for subdir, dirs, files in os.walk(in_dir):
         for file in files:
-            if file[0] != '.' and file[-5:] == '.json':
-                with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
-                    jsondata = json.load(in_file)
-                    year_lists.append(sorted(jsondata['year list']))
+            if file[0] == '.':
+                continue
+            if file[-5:] != '.json':
+                continue
+            with open(in_dir + "/" + file, 'r', encoding='utf8') as in_file:
+                jsondata = json.load(in_file)
+                year_lists.append(sorted(jsondata['year list']))
     for year_list in year_lists:
         if year_list != year_lists[0]:
             common.fail("One of your files has a different year list from the others." +
                         " Please make sure all your files contain the same year lists.")
     # just return first list in year_lists if they're all the same
     return year_lists[0]
-
-
 
 def determine_data_type(statistic):
     mapping = {
@@ -96,16 +100,6 @@ def determine_data_type(statistic):
     }
     result = mapping[statistic]
     return result["data_type"], result["y_label"], result["title"]
-
-# if bar, determine bar width
-def plot_type(bar, width):
-    if bar:
-        if width is not None:
-            width = float(width)
-        else:
-            width = 5
-    return [bar, width]
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -219,8 +213,10 @@ def main():
 
     year_list = build_year_list(args.i)
 
-    plot_params = plot_type(args.bar, args.b_width)
-    bar, width = plot_params[0], plot_params[1]
+    if args.b_width is not None:
+        width = float(args.b_width)
+    else:
+        width = 5
 
     if args.leg is not None:
         leg_size = int(args.leg)
@@ -236,7 +232,7 @@ def main():
 
     # set x-axis
     num_ranges = len(graph_dict)
-    if bar:
+    if args.bar:
         offset = num_ranges * width / 2
     else:
         offset = 0
@@ -251,7 +247,7 @@ def main():
         for label in ax1.xaxis.get_ticklabels():
             label.set_size(args.labelsize)
 
-    if bar:
+    if args.bar:
         i = 0
         for f in graph_dict:
             for k in graph_dict[f]:

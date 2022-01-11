@@ -18,36 +18,38 @@ def build_samples(csv_inpt, year_list, yrange_min, yrange_max):
             binary = True
         print("Building a set of samples")
         for row in tqdm.tqdm(read_csv):
-            if row[0] != "filename":
-                year = int(row[1])
-                # check to make sure it's within range specified by user
-                if yrange_min <= year < yrange_max:
-                    # determine which period it falls within
-                    target = common.determine_year(year, year_list)
+            if row[0] == "filename":
+                continue
+            year = int(row[1])
+            # check to make sure it's within range specified by user
+            if year < yrange_min or year >= yrange_max:
+                continue
+            # determine which period it falls within
+            target = common.determine_year(year, year_list)
+            try:
+                if binary:
+                    # one more volume to sample size w/r/t year period
+                    n[target] += 1
+                else:
+                    # add total words to sample size w/r/t year period
+                    n[target] += int(row[-1])
+            except KeyError:
+                pass
+            for cell in row[2:-1]:
+                if binary:
+                    if cell == "1":
+                        try:
+                            # add one to observation dict and break
+                            p[target] += 1
+                            break
+                        except KeyError:
+                            pass
+                else:
                     try:
-                        if binary:
-                            # one more volume to sample size w/r/t year period
-                            n[target] += 1
-                        else:
-                            # add total words to sample size w/r/t year period
-                            n[target] += int(row[-1])
+                        # add frequency in this cell to observation dict
+                        p[target] += int(cell)
                     except KeyError:
                         pass
-                    for cell in row[2:-1]:
-                        if binary:
-                            if cell == "1":
-                                try:
-                                    # add one to observation dict and break
-                                    p[target] += 1
-                                    break
-                                except KeyError:
-                                    pass
-                        else:
-                            try:
-                                # add frequency in this cell to observation dict
-                                p[target] += int(cell)
-                            except KeyError:
-                                pass
     return [p, n]
 
 

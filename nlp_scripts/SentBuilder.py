@@ -11,69 +11,71 @@ def parse_json(in_dir, out_dir, keywords, by_sentences):
     for subdir, dirs, files in os.walk(in_dir):
         print("Extracting snippets of text.")
         for jsondoc in tqdm.tqdm(files):
-            if jsondoc[0] != ".":
-                with open(in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
-                    index += 1
-                    jsondata = json.load(in_file)
-                    year = int(jsondata["Year"])
-                    if y_min <= year <= y_max:
-                        try:
-                            title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type[0]]
-                        except KeyError:
-                            title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type[1]]
-                        for keyword in keywords:
-                            if not bigrams:
-                                # keep a set for more efficient word lookup,
-                                # and a list to preserve ordering for file naming
-                                word_set = set(keyword.split("/"))
-                                words = keyword.split("/")
-                                for i in range(len(text)):
-                                    if by_sentences:
-                                        for word in text[i].split():
-                                            if word in word_set:
+            if jsondoc[0] == ".":
+                continue
+            with open(in_dir + "/" + jsondoc, 'r', encoding='utf8') as in_file:
+                index += 1
+                jsondata = json.load(in_file)
+                year = int(jsondata["Year"])
+                if year < y_min or year >= y_max:
+                    continue
+                try:
+                    title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type[0]]
+                except KeyError:
+                    title, author, text = jsondata["Title"], jsondata["Author"], jsondata[text_type[1]]
+                for keyword in keywords:
+                    if not bigrams:
+                        # keep a set for more efficient word lookup,
+                        # and a list to preserve ordering for file naming
+                        word_set = set(keyword.split("/"))
+                        words = keyword.split("/")
+                        for i in range(len(text)):
+                            if by_sentences:
+                                for word in text[i].split():
+                                    if word in word_set:
+                                        words_list = []
+                                        sub_index += 1
+                                        snippet = text[(i - int(length/2)):(i + int(length/2))]
+                                        for sentence in snippet:
+                                            words_list.extend(sentence.split())
+                                        sub_text = " ".join(snippet)
+                                        write_to_file(out_dir, words, year, index, sub_index,
+                                                      title, author, sub_text, words_list)
+                            else:
+                                if text[i] in word_set:
+                                    sub_index += 1
+                                    sub_words = text[(i - int(length/2)):(i + int(length/2))]
+                                    sub_text = " ".join(sub_words)
+                                    write_to_file(out_dir, words, year, index, sub_index,
+                                                  title, author, sub_text, sub_words)
+                    else:
+                        words = []
+                        # build a list of tuples
+                        for i in range(len(keyword)):
+                            words.append("-".join(wd for wd in keyword[i]))
+                        # for each tuple, search the text for occurrences of it
+                        for i in range(len(keyword)):
+                            for j in range(len(text)):
+                                if by_sentences:
+                                    sentence = text[j].split()
+                                    if len(sentence) > 1:
+                                        for k in range(len(sentence) - 1):
+                                            if sentence[k] == keyword[i][0] and sentence[k+1] == keyword[i][1]:
                                                 words_list = []
                                                 sub_index += 1
-                                                snippet = text[(i - int(length/2)):(i + int(length/2))]
-                                                for sentence in snippet:
-                                                    words_list.extend(sentence.split())
+                                                snippet = text[(j - int(length/2)):(j + int(length/2))]
+                                                for sent in snippet:
+                                                    words_list.extend(sent.split())
                                                 sub_text = " ".join(snippet)
                                                 write_to_file(out_dir, words, year, index, sub_index,
                                                               title, author, sub_text, words_list)
-                                    else:
-                                        if text[i] in word_set:
-                                            sub_index += 1
-                                            sub_words = text[(i - int(length/2)):(i + int(length/2))]
-                                            sub_text = " ".join(sub_words)
-                                            write_to_file(out_dir, words, year, index, sub_index,
-                                                          title, author, sub_text, sub_words)
-                            else:
-                                words = []
-                                # build a list of tuples
-                                for i in range(len(keyword)):
-                                    words.append("-".join(wd for wd in keyword[i]))
-                                # for each tuple, search the text for occurrences of it
-                                for i in range(len(keyword)):
-                                    for j in range(len(text)):
-                                        if by_sentences:
-                                            sentence = text[j].split()
-                                            if len(sentence) > 1:
-                                                for k in range(len(sentence) - 1):
-                                                    if sentence[k] == keyword[i][0] and sentence[k+1] == keyword[i][1]:
-                                                        words_list = []
-                                                        sub_index += 1
-                                                        snippet = text[(j - int(length/2)):(j + int(length/2))]
-                                                        for sent in snippet:
-                                                            words_list.extend(sent.split())
-                                                        sub_text = " ".join(snippet)
-                                                        write_to_file(out_dir, words, year, index, sub_index,
-                                                                      title, author, sub_text, words_list)
-                                        else:
-                                            if text[j] == keyword[i][0] and text[j+1] == keyword[i][1]:
-                                                sub_index += 1
-                                                sub_words = text[(j - int(length/2)):(j + int(length/2))]
-                                                sub_text = " ".join(sub_words)
-                                                write_to_file(out_dir, words, year, index, sub_index,
-                                                              title, author, sub_text, sub_words)
+                                else:
+                                    if text[j] == keyword[i][0] and text[j+1] == keyword[i][1]:
+                                        sub_index += 1
+                                        sub_words = text[(j - int(length/2)):(j + int(length/2))]
+                                        sub_text = " ".join(sub_words)
+                                        write_to_file(out_dir, words, year, index, sub_index,
+                                                      title, author, sub_text, sub_words)
 
 
 def write_to_file(out_dir, words, year, index, sub_index, title, author, sub_text, sub_words):

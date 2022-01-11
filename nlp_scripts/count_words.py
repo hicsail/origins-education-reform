@@ -16,9 +16,10 @@ if __name__ == '__main__':
     c = 0
     for subdir, dirs, files in os.walk(input_dir):
         for jsondoc in tqdm.tqdm(files):
-            if jsondoc[0] != ".":
-                with open(f"{input_dir}/{jsondoc}", 'r', encoding='utf8') as inpt:
-                    jsondata = json.load(inpt)
-                    c += len(jsondata[text_field])
+            if jsondoc[0] == ".":
+                continue
+            with open(f"{input_dir}/{jsondoc}", 'r', encoding='utf8') as inpt:
+                jsondata = json.load(inpt)
+                c += len(jsondata[text_field])
 
     print(f"Number of words in corpus: {c}")
