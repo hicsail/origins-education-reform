@@ -97,87 +97,118 @@ def build_ignore_list(path_to_file, language):
                 stopwords.add(wd)
     return stopwords
 
-
-def main():
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
-    parser.add_argument("-txt", help="output text file argument", action="store")
-    parser.add_argument("-num_topics", action="store", help="number of topics to display")
-    parser.add_argument("-num_words", action="store", help="number of words per topic")
-    parser.add_argument("-weights", action="store_true", help="display topic weights with topics")
-    parser.add_argument("-lang", action="store", help="language")
-    parser.add_argument("-type", action="store", help="json field to analyze")
-    parser.add_argument("-ignore", action="store", help="path to ignored list json file")
-    parser.add_argument("-p", help="boolean to analyze by different periods rather than a fixed increment value",
-                        action="store_true")
-    parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
-                        action="store")
-    parser.add_argument("-lsi", help="Topic modeling vida LSI", action="store_true")
-    parser.add_argument("-include_keys", help="don't filter keywords from topics", action="store_true")
-    parser.add_argument("-passes", help="number of passes on corpus", action="store")
-    parser.add_argument("-seed", help="generator seed for deterministic(ish) modeling", action="store")
+    parser.add_argument(
+        "-i",
+        help="Input directory path",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-txt",
+        help="Text output filename",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-num_topics",
+        type=int,
+        help="Number of topics to display",
+        default=10,
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-num_words",
+        type=int,
+        help="Number of words per topic",
+        default=10,
+        action="store"
+    )
+    parser.add_argument(
+        "-weights",
+        help="Set to display topic weights",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-lang",
+        help="Input text language",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-type",
+        help="Text field to use in analysis",
+        default="Words",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-ignore",
+        help="Path to JSON file with stopwords",
+        action="store"
+    )
+    parser.add_argument(
+        "-y",
+        help="Start year, end year, and year increment for grouping texts",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-p",
+        help="Set to analyze a single period",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-lsi",
+        help="Set to use LSI for topic modelling",
+        default=False,
+        action="store_true"
+    )
+    parser.add_argument(
+        "-include_keys",
+        help="Set to show keywords in topics",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-passes",
+        type=int,
+        help="Number of topic modelling passes",
+        default=1,
+        action="store"
+    )
+    parser.add_argument(
+        "-seed",
+        type=int,
+        help="Seed for random number generator",
+        action="store"
+    )
 
-    try:
-        args = parser.parse_args()
-    except IOError as msg:
-        print(parser.error(str(msg)))
+    return parser.parse_args()
 
-    if args.num_topics is None:
-        num_topics = 10
-    else:
-        num_topics = int(args.num_topics)
+if __name__ == "__main__":
+    args = parse_args()
 
-    if args.num_words is None:
-        num_words = 10
-    else:
-        num_words = int(args.num_words)
-
-    if args.type is not None:
-        text_type = args.type
-    else:
-        text_type = "Words"
-
-    if args.passes is None:
-        passes = 1
-    else:
-        passes = int(args.passes)
-
-    if args.seed is None:
-        deterministic = False
-    else:
-        deterministic = True
-        seed = int(args.seed)
-
-    if args.lsi:
-        lda = False
-        lsi = True
-    else:
-        lda = True
-        lsi = False
-
-    weights = args.weights
-    periods = args.p
-    include_keys = args.include_keys
-    language = args.lang
     range_years = args.y.split()
-    year_params = common.year_params(range_years, periods)
+    year_params = common.year_params(range_years, args.p)
     increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
 
     # initialize list of years and dict to keep track of
     # how many books between each year range
-    year_list = common.build_year_list(increment, range_years, periods, yrange_max, yrange_min)
+    year_list = common.build_year_list(increment, range_years, args.p, yrange_max, yrange_min)
 
     # build list of keywords that we'll be making topic models for
     key_list = build_key_list(args.i)
 
     # add words in json file to stopwords set, if filepath is given
     if args.ignore is not None:
-        stopwords = build_ignore_list(args.ignore, language)
+        stopwords = build_ignore_list(args.ignore, args.lang)
     else:
-        stopwords = set(nltk.corpus.stopwords.words(language))
+        stopwords = set(nltk.corpus.stopwords.words(args.lang))
 
     # add keywords in stopwords set if include_keys is not set
-    if not include_keys:
+    if not args.include_keys:
         for key in key_list:
             sub_keys = key.split("_")
             for wd in sub_keys:
@@ -187,35 +218,21 @@ def main():
     dictionary_dict = build_frequency_dict(doc_dict, key_list, year_list)
     corpus_dict = common.build_dict_of_lists(year_list, key_list)
 
-    if lda:
-        lda_dict = common.build_dict_of_lists(year_list, key_list)
-        if deterministic:
-            # generator seed
-            rands = numpy.random.RandomState(seed)
-    if lsi:
+    if args.lsi:
         tfidf_dict = common.build_dict_of_lists(year_list, key_list)
         lsi_dict = common.build_dict_of_lists(year_list, key_list)
+    else:
+        lda_dict = common.build_dict_of_lists(year_list, key_list)
+        if args.seed is not None:
+            # generator seed
+            rands = numpy.random.RandomState(args.seed)
     print("Building topic models.")
     for year in tqdm.tqdm(year_list):
         for key in key_list:
             corpus_dict[year][key] = \
                 [dictionary_dict[year][key].doc2bow(doc) for doc in doc_dict[year][key]]
             numdocs = len(corpus_dict[year][key])
-            if lda:
-                try:
-                    if not deterministic:
-                        # stochastic
-                        lda_dict[year][key] = (gensim.models.ldamodel.LdaModel(
-                            corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
-                            num_topics=num_topics, passes=passes), numdocs)
-                    else:
-                        # deterministic (ish)
-                        lda_dict[year][key] = (gensim.models.ldamodel.LdaModel(
-                            corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
-                            num_topics=num_topics, random_state=rands, passes=passes), numdocs)
-                except ValueError:
-                    lda_dict[year][key] = "No Documents for this period."
-            if lsi:
+            if args.lsi:
                 try:
                     tfidf_dict[year][key] = gensim.models.TfidfModel(corpus_dict[year][key])
                     tfidf = tfidf_dict[year][key]
@@ -224,6 +241,20 @@ def main():
                         num_topics=200)
                 except ValueError:
                     lsi_dict[year][key] = "No Documents for this period."
+            else:
+                try:
+                    if args.seed is None:
+                        # stochastic
+                        lda_dict[year][key] = (gensim.models.ldamodel.LdaModel(
+                            corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
+                            num_topics=args.num_topics, passes=args.passes), numdocs)
+                    else:
+                        # deterministic (ish)
+                        lda_dict[year][key] = (gensim.models.ldamodel.LdaModel(
+                            corpus=corpus_dict[year][key], id2word=dictionary_dict[year][key],
+                            num_topics=args.num_topics, random_state=rands, passes=args.passes), numdocs)
+                except ValueError:
+                    lda_dict[year][key] = "No Documents for this period."
 
     with open(args.txt + '.txt', 'w', encoding='utf8') as txt_out:
         txt_out.write("Topics per period / keyword pair: " + "\n")
@@ -234,18 +265,18 @@ def main():
                 txt_out.write("Number of documents for this period / keyword pair: {0}"
                               .format(str(lda_dict[year_list[i]][key][1])) + "\n")
                 try:
-                    if lda:
-                        topics = lda_dict[year_list[i]][key][0].show_topics(
-                            num_topics=num_topics, num_words=num_words)
-                    if lsi:
+                    if args.lsi:
                         try:
                             topics = lsi_dict[year_list[i]][key].show_topics(
-                                num_topics=num_topics, num_words=num_words)
+                                num_topics=args.num_topics, num_words=args.num_words)
                         except TypeError:
                             topics = ["There were no documents for this period."]
+                    else:
+                        topics = lda_dict[year_list[i]][key][0].show_topics(
+                            num_topics=args.num_topics, num_words=args.num_words)
                     j = 1
                     for topic in topics:
-                        if weights:
+                        if args.weights:
                             topic = str(topic[1])
                             filtered = topic.split('+')
                             for k in range(len(filtered) - 1, -1, -1):
@@ -278,7 +309,3 @@ def main():
                 except AttributeError:
                     txt_out.write(lda_dict[year_list[i]][key])
             txt_out.write("\n")
-
-
-if __name__ == '__main__':
-    main()

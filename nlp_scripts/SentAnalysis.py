@@ -166,24 +166,61 @@ def list_to_string(list_inpt):
         return_string += (str(wd) + " ")
     return return_string
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", metavar='in-dir', action="store", help="input directory argument")
-    parser.add_argument("-c", help="file path to full corpus", action="store")
-    parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
-                        action="store")
-    parser.add_argument("-num", help="number of max/min documents to grab from each period", action="store")
-    parser.add_argument("-p", help="boolean to analyze by different periods rather than a fixed increment value",
-                        action="store_true")
-    parser.add_argument("-csv", help="file path to csv output", action="store")
-    parser.add_argument("-txt", help="file path to txt output", action="store")
-    parser.add_argument("-language", help="language for AFINN word list. \'en\' for english, "
-                                          "\'da\' for danish", action="store")
+    parser.add_argument(
+        "-i",
+        help="Input directory path",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-c",
+        help="Path to full corpus",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-y",
+        help="Start year, end year, and year increment for grouping texts",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-num",
+        type=int,
+        help="Number of documents to analyze from each period",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-p",
+        help="Set to analyze a single period",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-csv",
+        help="CSV output filename",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-txt",
+        help="Text output filename",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-language",
+        help="Input text language",
+        action="store",
+        required=True
+    )
 
-    try:
-        args = parser.parse_args()
-    except IOError:
-        pass
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
 
     global periods, yrange_min, yrange_max
 
@@ -266,7 +303,3 @@ def main():
         for keyword in overall_list:
             csvwriter.writerow([keyword, list_to_string(
                 common.build_graph_list(keyword, year_list, overall_avg))])
-
-
-if __name__ == '__main__':
-    main()

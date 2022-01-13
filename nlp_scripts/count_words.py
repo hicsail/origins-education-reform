@@ -3,23 +3,33 @@ import tqdm
 import os
 import json
 
-
-if __name__ == '__main__':
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", action="store", help="input directory argument")
-    parser.add_argument("-t", action="store", help="text field to count from")
+    parser.add_argument(
+        "-i",
+        action="store",
+        help="Input directory path",
+        required=True
+    )
+    parser.add_argument(
+        "-t",
+        help="Text field to use in analysis",
+        action="store",
+        required=True
+    )
 
-    args = parser.parse_args()
-    input_dir = args.i
-    text_field = args.t
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
 
     c = 0
-    for subdir, dirs, files in os.walk(input_dir):
+    for _, _, files in os.walk(args.i):
         for jsondoc in tqdm.tqdm(files):
             if jsondoc[0] == ".":
                 continue
-            with open(f"{input_dir}/{jsondoc}", 'r', encoding='utf8') as inpt:
+            with open(f"{args.i}/{jsondoc}", 'r', encoding='utf8') as inpt:
                 jsondata = json.load(inpt)
-                c += len(jsondata[text_field])
+                c += len(jsondata[args.t])
 
     print(f"Number of words in corpus: {c}")

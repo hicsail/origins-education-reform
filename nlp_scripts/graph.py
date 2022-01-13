@@ -106,13 +106,15 @@ def parse_args():
     parser.add_argument(
         "-i",
         help="Input directory path",
-        action="store"
+        action="store",
+        required=True
     )
     parser.add_argument(
         "-stat",
         help="Statistic to graph",
         choices=["avg", "max", "mean", "min", "percent", "var"],
-        action="store"
+        action="store",
+        required=True
     )
     parser.add_argument(
         "-o",
@@ -289,7 +291,3 @@ def main():
     leg = ax1.legend(prop={'size': leg_size})
     leg.get_frame().set_alpha(0.1)
     plt.show()
-
-
-if __name__ == '__main__':
-    main()

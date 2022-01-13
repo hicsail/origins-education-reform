@@ -278,8 +278,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-i",
-        action="store",
         help="Input directory path",
+        action="store",
         required=True
     )
     parser.add_argument(
@@ -290,7 +290,7 @@ def parse_args():
     )
     parser.add_argument(
         "-type",
-        help="Selects the text field to use in analysis",
+        help="Text field to use in analysis",
         default="Words",
         action="store",
         required=True
@@ -309,7 +309,7 @@ def parse_args():
     )
     parser.add_argument(
         "-k",
-        help="List of words used for analysis",
+        help="List of keywords for analysis",
         action="store",
         required=True
     )
@@ -321,7 +321,7 @@ def parse_args():
     parser.add_argument(
         "-num",
         type=int,
-        help="Number of words to analyze from each decade",
+        help="Number of words to analyze from each period",
         action="store"
     )
     parser.add_argument(
@@ -384,10 +384,10 @@ if __name__ == "__main__":
                               .format(str(tf_idf_min[periods[i]][keyword]) + "\n"))
                 txt_out.write("Word frequency for \"{0}\" (as percentage of total words) for this period: {1}"
                               .format(keyword, str(sum(keyword_percentage[periods[i]][keyword].values())) + "\n"))
-                if args.num != None:
+                if args.num is not None:
                     common.list_max_docs(txt_out, periods[i], keyword, tfidf_results, args.num, "TF-IDF")
                     common.list_min_docs(txt_out, periods[i], keyword, tfidf_results, args.num, "TF-IDF")
-            if args.num != None:
+            if args.num is not None:
                 output_top_words(txt_out, periods[i], n_dict, args.num)
             txt_out.write("\n")
 

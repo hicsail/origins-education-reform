@@ -63,36 +63,47 @@ def diff_props_test(k1, n1, k2, n2):
     (z, p_value) = statsmodels.api.stats.proportions_ztest([k1, k2], [n1, n2], alternative='two-sided', prop_var=False)
     return [z, p_value]
 
-
-def main():
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-csv", help="input csv files argument", action="store")
-    parser.add_argument("-txt", help="output text filepath", action="store")
-    parser.add_argument("-y", help="min/max for year range and increment value, surround with quotes",
-                        action="store")
-    parser.add_argument("-p", help="boolean to analyze by different periods rather than a fixed increment value",
-                        action="store_true")
+    parser.add_argument(
+        "-csv",
+        help="Path to two input CSV files",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-txt",
+        help="Start year, end year, and year increment for grouping texts",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-y",
+        help="Start year, end year, and year increment for grouping texts",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-p",
+        help="Set to analyze a single period",
+        action="store_true"
+    )
 
-    try:
-        args = parser.parse_args()
-    except IOError as msg:
-        common.fail(msg)
+    return parser.parse_args()
 
-    if args.csv is None or len(args.csv.split()) != 2:
-        common.fail("Please enter two csv files after -csv, separated by whitespace.")
+if __name__ == "__main__":
+    args = parse_args()
+
+    if len(args.csv.split()) != 2:
+        raise Exception("Please enter two csv files after -csv, separated by whitespace.")
     else:
         csv_files = args.csv.split()
 
-    if args.txt is None:
-        common.fail("Please enter output text file path.")
-
-    periods = args.p
-
     range_years = args.y.split()
-    year_params = common.year_params(range_years, periods)
+    year_params = common.year_params(range_years, args.p)
     increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
 
-    year_list = common.build_year_list(increment, range_years, periods, yrange_max, yrange_min)
+    year_list = common.build_year_list(increment, range_years, args.p, yrange_max, yrange_min)
 
     first = build_samples(csv_files[0], year_list, yrange_min, yrange_max)
     x1 = first[0]
@@ -119,6 +130,3 @@ def main():
             txt_out.write("P value: " + str(diff_props[i][1]) + "\n")
             txt_out.write("Significance: " + str(diff_props[i][2]) + "\n")
             txt_out.write("Critical: " + str(critical) + "\n\n")
-
-if __name__ == '__main__':
-    main()

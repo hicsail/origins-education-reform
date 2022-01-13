@@ -45,47 +45,55 @@ def take_frequencies(corpus, keywords, text_type, binary):
                     frequencies.append(row)
         return frequencies
 
-
-def main():
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", metavar='in-directory', action="store", help="input directory argument")
-    parser.add_argument("-csv", help="output csv file argument", action="store")
-    parser.add_argument("-k", help="list of keywords argument, surround list with quotes", action="store")
-    parser.add_argument("-type", help="set the name of the text field you're analyzing", action="store")
-    parser.add_argument("-bin", help="track binary (0/1) occurrence, default is raw frequency", action="store_true")
+    parser.add_argument(
+        "-i",
+        help="Input directory path",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-csv",
+        help="CSV output filename",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-k",
+        help="List of keywords for analysis",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-type",
+        help="Text field to use in analysis",
+        default="Words",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-bin",
+        help="Set to analyze by texts instead of words",
+        action="store_true"
+    )
 
-    try:
-        args = parser.parse_args()
-    except IOError as msg:
-        common.fail(parser.error(str(msg)))
+    return parser.parse_args()
 
-    if args.i is None:
-        common.fail("Please specify input directory.")
-    else:
-        corpus = args.i
+if __name__ == "__main__":
+    args = parse_args()
 
-    binary = args.bin
     keywords = args.k.lower().split("/")
-    
-    if args.type is None:
-        text_type = "Words"
-    else:
-        text_type = args.type
-
-    frequencies = take_frequencies(corpus, keywords, text_type, binary)
+    frequencies = take_frequencies(args.i, keywords, text_type, args.bin)
 
     with open(args.csv + '.csv', 'w', newline='', encoding='utf-8') as csv_out:
         csvwriter = csv.writer(csv_out, delimiter=',')
         row = ["filename", "publication date"]
         row.extend(keywords)
-        if not binary:
+        if not args.bin:
             row.append("total words")
         csvwriter.writerow(row)
         sorted_freq = sorted(frequencies, key=operator.itemgetter(1))
         print("Writing to CSV\n")
         for volume in tqdm.tqdm(sorted_freq):
             csvwriter.writerow(volume)
-
-
-if __name__ == '__main__':
-    main()

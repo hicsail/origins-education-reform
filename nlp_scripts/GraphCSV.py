@@ -36,26 +36,48 @@ def findMin(list_inpt, g_max):
                 g_min = list_inpt[i][1][j]
     return g_min
 
-
-def main():
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", help="input csv filepath", action="store")
-    parser.add_argument("-avg", help="take tf_idf /sentiment avg for each decade", action="store_true")
-    parser.add_argument("-max", help="take tf_idf /sentiment max for each decade", action="store_true")
-    parser.add_argument("-min", help="take tf_idf / sentiment min for each decade", action="store_true")
-    parser.add_argument("-percent", help="graph word frequency as a percentage of total words (not tfidf)",
-                        action="store_true")
-    parser.add_argument("-mean", help="display arithmetic mean", action="store_true")
-    parser.add_argument("-var", help="display variance", action="store_true")
-    parser.add_argument("-bar", help="plot data as a bar graph (default is line)", action="store_true")
-    parser.add_argument("-wf", help="if plotting from word frequency script results", action="store_true")
-    parser.add_argument("-sa", help="if plotting from sentiment analysis script results", action="store_true")
-    parser.add_argument("-yaxis", help="argument for setting the y-axis min/max values", action="store")
+    parser.add_argument(
+        "-i",
+        help="Input directory path",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-stat",
+        help="Statistic to graph",
+        choices=["avg", "max", "mean", "min", "percent", "var"],
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-bar",
+        help="Plot data as a bar graph instead of a line graph",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-wf",
+        help="Set to analyze results from WordFrequency",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-sa",
+        help="Set to analyze results from SentAnalysis",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-yaxis",
+        help="Set the y-axis range",
+        type=int,
+        nargs=2,
+        action="store"
+    )
 
-    try:
-        args = parser.parse_args()
-    except IOError:
-        pass
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
 
     # list of tuples - (keyword, stats_list)
     graphed = []
@@ -190,6 +212,3 @@ def main():
         plt.axis([year_list[0], year_list[len(year_list) - 2], float(y_vals[0]), float(y_vals[1])])
     plt.legend()
     plt.show()
-
-if __name__ == '__main__':
-    main()

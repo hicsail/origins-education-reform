@@ -4,7 +4,7 @@ import common
 
 # iterate through corpus, extract text surrounding occurrences of each
 # keyword / bigram and write those to json files
-def parse_json(in_dir, out_dir, keywords, by_sentences):
+def parse_json(in_dir, out_dir, keywords, by_sentences, length):
     # index and sub index for file naming
     index = 0
     sub_index = 0
@@ -35,7 +35,7 @@ def parse_json(in_dir, out_dir, keywords, by_sentences):
                                     if word in word_set:
                                         words_list = []
                                         sub_index += 1
-                                        snippet = text[(i - int(length/2)):(i + int(length/2))]
+                                        snippet = text[(i - length/2):(i + length/2)]
                                         for sentence in snippet:
                                             words_list.extend(sentence.split())
                                         sub_text = " ".join(snippet)
@@ -44,7 +44,7 @@ def parse_json(in_dir, out_dir, keywords, by_sentences):
                             else:
                                 if text[i] in word_set:
                                     sub_index += 1
-                                    sub_words = text[(i - int(length/2)):(i + int(length/2))]
+                                    sub_words = text[(i - length/2):(i + length/2)]
                                     sub_text = " ".join(sub_words)
                                     write_to_file(out_dir, words, year, index, sub_index,
                                                   title, author, sub_text, sub_words)
@@ -63,7 +63,7 @@ def parse_json(in_dir, out_dir, keywords, by_sentences):
                                             if sentence[k] == keyword[i][0] and sentence[k+1] == keyword[i][1]:
                                                 words_list = []
                                                 sub_index += 1
-                                                snippet = text[(j - int(length/2)):(j + int(length/2))]
+                                                snippet = text[(j - length/2):(j + length/2)]
                                                 for sent in snippet:
                                                     words_list.extend(sent.split())
                                                 sub_text = " ".join(snippet)
@@ -72,7 +72,7 @@ def parse_json(in_dir, out_dir, keywords, by_sentences):
                                 else:
                                     if text[j] == keyword[i][0] and text[j+1] == keyword[i][1]:
                                         sub_index += 1
-                                        sub_words = text[(j - int(length/2)):(j + int(length/2))]
+                                        sub_words = text[(j - length/2):(j + length/2)]
                                         sub_text = " ".join(sub_words)
                                         write_to_file(out_dir, words, year, index, sub_index,
                                                       title, author, sub_text, sub_words)
@@ -96,24 +96,61 @@ def build_json(title, author, keyword, year, text, words):
                        sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
-
-def main():
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", metavar='in-dir', action="store", help="input directory argument")
-    parser.add_argument("-o", metavar='out-dir', action="store", help="output directory argument")
-    parser.add_argument("-k", action="store", help="list of keywords")
-    parser.add_argument("-len", action="store", help="number of words to surround each keyword occurrence by")
-    parser.add_argument("-b", help="boolean to control searching for bigrams rather than individual words",
-                        action="store_true")
-    parser.add_argument("-type", help="which text field from the json document you intend to analyze",
-                        action="store")
-    parser.add_argument("-y", help="year range", action="store")
-    parser.add_argument("-sentences", help="extract number of sentences rather than words", action="store_true")
+    parser.add_argument(
+        "-i",
+        help="Input directory path",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-o",
+        help="Output directory",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-k",
+        help="List of keywords for analysis",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-len",
+        type=int,
+        help="Number of words around each keyword to keep",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-b",
+        help="Set to analyze using bigrams",
+        action="store_true"
+    )
+    parser.add_argument(
+        "-type",
+        help="Text field to use in analysis",
+        default="Words",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-y",
+        help="Start year and end year for grouping texts",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-sentences",
+        help="Set to keep -len sentences around keywords instead of words",
+        action="store_true"
+    )
 
-    try:
-        args = parser.parse_args()
-    except IOError:
-        pass
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
 
     # create / overwrite directory where results will be stored
     if not os.path.exists(args.o):
@@ -122,59 +159,30 @@ def main():
         shutil.rmtree(args.o)
         os.mkdir(args.o)
 
-    if args.len is None:
-        common.fail("Please specify snippet length.")
-
-    if int(args.sentences) < 1:
-        print("Building snippets of {0} words around the specified keywords."
+    if args.sentences:
+        print("Building snippets of {0} sentences around the specified keywords."
               .format(args.len))
     else:
-        print("Building snippets of {0} sentences around the specified keywords."
+        print("Building snippets of {0} words around the specified keywords."
               .format(args.len))
 
     # make some variables global to simplify the function parameters
-    global text_type, bigrams, length, y_min, y_max
+    global text_type, bigrams, y_min, y_max
 
-    by_sentences = args.sentences
     type = args.type
     bigrams = args.b
-    length = int(args.len)
     y_range = args.y.split()
     y_min = int(y_range[0])
     y_max = int(y_range[1])
 
-    # determine which json field to parse based on input
-    if by_sentences:
-        if type.lower() == "full":
-            text_type = "Full Sentences"
-        elif type.lower() == "filtered":
-            text_type = "Filtered Sentences"
-        elif type.lower() == "stemmed":
-            text_type = "Stemmed Sentences"
-        elif type.lower() == "filtered stemmed":
-            text_type = "Filtered Stemmed Sentences"
-        else:
-            text_type = type
-    else:
-        if type.lower() == "full":
-            text_type = ["Full Text", "Text"]
-        elif type.lower() == "filtered":
-            text_type = ["Filtered Text", "Filtered"]
-        elif type.lower() == "stemmed":
-            text_type = ["Full Text Stemmed", "Stemmed"]
-        elif type.lower() == "filtered stemmed":
-            text_type = ["Filtered Text Stemmed", "Filtered Stemmed"]
-        else:
-            text_type = type
-
-    # set up input directory and key list values
-    in_dir = args.i
-    out_dir = args.o
-    keywords = common.build_key_list(args.k, bigrams)
+    if args.sentences and "sentences" not in args.type.lower():
+        raise Exception("Must use a Sentence field in -type with -sentences")
+    elif not args.sentences "sentences" in args.type.lower():
+        raise Exception("Cannot use a Sentence field in -type with -len")
+    
+    text_type = args.type
+    keywords = common.build_key_list(args.k, args.b)
 
     # build subdirectories and populate them
-    common.build_subdirs(out_dir, keywords, bigrams)
-    parse_json(in_dir, out_dir, keywords, by_sentences)
-
-if __name__ == '__main__':
-    main()
+    common.build_subdirs(args.o, keywords, args.b)
+    parse_json(args.i, args.o, keywords, args.sentences, args.len)

@@ -8,7 +8,6 @@ def filter_by_threshold(thresh, score):
         return True
     return False
 
-
 def filter_tfidf(keywords, dictionary, in_dir, out_dir, tfidf_model, text_type, thresh):
     for subdir, dirs, files in os.walk(in_dir):
         for jf in files:
@@ -51,19 +50,7 @@ def construct_dictionary_and_corpus(in_dir, text_type):
             text = extract_text(in_dir + jf, text_type)
             dictionary.add_documents([text])
             corpus.append(dictionary.doc2bow(text))
-    return [dictionary, corpus]
-
-
-def determine_text_type(text_type):
-    if text_type == 'full':
-        text = "Full Text"
-    elif text_type == 'stemmed':
-        text = "Full Text Stemmed"
-    elif text_type == 'filtered stemmed':
-        text = 'Filtered Text Stemmed'
-    else:
-        text = text_type
-    return text
+    return dictionary, corpus
 
 def build_out(out_dir):
     if out_dir is not None:
@@ -76,50 +63,52 @@ def build_out(out_dir):
     else:
         raise Exception("Please specify output directory.")
 
-def args_setup(in_dir, keys, out_dir, text_type, threshold):
-    if in_dir is None:
-        common.fail("Please specify input (-i) directory.")
-    if keys is None:
-        common.fail("Please specify keywords (-k)")
-    else:
-        # TODO: make bigrams configurable in future if needed
-        key_list = common.build_key_list(keys, False)
-    if out_dir is None:
-        common.fail("Please specify output (-o) directory.")
-    else:
-        build_out(out_dir)
-        common.build_subdirs(out_dir, key_list, False)
-    if text_type is None:
-        text_type = 'Filtered Text Stemmed'
-    else:
-        text_type = determine_text_type(text_type.lower())
-    if threshold is None:
-        common.fail("Please specify TF-IDF threshold argument (-thresh")
-    else:
-        thresh = float(threshold)
-    return [key_list, text_type, thresh]
-
-
-def main():
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", metavar="in-directory", action="store", help="input directory argument")
-    parser.add_argument("-o", help="output directory", action="store")
-    parser.add_argument("-thresh", help="tf-idf threshold", action="store")
-    parser.add_argument("-type", help="text field from json doc", action="store")
-    parser.add_argument("-k", help="keywords", action="store")
+    parser.add_argument(
+        "-i",
+        help="Input directory path",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-o",
+        help="Output directory",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-thresh",
+        type=float,
+        help="Minimum TF-IDF score to display",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-type",
+        help="Text field to use in analysis",
+        default="Words",
+        action="store",
+        required=True
+    )
+    parser.add_argument(
+        "-k",
+        help="List of keywords for analysis",
+        action="store",
+        required=True
+    )
 
-    try:
-        args = parser.parse_args()
-    except IOError:
-        pass
+    return parser.parse_args()
 
-    thresh = args.thresh.strip('"').strip("'")
+if __name__ == "__main__":
+    args = parse_args()
 
-    in_args = args_setup(args.i, args.k, args.o, args.type, thresh)
-    key_list, text_type, thresh = in_args[0], in_args[1], in_args[2]
+    key_list = common.build_key_list(args.k, False)
+    build_out(args.o)
+    common.build_subdirs(args.o, key_list, False)
 
-    model_params = construct_dictionary_and_corpus(args.i, text_type)
-    dictionary, corpus = model_params[0], model_params[1]
+    dictionary, corpus = construct_dictionary_and_corpus(args.i, args.type)
+
     # TODO: make this configurable
     '''
     dictionary.save('/tmp/dictionary.dict')
@@ -128,8 +117,4 @@ def main():
 
     tfidf = models.TfidfModel(corpus)
 
-    filter_tfidf(key_list, dictionary, args.i, args.o, tfidf, text_type, thresh)
-
-if __name__ == '__main__':
-    main()
-
+    filter_tfidf(key_list, dictionary, args.i, args.o, tfidf, args.type, args.thresh)
