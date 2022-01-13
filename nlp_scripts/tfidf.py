@@ -65,6 +65,16 @@ def determine_text_type(text_type):
         text = text_type
     return text
 
+def build_out(out_dir):
+    if out_dir is not None:
+        # create / overwrite directory where results will be stored
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
+        else:
+            shutil.rmtree(out_dir)
+            os.mkdir(out_dir)
+    else:
+        raise Exception("Please specify output directory.")
 
 def args_setup(in_dir, keys, out_dir, text_type, threshold):
     if in_dir is None:
@@ -77,7 +87,7 @@ def args_setup(in_dir, keys, out_dir, text_type, threshold):
     if out_dir is None:
         common.fail("Please specify output (-o) directory.")
     else:
-        common.build_out(out_dir)
+        build_out(out_dir)
         common.build_subdirs(out_dir, key_list, False)
     if text_type is None:
         text_type = 'Filtered Text Stemmed'

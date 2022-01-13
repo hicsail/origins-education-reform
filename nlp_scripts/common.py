@@ -6,19 +6,6 @@ def fail(msg):
     print(msg)
     os._exit(1)
 
-
-def build_out(out_dir):
-    if out_dir is not None:
-        # create / overwrite directory where results will be stored
-        if not os.path.exists(out_dir):
-            os.mkdir(out_dir)
-        else:
-            shutil.rmtree(out_dir)
-            os.mkdir(out_dir)
-    else:
-        fail("Please specify output directory.")
-
-
 # build subdirectories within output directory, each containing
 # documents where a single keyword / bigram occurs
 def build_subdirs(out_dir, keywords, bigrams):
@@ -54,7 +41,6 @@ def build_key_list(keywords, bigrams):
         return bigram_list
     return key_list
 
-
 # construct list of year periods
 def build_year_list(increment, range_years, periods, yrange_max, yrange_min):
     if not periods:
@@ -72,7 +58,6 @@ def build_year_list(increment, range_years, periods, yrange_max, yrange_min):
             year_list[i] = int(num)
             i += 1
     return sorted(year_list)
-
 
 # set up parameters for year range, depending on whether user is
 # searching for fixed increments or specific periods of years
@@ -96,22 +81,12 @@ def year_params(range_years, periods):
         increment = 0
     return[increment, yrange_min, yrange_max]
 
-
 # simplest dict with numbers as entries
 def build_simple_dict_of_nums(year_list):
     results = {}
     for year in year_list:
         results[year] = 0
     return results
-
-
-# simplest dict with lists as entries
-def build_simple_dict_of_lists(year_list):
-    results = {}
-    for year in year_list:
-        results[year] = []
-    return results
-
 
 # build a nested dict with lists as leaf entries
 def build_dict_of_lists(year_list, keywords):
@@ -124,7 +99,6 @@ def build_dict_of_lists(year_list, keywords):
                 results[year] = {keyword: []}
     return results
 
-
 # build a nested dict with numbers as leaf entries
 def build_dict_of_nums(year_list, keywords):
     results = {}
@@ -135,19 +109,6 @@ def build_dict_of_nums(year_list, keywords):
             except KeyError:
                 results[year] = {keyword: 0}
     return results
-
-
-def build_nested_dict_of_nums(year_list, keywords):
-    results = {}
-    for year in year_list:
-        results[year] = {}
-        for keyword in keywords:
-            results[year][keyword] = {}
-            results[year][keyword]["TOTAL"] = 0
-            for k in keyword.split("/"):
-                results[year][keyword][k] = 0
-    return results
-
 
 # build a nested dict with dicts as leaf entries
 def build_dict_of_dicts(year_list, key_list):
@@ -160,29 +121,12 @@ def build_dict_of_dicts(year_list, key_list):
                 results[year] = {key: {}}
     return results
 
-
 # returns a list of values to be plotted
 def build_graph_list(keyword, year_list, param):
     a = [0] * len(year_list)
     for i in range(len(year_list)):
         a[i] += param[year_list[i]][keyword]
     return a
-
-
-def build_graph_list_from_nested(keyword, year_list, param, k):
-    a = [0] * len(year_list)
-    for i in range(len(year_list)):
-        a[i] += param[year_list[i]][keyword][k]
-    return a
-
-
-# can't store lists in csv file, so need to store data in string
-def list_to_string(list_inpt):
-    return_string = ""
-    for wd in list_inpt:
-        return_string += (str(wd) + " ")
-    return return_string
-
 
 # helper method to group docs into periods
 def determine_year(year, year_list):
@@ -198,7 +142,6 @@ def determine_year(year, year_list):
             return target
         else:
             continue
-
 
 # writes N documents with lowest scores for each period to a text file
 def list_min_docs(out, year, keyword, results, num, analysis):
@@ -221,7 +164,6 @@ def list_min_docs(out, year, keyword, results, num, analysis):
             out.write("{0}. {1}: {2}".format(str(i), str(key_tup[0]), str(key_tup[1])) + "\n")
             i += 1
         out.write("\n")
-
 
 # writes N documents with highest scores for each period to a text file
 def list_max_docs(out, year, keyword, results, num, analysis):

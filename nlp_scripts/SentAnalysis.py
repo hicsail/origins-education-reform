@@ -159,6 +159,12 @@ def sent_calcs(year_list, key_list, sent_results, calc_type):
                 sent_result[year_list[i]][keyword] = total
     return sent_result
 
+# can't store lists in csv file, so need to store data in string
+def list_to_string(list_inpt):
+    return_string = ""
+    for wd in list_inpt:
+        return_string += (str(wd) + " ")
+    return return_string
 
 def main():
     parser = argparse.ArgumentParser()
@@ -252,13 +258,13 @@ def main():
         csvwriter.writerow(['word', 'sent avg', 'sent max', 'sent min', 'sent total', year_string, num_docs_string])
         for keyword in key_list:
             # populate each line with each sentiment calculation
-            csvwriter.writerow([keyword, common.list_to_string(common.build_graph_list(keyword, year_list, sent_avg)),
-                                common.list_to_string(common.build_graph_list(keyword, year_list, sent_max)),
-                                common.list_to_string(common.build_graph_list(keyword, year_list, sent_min)),
-                                common.list_to_string(common.build_graph_list(keyword, year_list, sent_total))])
+            csvwriter.writerow([keyword, list_to_string(common.build_graph_list(keyword, year_list, sent_avg)),
+                                list_to_string(common.build_graph_list(keyword, year_list, sent_max)),
+                                list_to_string(common.build_graph_list(keyword, year_list, sent_min)),
+                                list_to_string(common.build_graph_list(keyword, year_list, sent_total))])
         # write average sentiment across corpus in last line of csv file
         for keyword in overall_list:
-            csvwriter.writerow([keyword, common.list_to_string(
+            csvwriter.writerow([keyword, list_to_string(
                 common.build_graph_list(keyword, year_list, overall_avg))])
 
 

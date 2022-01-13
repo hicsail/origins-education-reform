@@ -47,6 +47,13 @@ def build_nested_dict_of_nums(year_list, keywords):
                 results[year][keyword][k] = 0
     return results
 
+# simplest dict with lists as entries
+def build_simple_dict_of_lists(year_list):
+    results = {}
+    for year in year_list:
+        results[year] = []
+    return results
+
 # PER DOCUMENT FUNCTIONS
 
 def process_documents(keywords, periods, directory, num):
@@ -60,7 +67,7 @@ def process_documents(keywords, periods, directory, num):
     frequency_list = common.build_dict_of_lists(periods, keywords)
     freq_dist_dict = {start_year: None for start_year in periods}
     text_lengths = common.build_simple_dict_of_nums(periods)
-    n_dict = common.build_simple_dict_of_lists(periods)
+    n_dict = build_simple_dict_of_lists(periods)
 
     for _, _, files in os.walk(directory):
         print("Processing documents:")
@@ -261,6 +268,12 @@ def build_json(in_dict):
     jfile = json.dumps(in_dict, sort_keys=False, indent=4, separators=(',', ': '), ensure_ascii=False)
     return jfile
 
+def build_graph_list_from_nested(keyword, year_list, param, k):
+    a = [0] * len(year_list)
+    for i in range(len(year_list)):
+        a[i] += param[year_list[i]][keyword][k]
+    return a
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -393,7 +406,7 @@ if __name__ == "__main__":
         jf[keyword]['average frequency'] = common.build_graph_list(keyword, periods, keyword_averages)
         jf[keyword]['variance'] = common.build_graph_list(keyword, periods, keyword_variances)
         for k in keyword.split('/'):
-            jf['breakdown'][k] = common.build_graph_list_from_nested(keyword, periods, keyword_percentage, k)
+            jf['breakdown'][k] = build_graph_list_from_nested(keyword, periods, keyword_percentage, k)
 
     with open(args.json + '.json', 'w', encoding='utf-8') as jfile:
         jfile.write(build_json(jf))
