@@ -17,13 +17,13 @@ import common
 #
 
 def determine_year(year):
-    if year < yrange_min:
+    if year < min_year:
         return -1
-    if year >= yrange_max:
+    if year >= max_year:
         return -1
 
-    index = (year - yrange_min) // increment
-    start_year = index * increment + yrange_min
+    index = (year - min_year) // increment
+    start_year = index * increment + min_year
     return start_year
 
 # calculate term frequency for tf-idf results
@@ -84,9 +84,9 @@ def process_documents(keywords, periods, directory, num):
                 freq_dist = nltk.FreqDist(text)
 
                 year = int(jsondata["Year"])
-                if year < yrange_min:
+                if year < min_year:
                     continue
-                if year >= yrange_max:
+                if year >= max_year:
                     continue
                 start_year = determine_year(year)
 
@@ -345,22 +345,16 @@ if __name__ == "__main__":
     keywords = common.build_key_list(args.k, bigrams)
 
     # Handle year argument
-    global yrange_min, yrange_max, increment
-    [yrange_min, yrange_max, increment] = map(int, args.y.split())
-    if yrange_max < yrange_min:
-        raise Exception("Maximum year must be larger than minimum year.")
-    if (yrange_max - yrange_min) % increment != 0:
-        raise Exception("Increment does not evenly divide year range.")
-    periods = list(range(yrange_min, yrange_max, increment))
+    global min_year, max_year, increment
+    min_year, max_year, increment, year_list = common.build_year_list(args.y, False)
 
     num_docs, idf_results, tfidf_results, word_count_dict, frequency_list, word_totals, n_dict \
         = process_documents(keywords, periods, directory, args.num)
-    tf_idf_avg, tf_idf_min, tf_idf_max \
-        = calculate_tfidf_stats(periods, keywords, tfidf_results)
+    tf_idf_avg, tf_idf_min, tf_idf_max = calculate_tfidf_stats(periods, keywords, tfidf_results)
     keyword_percentage = take_keyword_percentage(periods, keywords, word_totals, word_count_dict)
     keyword_averages, keyword_variances = calculate_frequency_stats(periods, keywords, frequency_list)
 
-    out_periods = periods + [yrange_max]
+    out_periods = periods + [max_year]
 
     # create txt file and write all the collected data to it
     with open(args.txt + '.txt', 'w') as txt_out:

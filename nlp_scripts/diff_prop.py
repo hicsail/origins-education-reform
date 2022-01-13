@@ -4,7 +4,7 @@ import scipy.stats
 import common
 
 
-def build_samples(csv_inpt, year_list, yrange_min, yrange_max):
+def build_samples(csv_inpt, year_list, min_year, max_year):
     # set up observation and sample size dicts
     p = common.build_simple_dict_of_nums(year_list)
     n = common.build_simple_dict_of_nums(year_list)
@@ -22,7 +22,7 @@ def build_samples(csv_inpt, year_list, yrange_min, yrange_max):
                 continue
             year = int(row[1])
             # check to make sure it's within range specified by user
-            if year < yrange_min or year >= yrange_max:
+            if year < min_year or year >= max_year:
                 continue
             # determine which period it falls within
             target = common.determine_year(year, year_list)
@@ -99,16 +99,12 @@ if __name__ == "__main__":
     else:
         csv_files = args.csv.split()
 
-    range_years = args.y.split()
-    year_params = common.year_params(range_years, args.p)
-    increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
+    min_year, max_year, increment, year_list = common.build_year_list(args.y, args.p)
 
-    year_list = common.build_year_list(increment, range_years, args.p, yrange_max, yrange_min)
-
-    first = build_samples(csv_files[0], year_list, yrange_min, yrange_max)
+    first = build_samples(csv_files[0], year_list, min_year, max_year)
     x1 = first[0]
     n1 = first[1]
-    second = build_samples(csv_files[1], year_list, yrange_min, yrange_max)
+    second = build_samples(csv_files[1], year_list, min_year, max_year)
     x2 = second[0]
     n2 = second[1]
 

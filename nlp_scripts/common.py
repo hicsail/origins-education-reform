@@ -36,44 +36,27 @@ def build_key_list(keywords, bigrams):
     return key_list
 
 # construct list of year periods
-def build_year_list(increment, range_years, periods, yrange_max, yrange_min):
-    if not periods:
-        num_elements = int(((yrange_max - yrange_min) / increment))
-        year_list = [None] * num_elements
-        i = 0
-        for num in range(yrange_min, yrange_max, increment):
-            year_list[i] = num
-            i += 1
-    else:
-        num_elements = len(range_years)
-        year_list = [None] * num_elements
-        i = 0
-        for num in range_years:
-            year_list[i] = int(num)
-            i += 1
-    return sorted(year_list)
+def build_year_list(years, periods):
+    range_years = map(int, years.split())
 
-# set up parameters for year range, depending on whether user is
-# searching for fixed increments or specific periods of years
-def year_params(range_years, periods):
-    # if periods flag is not set, set up variables for fixed increments
     if not periods:
-        yrange_min = int(range_years[0])
-        increment = int(range_years[2])
-        difference = int(range_years[1]) - yrange_min
-        mod_val = difference % increment
+        min_year = range_years[0]
+        max_year = range_years[1]
+        increment = range_years[2]
 
-        # adjust list of years so the end bit doesn't get cut out
-        if mod_val != 0:
-            yrange_max = int(range_years[1]) + (increment - mod_val) + increment
-        else:
-            yrange_max = int(range_years[1]) + increment
-    # set up variables for periods rather than fixed increments
+        if max_year < min_year:
+            raise Exception("Maximum year must be larger than minimum year.")
+        if (max_year - min_year) % increment != 0:
+            raise Exception("Increment does not evenly divide year range.")
+
+        year_list = range(min_year, max_year, increment)
     else:
-        yrange_min = int(range_years[0])
-        yrange_max = int(range_years[len(range_years) - 1])
+        min_year = range_years[0]
+        max_year = range_years[-1]
         increment = 0
-    return[increment, yrange_min, yrange_max]
+        year_list = range_years
+
+    return min_year, max_year, increment, year_list
 
 # simplest dict with numbers as entries
 def build_simple_dict_of_nums(year_list):

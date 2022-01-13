@@ -45,7 +45,7 @@ def populate_overall_sentiment(directory, overall_list, year_list, afinn):
                 text = jsondata["Filtered Text"]
                 year = int(jsondata["Year"])
                 # check to make sure it's within range specified by user
-                if year < yrange_min or year >= yrange_max:
+                if year < min_year or year >= max_year:
                     continue
                 # determine which period it falls within
                 target = common.determine_year(year, year_list)
@@ -92,7 +92,7 @@ def populate_sent_dict(directory, key_list, year_list, afinn):
                             text = jsondata["Text"]
                             year = int(jsondata["Year"])
                             # check to make sure it's within range specified by user
-                            if yrange_min <= year < yrange_max:
+                            if min_year <= year < max_year:
                                 target = common.determine_year(year, year_list)
                                 sentiment += afinn.score(text)
                                 sent_dict[target][subdir].append((jsondoc, sentiment))
@@ -222,19 +222,13 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    global periods, yrange_min, yrange_max
+    global periods, min_year, max_year
 
     periods = args.p
     directory = args.i
     corpus_path = args.c
 
-    range_years = args.y.split()
-    year_params = common.year_params(range_years, periods)
-    increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
-
-    # initialize list of years and dict to keep track of
-    # how many books between each year range
-    year_list = common.build_year_list(increment, range_years, periods, yrange_max, yrange_min)
+    min_year, max_year, increment, year_list = common.build_year_list(args.y, args.p)
 
     # set up dicts for sentiment word list, keyword list, & results of sentiment analysis
     # 'en' == english, 'da' == danish

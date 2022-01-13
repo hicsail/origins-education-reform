@@ -14,7 +14,7 @@ def build_key_list(directory):
 # separate year / keyword pairs into lists of texts. this dictionary is used in
 # conjunction with the build_frequency_dict function to yield a dictionary of
 # 'bag of words' representations of each individual document.
-def init_sent_doc_dict(input_dir, key_list, year_list, stopwords, yrange_min, yrange_max, text_type):
+def init_sent_doc_dict(input_dir, key_list, year_list, stopwords, min_year, max_year, text_type):
     doc_dict = common.build_dict_of_lists(year_list, key_list)
     for dirs, subdirs, files in os.walk(input_dir):
         # 'subdir' corresponds to each keyword
@@ -34,7 +34,7 @@ def init_sent_doc_dict(input_dir, key_list, year_list, stopwords, yrange_min, yr
                                 del text[i]
                         year = int(jsondata["Year"])
                         # check to make sure it's within range specified by user
-                        if year < yrange_min or year >= yrange_max:
+                        if year < min_year or year >= max_year:
                             continue
                         target = common.determine_year(year, year_list)
                         try:
@@ -190,13 +190,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    range_years = args.y.split()
-    year_params = common.year_params(range_years, args.p)
-    increment, yrange_min, yrange_max = year_params[0], year_params[1], year_params[2]
-
-    # initialize list of years and dict to keep track of
-    # how many books between each year range
-    year_list = common.build_year_list(increment, range_years, args.p, yrange_max, yrange_min)
+    min_year, max_year, increment, year_list = common.build_year_list(args.y, args.p)
 
     # build list of keywords that we'll be making topic models for
     key_list = build_key_list(args.i)
@@ -214,7 +208,7 @@ if __name__ == "__main__":
             for wd in sub_keys:
                 stopwords.add(wd)
 
-    doc_dict = init_sent_doc_dict(args.i, key_list, year_list, stopwords, yrange_min, yrange_max, text_type)
+    doc_dict = init_sent_doc_dict(args.i, key_list, year_list, stopwords, min_year, max_year, text_type)
     dictionary_dict = build_frequency_dict(doc_dict, key_list, year_list)
     corpus_dict = common.build_dict_of_lists(year_list, key_list)
 
