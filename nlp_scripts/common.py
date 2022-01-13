@@ -1,11 +1,5 @@
 import os, tqdm, math, shutil
 
-
-# generic fail method
-def fail(msg):
-    print(msg)
-    os._exit(1)
-
 # build subdirectories within output directory, each containing
 # documents where a single keyword / bigram occurs
 def build_subdirs(out_dir, keywords, bigrams):

@@ -60,7 +60,7 @@ def build_year_list(in_dir):
                 year_lists.append(sorted(jsondata['year list']))
     for year_list in year_lists:
         if year_list != year_lists[0]:
-            common.fail("One of your files has a different year list from the others." +
+            raise Exception("One of your files has a different year list from the others." +
                         " Please make sure all your files contain the same year lists.")
     # just return first list in year_lists if they're all the same
     return year_lists[0]
