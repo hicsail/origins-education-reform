@@ -12,7 +12,7 @@ macholib==1.5.1
 matplotlib==1.5.3
 modulegraph==0.10.4
 nltk==3.2.2
-numpy==1.12.1
+numpy==1.22.0
 pandas==0.19.2
 patsy==0.4.1
 py2app==0.7.3
